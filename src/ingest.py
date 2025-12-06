@@ -64,4 +64,4 @@ def save_genie_space(output_dir: str = "output", filename: str | None = None) ->
     return filepath
 
 
-save_genie_space("data", "my_serialized_genie_space.json")
+save_genie_space("data", "serialized_space.json")
