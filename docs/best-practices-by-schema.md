@@ -1,5 +1,7 @@
 # Genie Space Best Practices (Organized by Schema)
 
+Based on the [official Databricks Genie Best Practice doc](https://docs.databricks.com/aws/en/genie/best-practices). Last updated 11/05/2025.
+
 This document reorganizes Genie space best practices according to the JSON schema structure.
 
 ---
