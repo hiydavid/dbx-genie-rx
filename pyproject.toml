@@ -8,6 +8,7 @@ dependencies = [
     "databricks-sdk>=0.38.0",
     "pydantic>=2.0",
     "streamlit>=1.40.0",
+    "python-dotenv"
 ]
 
 [project.scripts]
