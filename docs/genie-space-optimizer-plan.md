@@ -3,16 +3,17 @@
 ## 1. Core Concept
 
 You're building an **LLM-powered lint/optimization tool** that:
-- Ingests a Genie Space definition (via GET API or JSON export)
+
+- Ingests a Genie Space definition (via GET API).
 - Analyzes each metadata section against best practices
-- Generates actionable recommendations
-- Outputs an optimized JSON payload ready for the Update API
+- Generates actionable recommendations in accordance to best practice guide.
+- Outputs an optimized JSON payload ready for the Update API. The JSON payload will have the correct schema.
 
 ---
 
 ## 2. Architecture Overview
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │                        Visual Frontend                          │
 │  (React/Streamlit app showing section-by-section analysis)      │
@@ -50,37 +51,42 @@ Based on the API and docs, here are the sections your tool should analyze:
 | **Example SQL Queries** | Count, parameterization, coverage | 5+ verified queries covering key question patterns |
 | **General Instructions** | Length, clarity, conflicts | Concise (<100 lines), no ambiguity |
 | **Sample Questions** | Count, diversity | Representative of expected user questions |
-| **Benchmarks** | Coverage, accuracy scores | 5+ benchmark questions with passing scores |
+| **Benchmarks** | Coverage, accuracy scores | 10+ benchmark questions with passing scores |
 
 ---
 
 ## 4. Implementation Phases
 
 ### Phase 1: Schema Discovery & Ingestion
+
 - Call `GET /api/2.0/genie/spaces/{space_id}` to pull the serialized space
 - Parse and normalize the JSON structure into analyzable sections
 - Build a **Pydantic model** for the Genie Space schema (for validation and typed access)
 
 ### Phase 2: Best Practices Knowledge Base
+
 - Scrape/ingest the Databricks documentation:
   - `docs.databricks.com/genie/best-practices`
   - `docs.databricks.com/genie/knowledge-store`
   - `docs.databricks.com/genie/set-up`
-- Chunk and embed into a **vector store** (could use Databricks Vector Search, or local FAISS)
+- Create a local Resources MCP servers to help serve best practice docs to the agent
 - Create rule-based checks for quantitative things (column count, query count, etc.)
 
 ### Phase 3: Section Analyzers
+
 For each section, build an analyzer that:
+
 1. **Extracts** the relevant portion of the Genie Space JSON
-2. **Retrieves** relevant best-practice context via RAG
+2. **Retrieves** relevant best-practice context via MCP
 3. **Prompts** an LLM to evaluate against criteria and generate:
-   - A quality score (1-5 or red/yellow/green)
+   - A quality score (red/yellow/green)
    - Specific issues found
    - Concrete recommendations
    - (Optionally) auto-generated fixes
 
 Example prompt structure:
-```
+
+```text
 You are a Genie Space quality auditor. 
 
 SECTION: Column Metadata for table `sales_orders`
@@ -98,12 +104,15 @@ Analyze this section and provide:
 ```
 
 ### Phase 4: Recommendation Aggregator
+
 - Combine all section analyses into a unified report
 - Prioritize by impact (e.g., missing column descriptions > suboptimal sampling)
 - Generate a summary view and detailed drill-down
 
 ### Phase 5: Visual Frontend
+
 Build a UI (React or Streamlit) that shows:
+
 - **Overview Dashboard**: Overall health score, section-by-section summary
 - **Section Drill-downs**: Expandable panels for each section with issues/recommendations
 - **Side-by-side Diff**: Current vs. recommended state
@@ -117,7 +126,6 @@ Build a UI (React or Streamlit) that shows:
 |-----------|------------|
 | Backend API | FastAPI (Python) |
 | LLM | Claude via Databricks Model Serving, or direct API |
-| Vector Store | Databricks Vector Search or FAISS |
 | Frontend | Streamlit (fast prototyping) or React (production) |
 | Deployment | Databricks App (uses the new Apps framework) |
 | Auth | OAuth M2M via service principal for Genie API calls |
@@ -126,7 +134,7 @@ Build a UI (React or Streamlit) that shows:
 
 ## 6. Sample Workflow
 
-```
+```text
 User enters Genie Space ID
          │
          ▼
@@ -190,6 +198,7 @@ User enters Genie Space ID
 ## Next Steps
 
 Choose where to start:
+
 - [ ] Pull a real Genie Space JSON and document the schema
 - [ ] Build Pydantic models for typed access
 - [ ] Create a single section analyzer (e.g., Column Metadata)

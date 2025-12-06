@@ -1,0 +1,385 @@
+{'version': 1,
+ 'data_sources': {
+    'tables': [
+            {
+                'identifier': 'users.david_huang.genie_balance_sheet',
+                'description': [
+                    'Balance sheet data for tickers: AXP, AAPL, BAC, and for years: from 2003 to 2022.'
+                ],
+                'column_configs': [
+                    {'column_name': 'ACCOUNTS_PAYABLES','get_example_values': True
+                    },
+                    {'column_name': 'ACCUMULATED_OTHER_COMPREHENSIVE_INCOME','get_example_values': True
+                    },
+                    {'column_name': 'CALENDAR_YEAR', 'get_example_values': True
+                    },
+                    {'column_name': 'CAPITAL_LEASE_OBLIGATIONS', 'get_example_values': True
+                    },
+                    {'column_name': 'CASH_AND_EQUIVALENTS', 'get_example_values': True
+                    },
+                    {'column_name': 'CASH_AND_SHORT_TERM_INVESTMENTS', 'get_example_values': True
+                    },
+                    {'column_name': 'COMMON_STOCK', 'get_example_values': True
+                    },
+                    {'column_name': 'DEFERRED_REVENUE', 'get_example_values': True
+                    },
+                    {'column_name': 'DEFERRED_REVENUE_NONCURRENT','get_example_values': True
+                    },
+                    {'column_name': 'DEFERRED_TAX_LIABILITIES_NONCURRENT','get_example_values': True
+                    },
+                    {'column_name': 'GOODWILL', 'get_example_values': True
+                    },
+                    {'column_name': 'GOOD_WILL_AND_INTANGIBLE_ASSETS','get_example_values': True
+                    },
+                    {'column_name': 'INTANGIBLE_ASSETS', 'get_example_values': True
+                    },
+                    {'column_name': 'INVENTORY', 'get_example_values': True
+                    },
+                    {'column_name': 'LONG_TERM_DEBT', 'get_example_values': True
+                    },
+                    {'column_name': 'LONG_TERM_INVESTMENTS', 'get_example_values': True
+                    },
+                    {'column_name': 'MINORITY_INTEREST', 'get_example_values': True
+                    },
+                    {'column_name': 'NET_DEBT', 'get_example_values': True
+                    },
+                    {'column_name': 'NET_RECEIVABLES', 'get_example_values': True
+                    },
+                    {'column_name': 'OTHER_ASSETS', 'get_example_values': True
+                    },
+                    {'column_name': 'OTHER_CURRENT_ASSETS', 'get_example_values': True
+                    },
+                    {'column_name': 'OTHER_CURRENT_LIABILITIES', 'get_example_values': True
+                    },
+                    {'column_name': 'OTHER_LIABILITIES', 'get_example_values': True
+                    },
+                    {'column_name': 'OTHER_NONCURRENT_LIABILITIES','get_example_values': True
+                    },
+                    {'column_name': 'OTHER_NON_CURRENT_ASSETS', 'get_example_values': True
+                    },
+                    {'column_name': 'OTHER_TOTAL_STOCKHOLDERS_EQUITY','get_example_values': True
+                    },
+                    {'column_name': 'PERIOD','get_example_values': True,'build_value_dictionary': True
+                    },
+                    {'column_name': 'PREFERRED_STOCK', 'get_example_values': True
+                    },
+                    {'column_name': 'PROPERTY_PLANT_EQUIPMENTNET','get_example_values': True
+                    },
+                    {'column_name': 'RETAINED_EARNINGS', 'get_example_values': True
+                    },
+                    {'column_name': 'SHORT_TERM_DEBT', 'get_example_values': True
+                    },
+                    {'column_name': 'SHORT_TERM_INVESTMENTS', 'get_example_values': True
+                    },
+                    {'column_name': 'TAX_ASSETS', 'get_example_values': True
+                    },
+                    {'column_name': 'TAX_PAYABLES', 'get_example_values': True
+                    },
+                    {'column_name': 'TICKER', 'synonyms': ['name', 'company'
+                        ]
+                    },
+                    {'column_name': 'TOTAL_ASSETS', 'get_example_values': True
+                    },
+                    {'column_name': 'TOTAL_CURRENT_ASSETS', 'get_example_values': True
+                    },
+                    {'column_name': 'TOTAL_CURRENT_LIABILITIES', 'get_example_values': True
+                    },
+                    {'column_name': 'TOTAL_DEBT', 'get_example_values': True
+                    },
+                    {'column_name': 'TOTAL_EQUITY', 'get_example_values': True
+                    },
+                    {'column_name': 'TOTAL_INVESTMENTS', 'get_example_values': True
+                    },
+                    {'column_name': 'TOTAL_LIABILITIES', 'get_example_values': True
+                    },
+                    {'column_name': 'TOTAL_LIABILITIES_AND_STOCKHOLDERS_EQUITY','get_example_values': True
+                    },
+                    {'column_name': 'TOTAL_LIABILITIES_AND_TOTAL_EQUITY','get_example_values': True
+                    },
+                    {'column_name': 'TOTAL_NONCURRENT_LIABILITIES','get_example_values': True
+                    },
+                    {'column_name': 'TOTAL_NON_CURRENT_ASSETS', 'get_example_values': True
+                    },
+                    {'column_name': 'TOTAL_STOCKHOLDERS_EQUITY', 'get_example_values': True
+                    },
+                    {'column_name': 'YEAR', 'get_example_values': True
+                    }
+                ]
+            },
+            {
+                'identifier': 'users.david_huang.genie_income_statement',
+                'description': [
+                    'Income statement data for tickers: AXP, AAPL, BAC, and for years: from 2003 to 2022.'
+                ],
+                'column_configs': [
+                    {'column_name': 'ACCOUNTS_PAYABLES','get_example_values': True
+                    },
+                    {'column_name': 'ACCOUNTS_RECEIVABLES', 'get_example_values': True
+                    },
+                    {'column_name': 'ACQUISITIONS', 'get_example_values': True
+                    },
+                    {'column_name': 'CALENDAR_YEAR', 'get_example_values': True
+                    },
+                    {'column_name': 'CAPITAL_EXPENDITURE', 'get_example_values': True
+                    },
+                    {'column_name': 'CHANGE_IN_WORKING_CAPITAL', 'get_example_values': True
+                    },
+                    {'column_name': 'COMMON_STOCK_ISSUED', 'get_example_values': True
+                    },
+                    {'column_name': 'COMMON_STOCK_REPURCHASED', 'get_example_values': True
+                    },
+                    {'column_name': 'DEBT_PAYMENT', 'get_example_values': True
+                    },
+                    {'column_name': 'DEFERRED_INCOME_TAX', 'get_example_values': True
+                    },
+                    {'column_name': 'DEPRECIATION_AND_AMORTIZATION','get_example_values': True
+                    },
+                    {'column_name': 'DIVIDENDS_PAID', 'get_example_values': True
+                    },
+                    {'column_name': 'FOREX_CHANGE', 'get_example_values': True
+                    },
+                    {'column_name': 'FREE_CASH_FLOW', 'get_example_values': True
+                    },
+                    {'column_name': 'INVENTORY', 'get_example_values': True
+                    },
+                    {'column_name': 'INVESTMENTS_IN_PROPERTY_PLANT_AND_EQUIPMENT','get_example_values': True
+                    },
+                    {'column_name': 'NET_CHANGE_IN_CASH', 'get_example_values': True
+                    },
+                    {'column_name': 'NET_FINANCING_ACTIVITIES', 'get_example_values': True
+                    },
+                    {'column_name': 'NET_INCOME', 'get_example_values': True
+                    },
+                    {'column_name': 'NET_INVESTING_ACTIVITES', 'get_example_values': True
+                    },
+                    {'column_name': 'NET_OPERATING_ACTIVITIES', 'get_example_values': True
+                    },
+                    {'column_name': 'OPERATING_CASH_FLOW', 'get_example_values': True
+                    },
+                    {'column_name': 'OTHER_FINANCING_ACTIVITES', 'get_example_values': True
+                    },
+                    {'column_name': 'OTHER_INVESTING_ACTIVITES', 'get_example_values': True
+                    },
+                    {'column_name': 'OTHER_NON_CASH_ITEMS', 'get_example_values': True
+                    },
+                    {'column_name': 'OTHER_WORKING_CAPITAL', 'get_example_values': True
+                    },
+                    {'column_name': 'PERIOD','get_example_values': True,'build_value_dictionary': True
+                    },
+                    {'column_name': 'PURCHASES_OF_INVESTMENTS', 'get_example_values': True
+                    },
+                    {'column_name': 'SALES_OF_INVESTMENTS', 'get_example_values': True
+                    },
+                    {'column_name': 'STOCK_BASED_COMPENSATION', 'get_example_values': True
+                    },
+                    {'column_name': 'TICKER','get_example_values': True,'build_value_dictionary': True
+                    },
+                    {'column_name': 'YEAR', 'get_example_values': True
+                    }
+                ]
+            }
+        ]
+    },
+ 'instructions': {
+    'text_instructions': [
+            {
+            'id': '01f0627177b91734ad5d46707599ea26',
+            'content': [
+                '# Guidelines\n',
+                '- **Fully qualify** each column with its table alias (`bs`, `is`, `cf`, etc.).\n',
+                '- **Filter** by `company_id` (ticker) and explicit period(s) given by the user.\n',
+                '- If the user omits **time period, filing type, or company**, respond with exactly **one** follow-up question that asks for the missing detail, then stop.\n',
+                '- Use `ROUND(metric_value,
+                    4)` for ratio outputs unless the user requests raw numbers.\n',
+                '- Default all queries to filter for the latest year (2022), unelss the user is asking about a specific year, or a range of years.\n',
+                '- Ensure divisions use `NULLIF(denominator,
+                    0)` to avoid divide-by-zero errors.\n',
+                '\n',
+                '# SUPPORTED METRICS & RATIOS\n',
+                '- Liquidity\n',
+                '    * Current Ratio: bs.total_current_assets / bs.total_current_liabilities\n',
+                '    * Quick Ratio: (bs.cash_and_equivalents + bs.short_term_investments + bs.accounts_receivable) / bs.total_current_liabilities\n',
+                '- Solvency\n',
+                '    * Debt-to-Equity: (bs.short_term_debt + bs.long_term_debt) / bs.shareholders_equity\n',
+                '    * Interest Coverage: is.ebit / NULLIF(is.interest_expense,
+                    0)\n',
+                '- Profitability\n',
+                '    * Gross Margin: (is.gross_profit / is.total_revenue)\n',
+                '    * Net Profit Margin: is.net_income / is.total_revenue\n',
+                '    * Return on Assets (ROA): is.net_income / bs.total_assets\n',
+                '    * Return on Equity (ROE): is.net_income / bs.shareholders_equity\n',
+                '- Efficiency\n',
+                '    * Asset Turnover: is.total_revenue / bs.total_assets\n',
+                '- Growth\n',
+                '    * Revenue Growth % YoY: (cur.total_revenue - prev.total_revenue) / prev.total_revenue\n',
+                '- Cash Flow\n',
+                '    * Free Cash Flow: cf.operating_cash_flow - cf.capital_expenditure\n',
+                '\n',
+                'Remember: you are a precise, no-nonsense financial analyst SQL generator. Ask clarifying questions only when essential information is missing; otherwise, return the optimized SQL query immediately.\n'
+                ]
+            }
+        ],
+  'example_question_sqls': [
+            {
+                'id': '01f06271a4fe10f49d704b8d741f55dd',
+                'question': [
+                    'What is the debt to equity ratio for APPL for 2022'
+                ],
+                'sql': [
+                    'SELECT\n',
+                    '  ROUND(\n',
+                    '    try_divide((`short_term_debt` + `long_term_debt`), NULLIF(`total_equity`,
+                    0)),
+                    4\n',
+                    '  ) AS `debt_to_equity_ratio`\n',
+                    'FROM\n',
+                    '  `doan`.`genai_hackathon`.`genie_balance_sheet`\n',
+                    'WHERE\n',
+                    '  `TICKER` = :company\n',
+                    '  AND `YEAR` = :year\n',
+                    ';'
+                ],
+                'parameters': [
+                    {'name': 'company', 'type_hint': 'STRING'
+                    },
+                    {'name': 'year', 'type_hint': 'STRING'
+                    }
+                ]
+            },
+            {
+                'id': '01f0c57ce8611d3b839604c5a8d7ef48',
+                'question': [
+                    "What is the forecast of Apple's annual net income until 2030?"
+                ],
+                'sql': [
+                    'SELECT * FROM AI_FORECAST(\n',
+                    "  TABLE(select NET_INCOME, to_date(concat(YEAR, '-12-31')) AS YEAR_END_DATE from users.david_huang.income_statement where ticker = :TICKER),\n",
+                    "  horizon => '2031',\n",
+                    "  time_col => 'YEAR_END_DATE',\n",
+                    "  value_col => 'NET_INCOME'\n",
+                ') '
+                ],
+                'parameters': [
+                    {'name': 'TICKER', 'type_hint': 'STRING'
+                    }
+                ]
+            },
+            {
+                'id': '01f0d1f0c4081887ac12e42e533abe54',
+                'question': [
+                    'What is the total assets value for Apple (AAPL) in 2022?'
+                ],
+                'sql': ['SELECT\n',
+                '  `TOTAL_ASSETS`\n',
+                'FROM\n',
+                '  `users`.`david_huang`.`genie_balance_sheet`\n',
+                'WHERE\n',
+                    "  `TICKER` = 'AAPL'\n",
+                '  AND `YEAR` = 2022;'
+                ]
+            }
+        ],
+  'join_specs': [
+            {
+                'id': '01f0c57668b417d98db5772ac3d15622',
+                'left': {
+                    'identifier': 'users.david_huang.genie_balance_sheet',
+                    'alias': 'genie_balance_sheet'
+                },
+                'right': {
+                    'identifier': 'users.david_huang.genie_income_statement',
+                    'alias': 'genie_income_statement'
+                },
+                'sql': [
+                    '`genie_balance_sheet`.`TICKER` = `genie_income_statement`.`TICKER`',
+                    '--rt=FROM_RELATIONSHIP_TYPE_ONE_TO_ONE--'
+                ]
+            },
+            {
+                'id': '01f0c576715019f89307f6982ad42a48',
+                'left': {
+                    'identifier': 'users.david_huang.genie_balance_sheet',
+                    'alias': 'genie_balance_sheet'
+                },
+                'right': {
+                    'identifier': 'users.david_huang.genie_income_statement',
+                    'alias': 'genie_income_statement_2'
+                },
+                'sql': [
+                    '`genie_balance_sheet`.`YEAR` = `genie_income_statement_2`.`YEAR`',
+                    '--rt=FROM_RELATIONSHIP_TYPE_ONE_TO_ONE--'
+                ]
+            }
+        ],
+    'sql_snippets': {
+        'filters': [
+                {
+                    'id': '01f0c56eb37e1158aac868094ebaf8f7',
+                    'sql': ['genie_balance_sheet.YEAR<2020'
+                    ],
+                    'display_name': 'pre-covid',
+                    'instruction': ['Filter for data before year 2020.'
+                    ],
+                    'synonyms': ['pre-covid19', 'pre-pandemic'
+                    ]
+                }
+            ],
+        'expressions': [
+                {
+                    'id': '01f0c56f9c1b1511936c54bf33866a05',
+                    'sql': [
+                        "genie_balance_sheet.TICKER in ('AXP', 'BAC') then 'financial services' else 'technology'"
+                    ],
+                    'display_name': 'sector',
+                    'synonyms': ['sector', 'gics'
+                    ]
+                }
+            ],
+        'measures': [
+                {
+                    'id': '01f0c56ee75e1ab4971ca92bb94dc8a3',
+                    'sql': ['genie_balance_sheet.TOTAL_CURRENT_LIABILITIES / genie_balance_sheet.TOTAL_CURRENT_LIABILITIES'
+                    ],
+                    'display_name': 'current ratio',
+                    'instruction': ['calculates the current ratio, a part of the liquidity metrics'
+                    ]
+                },
+                {
+                    'id': '01f0c56f589a1865a3394b64c76f3a1b',
+                    'sql': ['(\n',
+                    '  genie_balance_sheet.CASH_AND_EQUIVALENTS + \n',
+                    '  genie_balance_sheet.SHORT_TERM_INVESTMENTS + \n',
+                    '  genie_balance_sheet.NET_RECEIVABLES\n',
+                    ') / genie_balance_sheet.TOTAL_CURRENT_LIABILITIES'
+                    ],
+                    'display_name': 'quick ratio',
+                    'instruction': ['calculating the quick ratio, which is a part of the liquidity metrics'
+                    ]
+                }
+            ]
+        }
+    },
+ 'benchmarks': {
+    'questions': [
+            {
+                'id': '01f0d1f2bb8213f091ce52e6f7d4ef0f',
+                'question': ['What is the total assets value for Apple (AAPL) in the fiscal year 2022?'
+                ],
+                'answer': [
+                    {
+                        'format': 'SQL',
+                        'content': [
+                            'SELECT\n',
+                            '  `TOTAL_ASSETS`\n',
+                            'FROM\n',
+                            '  `users`.`david_huang`.`genie_balance_sheet`\n',
+                            'WHERE\n',
+                            "  `TICKER` = 'AAPL'\n",
+                            '  AND `YEAR` = 2022;'
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+}
