@@ -1,7 +1,14 @@
 [project]
 name = "dbx-genie-linter"
 version = "0.1.0"
-description = "Add your description here"
+description = "LLM-powered linting tool for Databricks Genie Spaces"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "databricks-sdk>=0.38.0",
+    "pydantic>=2.0",
+    "streamlit>=1.40.0",
+]
+
+[project.scripts]
+genie-lint = "main:main"
