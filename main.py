@@ -1,5 +1,5 @@
 def main():
-    print("Hello from dbx-genie-linter!")
+    print("Hello from dbx-genie-rx!")
 
 
 if __name__ == "__main__":

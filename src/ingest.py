@@ -39,7 +39,7 @@ def get_genie_space(
     return response.json()
 
 
-def save_genie_space(output_dir: str = "output", filename: str | None = None) -> str:
+def save_genie_space(output_dir: str = "output") -> str:
     """Fetch a Genie space and save it to a local JSON file.
 
     Args:
@@ -55,7 +55,7 @@ def save_genie_space(output_dir: str = "output", filename: str | None = None) ->
 
     os.makedirs(output_dir, exist_ok=True)
 
-    filename = filename or f"{genie_space_id}.json"
+    filename = f"space_{genie_space_id}.json"
     filepath = os.path.join(output_dir, filename)
 
     with open(filepath, "w") as f:
@@ -64,4 +64,4 @@ def save_genie_space(output_dir: str = "output", filename: str | None = None) ->
     return filepath
 
 
-save_genie_space("data", "serialized_space.json")
+save_genie_space("data")
