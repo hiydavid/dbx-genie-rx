@@ -1,3 +1,5 @@
+import json
+
 from dotenv import load_dotenv
 
 # Load environment variables before importing agent
@@ -7,12 +9,44 @@ load_dotenv()  # Also load from .env as fallback
 # Import the agent FIRST to register the predict function with mlflow.models.set_model()
 import agent_server.agent  # noqa: E402, F401
 
-from mlflow.genai.agent_server import AgentServer, setup_mlflow_git_based_version_tracking
+from mlflow.genai.agent_server import (
+    AgentServer,
+    setup_mlflow_git_based_version_tracking,
+)
+from starlette.responses import StreamingResponse
+
+from agent_server.agent import get_analyzer, save_analysis_output
+from agent_server.models import AgentInput
 
 agent_server = AgentServer()
 # Define the app as a module level variable to enable multiple workers
 app = agent_server.app  # noqa: F841
 setup_mlflow_git_based_version_tracking()
+
+
+# Add streaming endpoint for progress updates
+@app.post("/invocations/stream")
+async def invoke_stream(data: dict):
+    """Streaming invocation endpoint that sends progress updates."""
+
+    def generate():
+        analyzer = get_analyzer()
+        input_obj = AgentInput(**data)
+        gen = analyzer.predict_streaming(input_obj)
+
+        result = None
+        try:
+            while True:
+                progress = next(gen)
+                yield f"data: {json.dumps(progress)}\n\n"
+        except StopIteration as e:
+            result = e.value
+
+        if result:
+            save_analysis_output(result)
+            yield f"data: {json.dumps({'status': 'result', 'data': result.model_dump()})}\n\n"
+
+    return StreamingResponse(generate(), media_type="text/event-stream")
 
 
 def main():

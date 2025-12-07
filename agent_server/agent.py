@@ -1,5 +1,6 @@
 import json
 import os
+from collections.abc import Generator
 from pathlib import Path
 
 import mlflow
@@ -155,7 +156,9 @@ If data is empty or missing, note that as a finding."""
         if content.startswith("```"):
             # Remove markdown code fences
             lines = content.split("\n")
-            content = "\n".join(lines[1:-1]) if lines[-1] == "```" else "\n".join(lines[1:])
+            content = (
+                "\n".join(lines[1:-1]) if lines[-1] == "```" else "\n".join(lines[1:])
+            )
         result = json.loads(content)
 
         findings = [Finding(**f) for f in result.get("findings", [])]
@@ -220,6 +223,69 @@ If data is empty or missing, note that as a finding."""
             )
 
         return outputs
+
+    def predict_streaming(
+        self, agent_input: AgentInput
+    ) -> Generator[dict, None, AgentOutput]:
+        """Streaming version of predict that yields progress updates.
+
+        Yields dicts with progress info, then returns the final AgentOutput.
+        """
+        genie_space_id = agent_input.genie_space_id
+
+        # Fetch the Genie space
+        yield {"status": "fetching", "message": "Fetching Genie space..."}
+        with mlflow.start_span(name="fetch_genie_space") as span:
+            span.set_inputs({"genie_space_id": genie_space_id})
+            space = get_serialized_space(genie_space_id)
+            span.set_outputs({"keys": list(space.keys())})
+
+        # Analyze each section sequentially
+        analyses = []
+        total_score = 0
+        section_count = 0
+        total_sections = len(SECTIONS)
+
+        for i, section_name in enumerate(SECTIONS, 1):
+            section_data = self._get_section_data(space, section_name)
+
+            if section_data is not None:
+                yield {
+                    "status": "analyzing",
+                    "section": section_name,
+                    "current": i,
+                    "total": total_sections,
+                    "message": f"Analyzing {section_name}...",
+                }
+
+                with mlflow.start_span(name=f"analyze_{section_name}") as span:
+                    span.set_inputs({"section_name": section_name})
+                    analysis = self.analyze_section(section_name, section_data)
+                    analyses.append(analysis)
+                    total_score += analysis.score
+                    section_count += 1
+                    span.set_outputs(
+                        {
+                            "score": analysis.score,
+                            "findings_count": len(analysis.findings),
+                        }
+                    )
+
+        overall_score = total_score // section_count if section_count > 0 else 0
+        trace_id = (
+            mlflow.get_current_active_span().request_id
+            if mlflow.get_current_active_span()
+            else None
+        )
+
+        yield {"status": "complete", "message": "Analysis complete!"}
+
+        return AgentOutput(
+            genie_space_id=genie_space_id,
+            analyses=analyses,
+            overall_score=overall_score,
+            trace_id=trace_id or "",
+        )
 
 
 OUTPUT_DIR = Path(__file__).parent.parent / "output"

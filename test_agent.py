@@ -22,39 +22,49 @@ def test_agent(url: str = "http://localhost:8000", genie_space_id: str | None = 
     genie_space_id = genie_space_id or os.environ.get("GENIE_SPACE_ID")
 
     if not genie_space_id:
-        print("Error: GENIE_SPACE_ID environment variable not set and --genie-space-id not provided")
+        print(
+            "Error: GENIE_SPACE_ID environment variable not set and --genie-space-id not provided"
+        )
         sys.exit(1)
 
     payload = {"genie_space_id": genie_space_id}
 
-    print(f"Testing agent at {url}/invocations")
+    print(f"Testing agent at {url}/invocations/stream")
     print(f"Genie Space ID: {genie_space_id}")
     print("-" * 50)
 
     try:
-        response = requests.post(
-            f"{url}/invocations",
+        # Use streaming endpoint for progress updates
+        with requests.post(
+            f"{url}/invocations/stream",
             json=payload,
             headers={"Content-Type": "application/json"},
-        )
-        response.raise_for_status()
+            stream=True,
+        ) as response:
+            response.raise_for_status()
 
-        result = response.json()
-        print(json.dumps(result, indent=2))
+            result = None
+            for line in response.iter_lines():
+                if line:
+                    line = line.decode("utf-8")
+                    if line.startswith("data: "):
+                        data = json.loads(line[6:])
+                        status = data.get("status")
 
-        # Print summary
-        if isinstance(result, list) and len(result) > 0:
-            output = result[0]
-            print("\n" + "=" * 50)
-            print("SUMMARY")
-            print("=" * 50)
-            print(f"Overall Score: {output.get('overall_score', 'N/A')}/100")
-            print(f"Sections Analyzed: {len(output.get('analyses', []))}")
-            print(f"Trace ID: {output.get('trace_id', 'N/A')}")
+                        if status == "fetching":
+                            print(f"⏳ {data['message']}")
+                        elif status == "analyzing":
+                            print(
+                                f"🔍 [{data['current']}/{data['total']}] {data['message']}"
+                            )
+                        elif status == "complete":
+                            print(f"✅ {data['message']}")
+                        elif status == "result":
+                            result = data["data"]
 
-            for analysis in output.get("analyses", []):
-                finding_count = len(analysis.get("findings", []))
-                print(f"\n  {analysis['section_name']}: {analysis['score']}/100 ({finding_count} findings)")
+            if result:
+                print("\n" + json.dumps(result, indent=2))
+                _print_summary(result)
 
     except requests.exceptions.ConnectionError:
         print(f"Error: Could not connect to {url}")
@@ -64,6 +74,22 @@ def test_agent(url: str = "http://localhost:8000", genie_space_id: str | None = 
         print(f"HTTP Error: {e}")
         print(f"Response: {e.response.text}")
         sys.exit(1)
+
+
+def _print_summary(output: dict):
+    """Print a summary of the analysis results."""
+    print("\n" + "=" * 50)
+    print("SUMMARY")
+    print("=" * 50)
+    print(f"Overall Score: {output.get('overall_score', 'N/A')}/100")
+    print(f"Sections Analyzed: {len(output.get('analyses', []))}")
+    print(f"Trace ID: {output.get('trace_id', 'N/A')}")
+
+    for analysis in output.get("analyses", []):
+        finding_count = len(analysis.get("findings", []))
+        print(
+            f"\n  {analysis['section_name']}: {analysis['score']}/100 ({finding_count} findings)"
+        )
 
 
 def check_health(url: str = "http://localhost:8000"):
