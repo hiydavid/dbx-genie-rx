@@ -1,0 +1,357 @@
+{
+  "genie_space_id": "01f0627099691651968d0a92a26b06e9",
+  "analyses": [
+    {
+      "section_name": "config.sample_questions",
+      "findings": [
+        {
+          "category": "warning",
+          "severity": "medium",
+          "description": "Only one sample question is provided, which may not adequately demonstrate the space's full range of capabilities",
+          "recommendation": "Add 2-4 additional sample questions that showcase different types of analyses and capabilities the space can handle",
+          "reference": "Include questions that demonstrate the space's core capabilities"
+        },
+        {
+          "category": "suggestion",
+          "severity": "low",
+          "description": "The single question focuses on a specific company (Apple) which may not reflect the broader scope of data available in the space",
+          "recommendation": "Consider adding sample questions that demonstrate broader analytical capabilities, such as comparative analysis, trend analysis, or industry-wide insights",
+          "reference": "Use questions that reflect real business user needs"
+        },
+        {
+          "category": "suggestion",
+          "severity": "low",
+          "description": "The question is relatively straightforward and may not showcase advanced analytical capabilities",
+          "recommendation": "Include at least one sample question that demonstrates more complex analysis, such as 'How does Apple's debt-to-equity ratio compare to its tech industry peers over the last 5 years?' or 'What trends can we identify in Apple's debt structure changes?'",
+          "reference": "Include questions that demonstrate the space's core capabilities"
+        }
+      ],
+      "score": 70,
+      "summary": "The sample questions section has a solid foundation with one relevant business question, but lacks breadth and depth to fully demonstrate the space's capabilities. Adding more diverse sample questions would better showcase the space's potential and guide users toward effective usage patterns."
+    },
+    {
+      "section_name": "data_sources.tables",
+      "findings": [
+        {
+          "category": "best_practice",
+          "severity": "low",
+          "description": "Configuration includes only 2 tables, which is well within the recommended limit of 5 or fewer tables and the maximum of 25 tables",
+          "recommendation": "Continue maintaining a focused set of tables. Consider if additional related financial statement tables (e.g., cash flow statement) would be beneficial for comprehensive financial analysis",
+          "reference": "Stay focused: Include only the tables necessary to answer the questions you want the space to handle. Aim for five or fewer tables"
+        },
+        {
+          "category": "warning",
+          "severity": "medium",
+          "description": "The balance sheet table contains potentially overlapping columns that may confuse Genie, such as GOODWILL and GOOD_WILL_AND_INTANGIBLE_ASSETS, or multiple total equity columns (TOTAL_EQUITY, TOTAL_STOCKHOLDERS_EQUITY, OTHER_TOTAL_STOCKHOLDERS_EQUITY)",
+          "recommendation": "Review and consolidate overlapping columns. Consider creating a simplified view that removes redundant columns or clearly differentiates between similar metrics through better descriptions",
+          "reference": "Troubleshooting - Incorrect Table Usage: Remove unnecessary or overlapping tables"
+        },
+        {
+          "category": "warning",
+          "severity": "medium",
+          "description": "The income statement table appears to contain cash flow statement data (e.g., OPERATING_CASH_FLOW, NET_FINANCING_ACTIVITIES, CAPITAL_EXPENDITURE) which may not align with typical income statement structure",
+          "recommendation": "Verify the table contents match the table name. Consider separating cash flow data into a dedicated table or renaming the table to reflect its actual contents (e.g., 'financial_statements' or 'cash_flow_statement')",
+          "reference": "Troubleshooting - Incorrect Table Usage: Check that metadata terminology matches user terminology"
+        },
+        {
+          "category": "suggestion",
+          "severity": "low",
+          "description": "Column names use technical accounting terminology (e.g., PROPERTY_PLANT_EQUIPMENTNET, TOTAL_LIABILITIES_AND_STOCKHOLDERS_EQUITY) without descriptions visible in the configuration",
+          "recommendation": "Ensure Unity Catalog contains clear, business-friendly descriptions for all columns to help Genie generate accurate responses. Consider adding synonyms for common business terms",
+          "reference": "Build on well-annotated tables: Genie uses Unity Catalog column names and descriptions to generate responses"
+        },
+        {
+          "category": "best_practice",
+          "severity": "low",
+          "description": "Good use of synonyms for the TICKER column in the balance sheet table, mapping 'name' and 'company' to help users refer to companies naturally",
+          "recommendation": "Consider applying similar synonym mappings to the TICKER column in the income statement table and other key business terms throughout both tables",
+          "reference": "Troubleshooting - Incorrect Table Usage: Check that metadata terminology matches user terminology"
+        },
+        {
+          "category": "suggestion",
+          "severity": "low",
+          "description": "Both tables exclude the PERIOD column but include both CALENDAR_YEAR and YEAR columns, which may be redundant",
+          "recommendation": "Review if both CALENDAR_YEAR and YEAR columns are necessary, or if one can be excluded to simplify the dataset",
+          "reference": "Simplify datasets: Prejoining tables and removing unnecessary columns before adding data improves accuracy"
+        }
+      ],
+      "score": 75,
+      "summary": "The configuration follows key best practices with a focused set of 2 tables and good use of synonyms. However, there are opportunities to improve data clarity by addressing overlapping columns, ensuring table contents match their names, and simplifying redundant fields. The tables appear well-structured for financial analysis but would benefit from cleanup to reduce potential confusion."
+    },
+    {
+      "section_name": "instructions.text_instructions",
+      "findings": [
+        {
+          "category": "warning",
+          "severity": "medium",
+          "description": "The instructions are quite lengthy and detailed, which may reduce effectiveness according to best practices that recommend keeping instructions focused and minimal",
+          "recommendation": "Consider condensing the instructions by moving the detailed metric definitions to a separate reference document or table descriptions, keeping only the most critical behavioral guidelines in text_instructions",
+          "reference": "Keep instructions focused and minimal - Too many instructions can reduce effectiveness"
+        },
+        {
+          "category": "best_practice",
+          "severity": "low",
+          "description": "Instructions include proper error handling guidance with NULLIF for divide-by-zero scenarios",
+          "recommendation": "Continue using this approach as it demonstrates good SQL practices",
+          "reference": "Use for globally-applied context"
+        },
+        {
+          "category": "best_practice",
+          "severity": "low",
+          "description": "Instructions provide clear business context mapping (e.g., default to 2022 as latest year, specific ratio calculations)",
+          "recommendation": "This follows the best practice of mapping business context to technical implementation",
+          "reference": "Map business jargon to standard terminology"
+        },
+        {
+          "category": "suggestion",
+          "severity": "low",
+          "description": "The extensive metric definitions could potentially overwhelm the AI and reduce focus on core instructions",
+          "recommendation": "Consider moving the detailed metric formulas to table descriptions or a separate knowledge base, keeping only the core behavioral guidelines (qualification rules, filtering requirements, error handling) in text_instructions",
+          "reference": "Keep instructions focused and minimal - Use for globally-applied context"
+        },
+        {
+          "category": "best_practice",
+          "severity": "low",
+          "description": "Instructions include appropriate clarification behavior (ask one follow-up question when information is missing)",
+          "recommendation": "This is good practice for handling incomplete user queries",
+          "reference": "Use for globally-applied context"
+        }
+      ],
+      "score": 75,
+      "summary": "The section provides comprehensive and well-structured instructions with good business context and error handling. However, it may be too lengthy for optimal effectiveness, as best practices recommend keeping instructions focused and minimal. The detailed metric definitions, while useful, could potentially reduce the impact of the core behavioral guidelines."
+    },
+    {
+      "section_name": "instructions.example_question_sqls",
+      "findings": [
+        {
+          "category": "warning",
+          "severity": "medium",
+          "description": "First example has a typo in the question - 'APPL' instead of 'AAPL' for Apple's ticker symbol",
+          "recommendation": "Correct the typo in the question to use 'AAPL' instead of 'APPL' to match the actual ticker symbol",
+          "reference": "Use for complex, multi-part, or hard-to-interpret questions - questions should be accurate"
+        },
+        {
+          "category": "warning",
+          "severity": "medium",
+          "description": "Parameters lack clear descriptions as recommended in best practices",
+          "recommendation": "Add description fields to all parameters explaining what they represent (e.g., 'company': 'Stock ticker symbol', 'year': 'Financial reporting year')",
+          "reference": "Provide clear descriptions for each parameter"
+        },
+        {
+          "category": "suggestion",
+          "severity": "low",
+          "description": "Missing usage_guidance for all examples which would help trigger appropriate query selection",
+          "recommendation": "Add usage_guidance sections describing when each query should be used and include relevant keywords (e.g., 'debt ratio', 'leverage', 'forecasting', 'prediction')",
+          "reference": "Describe specific scenarios where the query applies and include keywords that should trigger this example"
+        },
+        {
+          "category": "warning",
+          "severity": "medium",
+          "description": "Third example uses hardcoded values ('AAPL', 2022) instead of parameters, reducing reusability",
+          "recommendation": "Replace hardcoded values with parameters to make the query more flexible and reusable across different companies and years",
+          "reference": "Use for commonly varied values (dates, names, limits)"
+        },
+        {
+          "category": "warning",
+          "severity": "low",
+          "description": "Inconsistent table references across examples (different schemas: doan.genai_hackathon vs users.david_huang)",
+          "recommendation": "Standardize table references to use consistent schema names or ensure all referenced tables are accessible",
+          "reference": "Provide complete SQL queries showing intricate patterns"
+        },
+        {
+          "category": "best_practice",
+          "severity": "low",
+          "description": "Examples demonstrate good complexity and diverse financial analysis patterns including ratio calculations, forecasting, and basic data retrieval",
+          "recommendation": "Continue providing diverse examples that showcase different analytical patterns",
+          "reference": "Include diverse examples, remove redundant ones"
+        }
+      ],
+      "score": 65,
+      "summary": "The section provides good diverse examples of financial queries with appropriate complexity, but has issues with parameter descriptions, hardcoded values, typos, and missing usage guidance. The examples show solid SQL patterns but need refinement for better reusability and accuracy."
+    },
+    {
+      "section_name": "instructions.join_specs",
+      "findings": [
+        {
+          "category": "warning",
+          "severity": "high",
+          "description": "Join specifications are defined for the same two tables (genie_balance_sheet and genie_income_statement) with separate conditions on TICKER and YEAR, but they should likely be combined into a single composite join condition",
+          "recommendation": "Combine the TICKER and YEAR join conditions into a single join spec with both conditions: `genie_balance_sheet`.`TICKER` = `genie_income_statement`.`TICKER` AND `genie_balance_sheet`.`YEAR` = `genie_income_statement`.`YEAR`",
+          "reference": "Use join specs for complex scenarios - having separate join specs for what should be a composite key can lead to incorrect query generation"
+        },
+        {
+          "category": "suggestion",
+          "severity": "medium",
+          "description": "Foreign key relationships should be defined in Unity Catalog instead of using join specs if possible, as this is the preferred approach",
+          "recommendation": "Check if foreign key constraints can be defined in Unity Catalog for the TICKER and YEAR relationship between these tables, and remove join specs if foreign keys can be established",
+          "reference": "Define foreign key references in Unity Catalog when possible"
+        },
+        {
+          "category": "suggestion",
+          "severity": "low",
+          "description": "The join specifications lack context about why these specific joins are needed and what business scenarios they support",
+          "recommendation": "Document the business context for these joins and consider providing example queries that demonstrate the expected join behavior for financial data analysis",
+          "reference": "Provide example queries showing standard joins"
+        },
+        {
+          "category": "suggestion",
+          "severity": "low",
+          "description": "For financial reporting tables that are frequently joined together, consider creating pre-joined views to simplify query generation",
+          "recommendation": "Evaluate if a pre-joined view combining balance sheet and income statement data by ticker and year would be beneficial for common analytical queries",
+          "reference": "Pre-join tables into views if other approaches fail"
+        }
+      ],
+      "score": 65,
+      "summary": "The join_specs section contains functional join definitions but has a critical issue with split join conditions that should be combined. The configuration would benefit from exploring Unity Catalog foreign keys as the primary solution and combining the separate join conditions into a single composite join."
+    },
+    {
+      "section_name": "instructions.sql_snippets.filters",
+      "findings": [
+        {
+          "category": "best_practice",
+          "severity": "low",
+          "description": "Good implementation of business-specific filter with clear synonyms",
+          "recommendation": "The 'pre-covid' filter is well-implemented with appropriate synonyms. Consider this as a template for other business-specific filters.",
+          "reference": "Include business-specific filters ('active customers', 'pre-covid')"
+        },
+        {
+          "category": "suggestion",
+          "severity": "medium",
+          "description": "Missing frequently-used time period filters",
+          "recommendation": "Add common time period filters such as 'last quarter', 'YTD', 'current year', 'last 12 months', 'previous year' to support typical business reporting needs.",
+          "reference": "Create filters for frequently-used time periods ('last quarter', 'YTD')"
+        },
+        {
+          "category": "suggestion",
+          "severity": "low",
+          "description": "Limited filter variety for comprehensive business analysis",
+          "recommendation": "Consider adding more business-specific filters relevant to your domain, such as 'active customers', 'high-value transactions', or other commonly filtered categories that users frequently request.",
+          "reference": "Include business-specific filters ('active customers', 'pre-covid')"
+        },
+        {
+          "category": "suggestion",
+          "severity": "low",
+          "description": "Single table reference limits filter reusability",
+          "recommendation": "If year filtering is common across multiple tables, consider creating additional filter variants that reference other date columns (e.g., transaction_date, created_date) to make filters more broadly applicable.",
+          "reference": "Create filters for frequently-used time periods ('last quarter', 'YTD')"
+        }
+      ],
+      "score": 72,
+      "summary": "The filters section demonstrates good implementation of a business-specific filter with proper synonyms, but lacks the commonly expected time period filters that are essential for most business analytics use cases."
+    },
+    {
+      "section_name": "instructions.sql_snippets.expressions",
+      "findings": [
+        {
+          "category": "warning",
+          "severity": "medium",
+          "description": "The SQL expression has incomplete CASE logic - it starts with a condition but lacks the 'CASE WHEN' prefix, making it syntactically invalid",
+          "recommendation": "Fix the SQL syntax by adding 'CASE WHEN' at the beginning: 'CASE WHEN genie_balance_sheet.TICKER in ('AXP', 'BAC') THEN 'financial services' ELSE 'technology' END'",
+          "reference": "expressions - Use for common categorizations or derivations"
+        },
+        {
+          "category": "suggestion",
+          "severity": "low",
+          "description": "The sector categorization only covers 4 tickers with a broad 'technology' catch-all for everything else, which may not accurately represent actual sectors",
+          "recommendation": "Expand the categorization to include more comprehensive sector mappings or consider using a lookup table for more accurate sector classification",
+          "reference": "expressions - Use for common categorizations or derivations"
+        },
+        {
+          "category": "best_practice",
+          "severity": "low",
+          "description": "Good use of synonyms including 'gics' which is a standard industry classification system term",
+          "recommendation": "Consider adding more business-relevant synonyms like 'industry', 'vertical', or 'business segment' to improve user accessibility",
+          "reference": "expressions - Include synonyms for user terminology"
+        },
+        {
+          "category": "best_practice",
+          "severity": "low",
+          "description": "The expression appropriately implements a common business categorization (sector classification) that would be frequently used across queries",
+          "recommendation": "Continue this pattern for other common categorizations in your business domain",
+          "reference": "expressions - Use for common categorizations or derivations"
+        }
+      ],
+      "score": 75,
+      "summary": "The section demonstrates good understanding of expression usage for categorization with appropriate synonyms, but has a critical SQL syntax error that needs immediate correction. The business logic could be more comprehensive."
+    },
+    {
+      "section_name": "instructions.sql_snippets.measures",
+      "findings": [
+        {
+          "category": "warning",
+          "severity": "high",
+          "description": "The current ratio SQL formula is incorrect - it divides TOTAL_CURRENT_LIABILITIES by itself, which will always equal 1, instead of dividing TOTAL_CURRENT_ASSETS by TOTAL_CURRENT_LIABILITIES",
+          "recommendation": "Fix the current ratio formula to: genie_balance_sheet.TOTAL_CURRENT_ASSETS / genie_balance_sheet.TOTAL_CURRENT_LIABILITIES",
+          "reference": "Troubleshooting - Metric Calculation Issues: Provide example SQL for roll-up values"
+        },
+        {
+          "category": "best_practice",
+          "severity": "medium",
+          "description": "Both measures define standard financial liquidity metrics that are frequently used in business analysis, which aligns well with best practices",
+          "recommendation": "Continue defining these standard business concepts as measures to ensure consistency across queries",
+          "reference": "Define frequently used metrics and use for standard business concepts across multiple queries"
+        },
+        {
+          "category": "suggestion",
+          "severity": "low",
+          "description": "The quick ratio calculation could benefit from additional documentation explaining why these specific components (cash, short-term investments, receivables) are used",
+          "recommendation": "Add more detailed instruction explaining that quick ratio excludes inventory and other less liquid current assets for a more conservative liquidity measure",
+          "reference": "Troubleshooting - Metric Calculation Issues: Document pre-computed metrics in table comments"
+        },
+        {
+          "category": "suggestion",
+          "severity": "low",
+          "description": "Consider creating pre-aggregated views for these financial ratios if they are calculated frequently at different organizational levels",
+          "recommendation": "Evaluate if these liquidity metrics would benefit from pre-computed views, especially if used across multiple reporting periods or organizational hierarchies",
+          "reference": "Troubleshooting - Metric Calculation Issues: Create views with pre-aggregated metrics"
+        }
+      ],
+      "score": 25,
+      "summary": "The section correctly identifies important financial metrics as measures, but contains a critical calculation error in the current ratio that renders it meaningless. The quick ratio is properly defined. Overall approach aligns with best practices for standard business metrics."
+    },
+    {
+      "section_name": "benchmarks.questions",
+      "findings": [
+        {
+          "category": "warning",
+          "severity": "high",
+          "description": "Only one benchmark question exists, which is insufficient for comprehensive testing and validation of the Genie Space",
+          "recommendation": "Add multiple benchmark questions covering different business scenarios, data patterns, and query complexities. Aim for at least 10-15 diverse questions that represent common user needs.",
+          "reference": "Add reviewed questions as benchmarks"
+        },
+        {
+          "category": "suggestion",
+          "severity": "medium",
+          "description": "The single question lacks variation in phrasing, missing opportunities to test how the system handles different ways of asking the same thing",
+          "recommendation": "Create multiple variations of this question using different phrasings, such as 'Show me Apple's total assets for FY2022', 'AAPL total asset value in 2022', or 'What were the total assets of Apple Inc. in fiscal 2022?'",
+          "reference": "Test with different phrasings"
+        },
+        {
+          "category": "suggestion",
+          "severity": "medium",
+          "description": "No evidence of user testing or feedback collection process being established through the benchmark questions",
+          "recommendation": "Design benchmark questions that can be used for user testing sessions with business users, focusing on realistic scenarios they would encounter. Include questions that test chat-based refinement capabilities.",
+          "reference": "Conduct user testing with business users"
+        },
+        {
+          "category": "suggestion",
+          "severity": "low",
+          "description": "The existing SQL query appears correct but lacks complexity testing for more advanced scenarios",
+          "recommendation": "Add benchmark questions that test more complex scenarios like aggregations across multiple years, comparisons between companies, or calculations involving multiple financial metrics.",
+          "reference": "Be your space's first user\u2014test and examine generated SQL"
+        },
+        {
+          "category": "suggestion",
+          "severity": "low",
+          "description": "Benchmark questions don't cover edge cases or potential ambiguities in business terminology",
+          "recommendation": "Include questions that test edge cases, such as queries about companies with similar names, fiscal vs calendar years, or questions requiring clarification to ensure the system handles ambiguity appropriately.",
+          "reference": "Test with different phrasings"
+        }
+      ],
+      "score": 25,
+      "summary": "The benchmarks section has minimal content with only one question, failing to adequately test the Genie Space capabilities. While the existing question and SQL appear correct, the lack of diversity in questions, phrasings, and complexity levels significantly limits the ability to validate system performance and conduct proper user testing."
+    }
+  ],
+  "overall_score": 60,
+  "trace_id": "tr-b9c6c7e7d434de3f98bce1ab2b433d0c"
+}
