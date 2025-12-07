@@ -1,0 +1,20 @@
+# Databricks Apps configuration
+# See: https://docs.databricks.com/dev-tools/databricks-apps/
+
+command:
+  - "streamlit"
+  - "run"
+  - "app.py"
+  - "--server.port"
+  - "8000"
+  - "--server.address"
+  - "0.0.0.0"
+  - "--server.headless"
+  - "true"
+
+env:
+  - name: DATABRICKS_HOST
+    valueFrom: "host"
+  - name: DATABRICKS_TOKEN
+    valueFrom: "api-token"
+
