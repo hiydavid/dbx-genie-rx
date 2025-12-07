@@ -244,32 +244,37 @@ If data is empty or missing, note that as a finding."""
         analyses = []
         total_score = 0
         section_count = 0
-        total_sections = len(SECTIONS)
 
-        for i, section_name in enumerate(SECTIONS, 1):
-            section_data = self._get_section_data(space, section_name)
+        # First, determine which sections have data to get accurate total
+        sections_with_data = [
+            (name, self._get_section_data(space, name)) for name in SECTIONS
+        ]
+        sections_with_data = [
+            (name, data) for name, data in sections_with_data if data is not None
+        ]
+        total_sections = len(sections_with_data)
 
-            if section_data is not None:
-                yield {
-                    "status": "analyzing",
-                    "section": section_name,
-                    "current": i,
-                    "total": total_sections,
-                    "message": f"Analyzing {section_name}...",
-                }
+        for i, (section_name, section_data) in enumerate(sections_with_data, 1):
+            yield {
+                "status": "analyzing",
+                "section": section_name,
+                "current": i,
+                "total": total_sections,
+                "message": f"Analyzing {section_name}...",
+            }
 
-                with mlflow.start_span(name=f"analyze_{section_name}") as span:
-                    span.set_inputs({"section_name": section_name})
-                    analysis = self.analyze_section(section_name, section_data)
-                    analyses.append(analysis)
-                    total_score += analysis.score
-                    section_count += 1
-                    span.set_outputs(
-                        {
-                            "score": analysis.score,
-                            "findings_count": len(analysis.findings),
-                        }
-                    )
+            with mlflow.start_span(name=f"analyze_{section_name}") as span:
+                span.set_inputs({"section_name": section_name})
+                analysis = self.analyze_section(section_name, section_data)
+                analyses.append(analysis)
+                total_score += analysis.score
+                section_count += 1
+                span.set_outputs(
+                    {
+                        "score": analysis.score,
+                        "findings_count": len(analysis.findings),
+                    }
+                )
 
         overall_score = total_score // section_count if section_count > 0 else 0
         trace_id = (
