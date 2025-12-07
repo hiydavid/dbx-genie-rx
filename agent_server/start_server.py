@@ -2,12 +2,10 @@ import json
 
 from dotenv import load_dotenv
 
-# Load environment variables before importing agent
 load_dotenv(dotenv_path=".env.local", override=True)
 load_dotenv()  # Also load from .env as fallback
 
-# Import the agent FIRST to register the predict function with mlflow.models.set_model()
-import agent_server.agent  # noqa: E402, F401
+import agent_server.agent
 
 from mlflow.genai.agent_server import (
     AgentServer,
