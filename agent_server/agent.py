@@ -10,6 +10,7 @@ from openai import OpenAI
 
 from agent_server.ingest import get_serialized_space
 from agent_server.models import AgentInput, AgentOutput, Finding, SectionAnalysis
+from agent_server.prompts import get_section_analysis_prompt
 
 # Sections to analyze (in order for future UI walkthrough)
 SECTIONS = [
@@ -108,43 +109,9 @@ class GenieSpaceAnalyzer:
     ) -> SectionAnalysis:
         """Analyze a single section against best practices."""
         relevant_practices = self._get_relevant_best_practices(section_name)
-
-        prompt = f"""You are analyzing a Databricks Genie Space configuration section against best practices.
-
-## Section: {section_name}
-
-## Relevant Best Practices:
-{relevant_practices}
-
-## Data to Analyze:
-```json
-{json.dumps(section_data, indent=2)}
-```
-
-## Instructions:
-Analyze this section against the best practices. For each finding:
-- Identify issues or improvement opportunities
-- Classify severity as "high", "medium", or "low"
-- Provide a specific, actionable recommendation
-- Reference the relevant best practice
-
-Output your analysis as JSON with this exact structure:
-{{
-  "findings": [
-    {{
-      "category": "best_practice" | "warning" | "suggestion",
-      "severity": "high" | "medium" | "low",
-      "description": "Description of the issue or opportunity",
-      "recommendation": "Specific actionable recommendation",
-      "reference": "Reference to the relevant best practice"
-    }}
-  ],
-  "score": 0-100,
-  "summary": "Brief summary of the section's compliance"
-}}
-
-If the section follows best practices well, return fewer findings with a higher score.
-If data is empty or missing, note that as a finding."""
+        prompt = get_section_analysis_prompt(
+            section_name, relevant_practices, section_data
+        )
 
         response = self.llm_client.chat.completions.create(
             model=self.model,
