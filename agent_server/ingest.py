@@ -39,29 +39,16 @@ def get_genie_space(
     return response.json()
 
 
-def save_genie_space(output_dir: str = "output") -> str:
-    """Fetch a Genie space and save it to a local JSON file.
+def get_serialized_space(genie_space_id: str | None = None) -> dict:
+    """Fetch a Genie space and return the parsed serialized space.
 
     Args:
-        output_dir: Directory to save the JSON file (created if doesn't exist)
-        filename: Output filename (defaults to {genie_space_id}.json)
+        genie_space_id: The Genie space ID (defaults to GENIE_SPACE_ID env var)
 
     Returns:
-        Path to the saved JSON file
+        Parsed serialized space configuration as a dictionary
     """
-    data = get_genie_space()
-    serialized_space = json.loads(data["serialized_space"])
-    genie_space_id = os.environ["GENIE_SPACE_ID"]
-
-    os.makedirs(output_dir, exist_ok=True)
-
-    filename = f"space_{genie_space_id}.json"
-    filepath = os.path.join(output_dir, filename)
-
-    with open(filepath, "w") as f:
-        json.dump(serialized_space, f, indent=2)
-
-    return filepath
+    data = get_genie_space(genie_space_id=genie_space_id)
+    return json.loads(data["serialized_space"])
 
 
-save_genie_space("data")

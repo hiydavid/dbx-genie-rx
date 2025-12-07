@@ -1,5 +1,5 @@
 [project]
-name = "dbx-genie-linter"
+name = "dbx-genie-rx"
 version = "0.1.0"
 description = "LLM-powered linting tool for Databricks Genie Spaces"
 readme = "README.md"
@@ -7,9 +7,21 @@ requires-python = ">=3.13"
 dependencies = [
     "databricks-sdk>=0.38.0",
     "pydantic>=2.0",
-    "streamlit>=1.40.0",
-    "python-dotenv"
+    "python-dotenv",
+    "mlflow>=3.6.0",
+    "databricks-agents>=1.4.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+    "openai>=1.0",
+    "requests>=2.31.0",
 ]
 
 [project.scripts]
-genie-lint = "main:main"
+start-server = "agent_server.start_server:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["agent_server"]
