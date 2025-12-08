@@ -15,7 +15,7 @@ An LLM-powered linting tool that analyzes Databricks Genie Space configurations 
 - **Actionable Recommendations** — Each finding includes specific remediation guidance
 - **Interactive Wizard UI** — Step-by-step analysis with progress navigation and JSON preview
 - **Multiple Interfaces** — Use via REST API or interactive Streamlit UI
-- **MLflow Tracing** — Full observability with MLflow trace integration
+- **MLflow Tracing** — Full observability with session-grouped traces (MLflow 3.6+)
 
 ## 🏗️ Architecture
 
@@ -223,7 +223,17 @@ uv run start-server --reload
 
 ### MLflow Tracing
 
-All LLM calls and analysis steps are traced with MLflow. View traces in the MLflow UI or access via the trace ID returned in the response.
+All LLM calls and analysis steps are traced with MLflow. Traces from a single analysis session are grouped together using MLflow 3.6's session ID feature, making it easy to correlate all section analyses for a given Genie Space.
+
+**Querying Traces by Session:**
+
+In the MLflow UI, you can filter traces by session ID:
+
+```
+metadata.`mlflow.trace.session` = '<session-id>'
+```
+
+View traces in the MLflow UI or access via the trace ID returned in the response.
 
 ## 📜 License
 
