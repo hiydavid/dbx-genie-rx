@@ -22,7 +22,7 @@ class SectionAnalysis(BaseModel):
 
     section_name: str  # e.g., "config.sample_questions", "data_sources.tables"
     findings: list[Finding]
-    score: int  # 0-100 compliance score
+    score: int  # 0-10 compliance score
     summary: str
 
 

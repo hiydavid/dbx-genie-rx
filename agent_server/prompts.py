@@ -36,6 +36,7 @@ Analyze this section against the best practices. For each finding:
 - Classify severity as "high", "medium", or "low"
 - Provide a specific, actionable recommendation
 - Reference the relevant best practice
+- No need to check for SQL syntax error since that is done on the Genie Space UI
 
 Output your analysis as JSON with this exact structure:
 {{
@@ -48,9 +49,9 @@ Output your analysis as JSON with this exact structure:
       "reference": "Reference to the relevant best practice"
     }}
   ],
-  "score": 0-100,
+  "score": 0-10,
   "summary": "Brief summary of the section's compliance"
 }}
 
-If the section follows best practices well, return fewer findings with a higher score.
+If the section follows best practices well, return fewer findings with a higher score (closer to 10).
 If data is empty or missing, note that as a finding."""

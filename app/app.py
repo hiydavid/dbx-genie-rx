@@ -281,10 +281,10 @@ def reset_session():
 # =============================================================================
 
 def get_score_class(score: int) -> str:
-    """Get CSS class based on score."""
-    if score >= 80:
+    """Get CSS class based on score (0-10 scale)."""
+    if score >= 8:
         return "good"
-    elif score >= 60:
+    elif score >= 6:
         return "medium"
     return ""
 
@@ -399,6 +399,28 @@ def display_sidebar_nav():
         
         st.markdown("---")
         
+        # Save Results button - only enabled on summary phase
+        save_disabled = phase != "summary"
+        if st.button("💾 Save Results", use_container_width=True, disabled=save_disabled):
+            try:
+                analyses = st.session_state.section_analyses
+                genie_space_id = st.session_state.genie_space_id
+                total_score = sum(a.score for a in analyses)
+                overall_score = total_score // len(analyses) if analyses else 0
+                
+                output = AgentOutput(
+                    genie_space_id=genie_space_id,
+                    analyses=analyses,
+                    overall_score=overall_score,
+                    trace_id="",
+                )
+                filepath = save_analysis_output(output)
+                st.success(f"✅ Saved to {filepath}")
+            except Exception as e:
+                st.error(f"❌ Failed to save: {str(e)}")
+        
+        st.markdown("---")
+        
         # Start over button
         if st.button("🔄 Start Over", use_container_width=True):
             reset_session()
@@ -468,6 +490,11 @@ def display_ingest_phase():
     """Display the ingest preview phase with JSON viewer."""
     space_data = st.session_state.space_data
     sections_with_data = st.session_state.sections_with_data
+    genie_space_id = st.session_state.genie_space_id
+    
+    # Display space ID
+    st.markdown(f"**Space ID:** `{genie_space_id}`")
+    st.markdown("---")
     
     # Metadata summary
     tables_count = len(space_data.get("data_sources", {}).get("tables", []))
@@ -532,23 +559,18 @@ def display_ingest_phase():
 # =============================================================================
 
 def display_finding(finding: Finding):
-    """Display a single finding."""
-    with st.container():
-        st.markdown(
-            f"""
-            <div class="finding-card {finding.severity}">
-                <div style="margin-bottom: 0.5rem;">
-                    <span style="color: #666; font-size: 0.85rem;">{finding.category}</span>
-                </div>
-                <div style="font-weight: 500; margin-bottom: 0.5rem;">{finding.description}</div>
+    """Display a single finding with recommendation inline."""
+    st.markdown(
+        f"""
+        <div class="finding-card {finding.severity}">
+            <div style="font-weight: 500; margin-bottom: 0.5rem;">{finding.description}</div>
+            <div style="color: #555; font-size: 0.9rem; padding-top: 0.5rem; border-top: 1px solid #E0E0E0;">
+                💡 {finding.recommendation}
             </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        with st.expander("💡 Recommendation"):
-            st.markdown(finding.recommendation)
-            if finding.reference:
-                st.caption(f"📖 Reference: {finding.reference}")
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def display_findings_by_severity(findings: list[Finding]):
@@ -578,6 +600,11 @@ def display_analysis_phase():
     sections = st.session_state.sections_with_data
     current_idx = st.session_state.current_section_idx
     analyses = st.session_state.section_analyses
+    genie_space_id = st.session_state.genie_space_id
+    
+    # Display space ID
+    st.markdown(f"**Space ID:** `{genie_space_id}`")
+    st.markdown("---")
     
     # Check if we're viewing a previously analyzed section or analyzing a new one
     is_reviewing = current_idx < len(analyses)
@@ -639,10 +666,10 @@ def display_analysis_phase():
     
     with col_findings:
         # Score display at top
-        if analysis.score >= 80:
+        if analysis.score >= 8:
             score_color = "#00A972"
             score_emoji = "✅"
-        elif analysis.score >= 60:
+        elif analysis.score >= 6:
             score_color = "#FF9800"
             score_emoji = "⚠️"
         else:
@@ -653,7 +680,7 @@ def display_analysis_phase():
             f"""
             <div style="background-color: {score_color}; color: white; 
                         border-radius: 12px; padding: 1rem; text-align: center; margin-bottom: 1rem;">
-                <div style="font-size: 2rem; font-weight: 800;">{analysis.score}/100</div>
+                <div style="font-size: 2rem; font-weight: 800;">{analysis.score}/10</div>
                 <div style="font-size: 0.85rem; opacity: 0.9;">Section Score</div>
             </div>
             """,
@@ -684,17 +711,13 @@ def display_summary_phase():
     analyses = st.session_state.section_analyses
     genie_space_id = st.session_state.genie_space_id
     
+    # Display space ID
+    st.markdown(f"**Space ID:** `{genie_space_id}`")
+    st.markdown("---")
+    
     # Calculate overall score
     total_score = sum(a.score for a in analyses)
     overall_score = total_score // len(analyses) if analyses else 0
-    
-    # Create AgentOutput for saving
-    output = AgentOutput(
-        genie_space_id=genie_space_id,
-        analyses=analyses,
-        overall_score=overall_score,
-        trace_id="",
-    )
     
     # Overall Score Card centered
     col1, col2, col3 = st.columns([1, 2, 1])
@@ -741,9 +764,9 @@ def display_summary_phase():
             finding_count = len(analysis.findings)
             
             # Score color
-            if analysis.score >= 80:
+            if analysis.score >= 8:
                 score_color = "#00A972"
-            elif analysis.score >= 60:
+            elif analysis.score >= 6:
                 score_color = "#FF9800"
             else:
                 score_color = "#C62828"
@@ -753,7 +776,7 @@ def display_summary_phase():
                 <div style="display: flex; justify-content: space-between; align-items: center; 
                             padding: 0.75rem; background: #F8F9FA; border-radius: 8px; margin-bottom: 0.5rem;">
                     <span style="font-weight: 500;">{display_name}</span>
-                    <span style="color: {score_color}; font-weight: 700;">{analysis.score}/100</span>
+                    <span style="color: {score_color}; font-weight: 700;">{analysis.score}/10</span>
                 </div>
                 """,
                 unsafe_allow_html=True
@@ -772,24 +795,6 @@ def display_summary_phase():
             display_findings_by_severity(all_findings)
         else:
             st.success("✅ No issues found across all sections!")
-    
-    st.markdown("---")
-    
-    # Action buttons
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        if st.button("💾 Save Results", use_container_width=True):
-            try:
-                filepath = save_analysis_output(output)
-                st.success(f"✅ Results saved to {filepath}")
-            except Exception as e:
-                st.error(f"❌ Failed to save: {str(e)}")
-    
-    with col2:
-        if st.button("🔄 New Analysis", type="primary", use_container_width=True):
-            reset_session()
-            st.rerun()
 
 
 # =============================================================================
