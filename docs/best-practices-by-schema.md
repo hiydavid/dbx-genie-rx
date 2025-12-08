@@ -127,11 +127,6 @@ When Genie filters for wrong values (e.g., "California" instead of "CA"):
 - Include diverse examples, remove redundant ones
 - Keep queries as short as possible
 
-**Good candidates:**
-
-- "breakdown my team's performance"
-- "For customers who've only joined recently, what products are doing the best?"
-
 #### `parameters`
 
 **Best Practices:**
@@ -218,13 +213,6 @@ When Genie filters for wrong values (e.g., "California" instead of "CA"):
 ---
 
 ## Performance and Limits
-
-**Token Limits:**
-
-- Remove/hide unnecessary columns
-- Streamline column descriptions
-- Prune redundant example queries
-- Simplify instructions
 
 **Performance Issues:**
 
