@@ -310,18 +310,128 @@ class GenieSpaceAnalyzer:
 OUTPUT_DIR = Path(__file__).parent.parent / "output"
 
 
+def _format_section_name(section_name: str) -> str:
+    """Format section name for display in markdown."""
+    return section_name.replace("_", " ").replace(".", " → ").title()
+
+
+def format_analysis_as_markdown(output: AgentOutput) -> str:
+    """Convert analysis output to a formatted markdown document.
+
+    Args:
+        output: The analysis output to format
+
+    Returns:
+        Formatted markdown string
+    """
+    lines = []
+
+    # Title
+    lines.append(f"# Genie Space Analysis Report")
+    lines.append("")
+    lines.append(f"**Space ID:** `{output.genie_space_id}`")
+    lines.append("")
+
+    # Overall Score
+    lines.append("---")
+    lines.append("")
+    lines.append(f"## Overall Score: {output.overall_score}/10")
+    lines.append("")
+
+    # Summary Statistics
+    total_findings = sum(len(a.findings) for a in output.analyses)
+    high_count = sum(
+        1 for a in output.analyses for f in a.findings if f.severity == "high"
+    )
+    medium_count = sum(
+        1 for a in output.analyses for f in a.findings if f.severity == "medium"
+    )
+    low_count = sum(
+        1 for a in output.analyses for f in a.findings if f.severity == "low"
+    )
+
+    lines.append("### Summary Statistics")
+    lines.append("")
+    lines.append(f"- **Total Findings:** {total_findings}")
+    lines.append(f"- **High Severity:** {high_count}")
+    lines.append(f"- **Medium Severity:** {medium_count}")
+    lines.append(f"- **Low Severity:** {low_count}")
+    lines.append(f"- **Sections Analyzed:** {len(output.analyses)}")
+    lines.append("")
+
+    # Section-by-section breakdown
+    lines.append("---")
+    lines.append("")
+    lines.append("## Section Analysis")
+    lines.append("")
+
+    for analysis in output.analyses:
+        display_name = _format_section_name(analysis.section_name)
+
+        # Section header with score
+        lines.append(f"### {display_name}")
+        lines.append("")
+        lines.append(f"**Score:** {analysis.score}/10")
+        lines.append("")
+
+        # Summary
+        if analysis.summary:
+            lines.append(f"**Summary:** {analysis.summary}")
+            lines.append("")
+
+        # Findings grouped by severity
+        if analysis.findings:
+            lines.append("#### Findings")
+            lines.append("")
+
+            # Group findings by severity
+            findings_by_severity = {"high": [], "medium": [], "low": []}
+            for finding in analysis.findings:
+                if finding.severity in findings_by_severity:
+                    findings_by_severity[finding.severity].append(finding)
+
+            severity_labels = {
+                "high": "🔴 High Severity",
+                "medium": "🟠 Medium Severity",
+                "low": "🔵 Low Severity",
+            }
+
+            for severity in ["high", "medium", "low"]:
+                severity_findings = findings_by_severity[severity]
+                if severity_findings:
+                    lines.append(f"**{severity_labels[severity]}**")
+                    lines.append("")
+                    for finding in severity_findings:
+                        lines.append(f"- **{finding.description}**")
+                        lines.append(
+                            f"  - 💡 *Recommendation:* {finding.recommendation}"
+                        )
+                        if finding.reference:
+                            lines.append(f"  - 📚 *Reference:* {finding.reference}")
+                    lines.append("")
+        else:
+            lines.append("✅ No issues found in this section.")
+            lines.append("")
+
+        lines.append("---")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
 def save_analysis_output(output: AgentOutput) -> Path:
-    """Save analysis output to JSON file.
+    """Save analysis output as a formatted markdown file.
 
     Args:
         output: The analysis output to save
 
     Returns:
-        Path to the saved JSON file
+        Path to the saved markdown file
     """
     OUTPUT_DIR.mkdir(exist_ok=True)
-    filepath = OUTPUT_DIR / f"analysis_{output.genie_space_id}.json"
-    filepath.write_text(json.dumps(output.model_dump(), indent=2))
+    filepath = OUTPUT_DIR / f"analysis_{output.genie_space_id}.md"
+    markdown_content = format_analysis_as_markdown(output)
+    filepath.write_text(markdown_content)
     return filepath
 
 

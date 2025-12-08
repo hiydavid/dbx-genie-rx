@@ -6,6 +6,7 @@ Provides a multi-step wizard interface for analyzing Genie Spaces against best p
 
 import os
 import sys
+from pathlib import Path
 
 # Add parent directory to path to import agent_server modules
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -244,6 +245,7 @@ st.markdown(
 # Session State Initialization
 # =============================================================================
 
+
 def init_session_state():
     """Initialize session state with default values."""
     defaults = {
@@ -255,6 +257,8 @@ def init_session_state():
         "section_analyses": [],
         "analyzer": None,
         "all_sections_analyzed": False,
+        "show_best_practices": False,  # Toggle for best practices page
+        "expanded_sections": {},  # Track which sections are expanded on summary page
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -279,6 +283,7 @@ def reset_session():
 # =============================================================================
 # Helper Functions
 # =============================================================================
+
 
 def get_score_class(score: int) -> str:
     """Get CSS class based on score (0-10 scale)."""
@@ -320,9 +325,19 @@ def group_findings_by_severity(findings: list[Finding]) -> dict[str, list[Findin
     return grouped
 
 
+def load_best_practices_content() -> str:
+    """Load the best practices markdown content."""
+    # Use absolute path resolution to handle different working directories
+    docs_path = (
+        Path(__file__).resolve().parent.parent / "docs" / "best-practices-by-schema.md"
+    )
+    return docs_path.read_text()
+
+
 # =============================================================================
 # Sidebar Navigation Component
 # =============================================================================
+
 
 def display_sidebar_nav():
     """Display the sidebar navigation."""
@@ -331,83 +346,94 @@ def display_sidebar_nav():
     current_idx = st.session_state.current_section_idx
     completed_analyses = len(st.session_state.section_analyses)
     all_done = st.session_state.all_sections_analyzed
-    
+
     with st.sidebar:
         st.markdown("### 📍 Progress")
         st.markdown("---")
-        
+
         # Only show nav if past input phase
         if phase == "input":
             st.caption("Enter a Genie Space ID to begin")
             return
-        
+
         # Ingest step
-        if phase == "ingest":
+        if phase == "ingest" and not st.session_state.show_best_practices:
             st.markdown(
                 '<div class="nav-item current">📥 Ingest Preview</div>',
-                unsafe_allow_html=True
+                unsafe_allow_html=True,
             )
         else:
-            if st.button("✓ Ingest Preview", key="nav_ingest", use_container_width=True):
+            if st.button(
+                "✓ Ingest Preview", key="nav_ingest", use_container_width=True
+            ):
                 st.session_state.phase = "ingest"
+                st.session_state.show_best_practices = False
                 st.rerun()
-        
+
         st.markdown("---")
         st.markdown("**Sections**")
-        
+
         # Section steps
         for i, (section_name, _) in enumerate(sections):
             short_name = get_short_section_name(section_name)
-            
-            if phase == "analysis" and i == current_idx:
+
+            if (
+                phase == "analysis"
+                and i == current_idx
+                and not st.session_state.show_best_practices
+            ):
                 # Current section
                 st.markdown(
                     f'<div class="nav-item current">🔍 {short_name}</div>',
-                    unsafe_allow_html=True
+                    unsafe_allow_html=True,
                 )
             elif i < completed_analyses:
                 # Completed section - clickable
-                if st.button(f"✓ {short_name}", key=f"nav_section_{i}", use_container_width=True):
+                if st.button(
+                    f"✓ {short_name}", key=f"nav_section_{i}", use_container_width=True
+                ):
                     st.session_state.phase = "analysis"
                     st.session_state.current_section_idx = i
+                    st.session_state.show_best_practices = False
                     st.rerun()
             else:
                 # Pending section
                 st.markdown(
                     f'<div class="nav-item pending">○ {short_name}</div>',
-                    unsafe_allow_html=True
+                    unsafe_allow_html=True,
                 )
-        
+
         st.markdown("---")
-        
+
         # Summary step - clickable if all sections are analyzed
-        if phase == "summary":
+        if phase == "summary" and not st.session_state.show_best_practices:
             st.markdown(
-                '<div class="nav-item current">📊 Summary</div>',
-                unsafe_allow_html=True
+                '<div class="nav-item current">📊 Summary</div>', unsafe_allow_html=True
             )
         elif all_done or completed_analyses == len(sections):
             # All sections analyzed - summary is clickable
             if st.button("📊 Summary", key="nav_summary", use_container_width=True):
                 st.session_state.phase = "summary"
+                st.session_state.show_best_practices = False
                 st.rerun()
         else:
             st.markdown(
-                '<div class="nav-item pending">○ Summary</div>',
-                unsafe_allow_html=True
+                '<div class="nav-item pending">○ Summary</div>', unsafe_allow_html=True
             )
-        
+
         st.markdown("---")
-        
+
         # Save Results button - only enabled on summary phase
         save_disabled = phase != "summary"
-        if st.button("💾 Save Results", use_container_width=True, disabled=save_disabled):
+        if st.button(
+            "💾 Save Results", use_container_width=True, disabled=save_disabled
+        ):
             try:
                 analyses = st.session_state.section_analyses
                 genie_space_id = st.session_state.genie_space_id
                 total_score = sum(a.score for a in analyses)
                 overall_score = total_score // len(analyses) if analyses else 0
-                
+
                 output = AgentOutput(
                     genie_space_id=genie_space_id,
                     analyses=analyses,
@@ -418,9 +444,16 @@ def display_sidebar_nav():
                 st.success(f"✅ Saved to {filepath}")
             except Exception as e:
                 st.error(f"❌ Failed to save: {str(e)}")
-        
+
         st.markdown("---")
-        
+
+        # Best Practices button
+        if st.button("📚 Best Practices", use_container_width=True):
+            st.session_state.show_best_practices = True
+            st.rerun()
+
+        st.markdown("---")
+
         # Start over button
         if st.button("🔄 Start Over", use_container_width=True):
             reset_session()
@@ -430,6 +463,7 @@ def display_sidebar_nav():
 # =============================================================================
 # Phase 1: Input Phase
 # =============================================================================
+
 
 def display_input_phase():
     """Display the initial input phase."""
@@ -447,7 +481,7 @@ def display_input_phase():
         )
 
     st.markdown("### Enter Genie Space ID")
-    
+
     col1, col2 = st.columns([3, 1])
 
     with col1:
@@ -459,7 +493,9 @@ def display_input_phase():
         )
 
     with col2:
-        fetch_button = st.button("📥 Fetch Space", type="primary", use_container_width=True)
+        fetch_button = st.button(
+            "📥 Fetch Space", type="primary", use_container_width=True
+        )
 
     if fetch_button:
         if not genie_space_id:
@@ -472,7 +508,7 @@ def display_input_phase():
                     space_data = get_serialized_space(genie_space_id)
                     analyzer = get_analyzer()
                     sections_with_data = analyzer.get_sections_with_data(space_data)
-                    
+
                     st.session_state.genie_space_id = genie_space_id
                     st.session_state.space_data = space_data
                     st.session_state.sections_with_data = sections_with_data
@@ -486,23 +522,28 @@ def display_input_phase():
 # Phase 2: Ingest Preview Phase
 # =============================================================================
 
+
 def display_ingest_phase():
     """Display the ingest preview phase with JSON viewer."""
     space_data = st.session_state.space_data
     sections_with_data = st.session_state.sections_with_data
     genie_space_id = st.session_state.genie_space_id
-    
+
     # Display space ID
     st.markdown(f"**Space ID:** `{genie_space_id}`")
     st.markdown("---")
-    
+
     # Metadata summary
     tables_count = len(space_data.get("data_sources", {}).get("tables", []))
     metric_views_count = len(space_data.get("data_sources", {}).get("metric_views", []))
-    instructions_count = len(space_data.get("instructions", {}).get("text_instructions", []))
-    examples_count = len(space_data.get("instructions", {}).get("example_question_sqls", []))
+    instructions_count = len(
+        space_data.get("instructions", {}).get("text_instructions", [])
+    )
+    examples_count = len(
+        space_data.get("instructions", {}).get("example_question_sqls", [])
+    )
     benchmarks_count = len(space_data.get("benchmarks", {}).get("questions", []))
-    
+
     col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
         st.metric("📊 Tables", tables_count)
@@ -514,34 +555,41 @@ def display_ingest_phase():
         st.metric("💡 Examples", examples_count)
     with col5:
         st.metric("✅ Benchmarks", benchmarks_count)
-    
+
     st.markdown("---")
-    
+
     # Two-column layout: JSON on left, sections list on right
     col_json, col_info = st.columns([2, 1])
-    
+
     with col_json:
-        st.markdown('<div class="panel-header">📄 Serialized Space Data</div>', unsafe_allow_html=True)
-        
+        st.markdown(
+            '<div class="panel-header">📄 Serialized Space Data</div>',
+            unsafe_allow_html=True,
+        )
+
         # Display each section in collapsible expanders
         for section_name, section_data in sections_with_data:
             display_name = format_section_name(section_name)
             item_count = len(section_data) if isinstance(section_data, list) else 1
-            
-            with st.expander(f"**{display_name}** ({item_count} item{'s' if item_count != 1 else ''})"):
+
+            with st.expander(
+                f"**{display_name}** ({item_count} item{'s' if item_count != 1 else ''})"
+            ):
                 st.json(section_data)
-    
+
     with col_info:
-        st.markdown('<div class="panel-header">ℹ️ Analysis Info</div>', unsafe_allow_html=True)
-        
+        st.markdown(
+            '<div class="panel-header">ℹ️ Analysis Info</div>', unsafe_allow_html=True
+        )
+
         st.markdown(f"**Sections to analyze:** {len(sections_with_data)}")
-        
+
         for section_name, _ in sections_with_data:
             short_name = get_short_section_name(section_name)
             st.markdown(f"- {short_name}")
-        
+
         st.markdown("---")
-        
+
         if st.button("🚀 Start Analysis", type="primary", use_container_width=True):
             # Start a new MLflow session for trace grouping
             analyzer = get_analyzer()
@@ -557,6 +605,7 @@ def display_ingest_phase():
 # =============================================================================
 # Phase 3: Section Analysis Phase
 # =============================================================================
+
 
 def display_finding(finding: Finding):
     """Display a single finding with recommendation inline."""
@@ -576,20 +625,20 @@ def display_finding(finding: Finding):
 def display_findings_by_severity(findings: list[Finding]):
     """Display findings grouped by severity."""
     grouped = group_findings_by_severity(findings)
-    
+
     severity_labels = {
         "high": ("🔴 High Severity", "#C62828"),
         "medium": ("🟠 Medium Severity", "#E65100"),
         "low": ("🔵 Low Severity", "#1565C0"),
     }
-    
+
     for severity in ["high", "medium", "low"]:
         severity_findings = grouped[severity]
         if severity_findings:
             label, color = severity_labels[severity]
             st.markdown(
                 f'<div class="severity-group-header {severity}">{label} ({len(severity_findings)})</div>',
-                unsafe_allow_html=True
+                unsafe_allow_html=True,
             )
             for finding in severity_findings:
                 display_finding(finding)
@@ -601,17 +650,17 @@ def display_analysis_phase():
     current_idx = st.session_state.current_section_idx
     analyses = st.session_state.section_analyses
     genie_space_id = st.session_state.genie_space_id
-    
+
     # Display space ID
     st.markdown(f"**Space ID:** `{genie_space_id}`")
     st.markdown("---")
-    
+
     # Check if we're viewing a previously analyzed section or analyzing a new one
     is_reviewing = current_idx < len(analyses)
-    
+
     section_name, section_data = sections[current_idx]
     display_name = format_section_name(section_name)
-    
+
     # Run analysis if needed
     if not is_reviewing:
         with st.spinner(f"Analyzing {display_name}..."):
@@ -619,24 +668,24 @@ def display_analysis_phase():
                 analyzer = get_analyzer()
                 analysis = analyzer.analyze_section(section_name, section_data)
                 st.session_state.section_analyses.append(analysis)
-                
+
                 # Check if all sections are now analyzed
                 if len(st.session_state.section_analyses) == len(sections):
                     st.session_state.all_sections_analyzed = True
-                
+
                 st.rerun()
             except Exception as e:
                 st.error(f"❌ Analysis failed: {str(e)}")
                 return
-    
+
     analysis = analyses[current_idx]
-    
+
     # Header with section info
     col_title, col_nav = st.columns([3, 1])
     with col_title:
         st.markdown(f"### 📊 {display_name}")
         st.caption(f"Section {current_idx + 1} of {len(sections)}")
-    
+
     with col_nav:
         # Navigation buttons
         nav_col1, nav_col2 = st.columns(2)
@@ -654,16 +703,18 @@ def display_analysis_phase():
                 if st.button("Summary →", type="primary", use_container_width=True):
                     st.session_state.phase = "summary"
                     st.rerun()
-    
+
     st.markdown("---")
-    
+
     # Three-column layout: JSON | Score | Findings
     col_json, col_findings = st.columns([1, 1])
-    
+
     with col_json:
-        st.markdown('<div class="panel-header">📄 Section Data</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="panel-header">📄 Section Data</div>', unsafe_allow_html=True
+        )
         st.json(section_data)
-    
+
     with col_findings:
         # Score display at top
         if analysis.score >= 8:
@@ -675,7 +726,7 @@ def display_analysis_phase():
         else:
             score_color = "#C62828"
             score_emoji = "❌"
-        
+
         st.markdown(
             f"""
             <div style="background-color: {score_color}; color: white; 
@@ -684,14 +735,16 @@ def display_analysis_phase():
                 <div style="font-size: 0.85rem; opacity: 0.9;">Section Score</div>
             </div>
             """,
-            unsafe_allow_html=True
+            unsafe_allow_html=True,
         )
-        
+
         if analysis.summary:
             st.info(f"{score_emoji} {analysis.summary}")
-        
-        st.markdown('<div class="panel-header">🔍 Findings</div>', unsafe_allow_html=True)
-        
+
+        st.markdown(
+            '<div class="panel-header">🔍 Findings</div>', unsafe_allow_html=True
+        )
+
         if analysis.findings:
             display_findings_by_severity(analysis.findings)
         else:
@@ -702,6 +755,7 @@ def display_analysis_phase():
 # Phase 4: Summary Phase
 # =============================================================================
 
+
 def display_summary_phase():
     """Display the final summary page."""
     # End MLflow session now that analysis is complete
@@ -710,15 +764,19 @@ def display_summary_phase():
 
     analyses = st.session_state.section_analyses
     genie_space_id = st.session_state.genie_space_id
-    
+
+    # Initialize expanded_sections state for all sections if not already set
+    if not st.session_state.expanded_sections:
+        st.session_state.expanded_sections = {a.section_name: False for a in analyses}
+
     # Display space ID
     st.markdown(f"**Space ID:** `{genie_space_id}`")
     st.markdown("---")
-    
+
     # Calculate overall score
     total_score = sum(a.score for a in analyses)
     overall_score = total_score // len(analyses) if analyses else 0
-    
+
     # Overall Score Card centered
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
@@ -732,15 +790,17 @@ def display_summary_phase():
             """,
             unsafe_allow_html=True,
         )
-    
+
     st.markdown("<br>", unsafe_allow_html=True)
-    
+
     # Summary statistics
     total_findings = sum(len(a.findings) for a in analyses)
     high_count = sum(1 for a in analyses for f in a.findings if f.severity == "high")
-    medium_count = sum(1 for a in analyses for f in a.findings if f.severity == "medium")
+    medium_count = sum(
+        1 for a in analyses for f in a.findings if f.severity == "medium"
+    )
     low_count = sum(1 for a in analyses for f in a.findings if f.severity == "low")
-    
+
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("Total Findings", total_findings)
@@ -750,64 +810,109 @@ def display_summary_phase():
         st.metric("🟠 Medium", medium_count)
     with col4:
         st.metric("🔵 Low", low_count)
-    
+
     st.markdown("---")
-    
-    # Two-column layout: Section scores | All findings by severity
-    col_sections, col_findings = st.columns([1, 1])
-    
-    with col_sections:
-        st.markdown('<div class="panel-header">📋 Section Scores</div>', unsafe_allow_html=True)
-        
-        for analysis in analyses:
-            display_name = format_section_name(analysis.section_name)
-            finding_count = len(analysis.findings)
-            
-            # Score color
-            if analysis.score >= 8:
-                score_color = "#00A972"
-            elif analysis.score >= 6:
-                score_color = "#FF9800"
-            else:
-                score_color = "#C62828"
-            
-            st.markdown(
-                f"""
-                <div style="display: flex; justify-content: space-between; align-items: center; 
-                            padding: 0.75rem; background: #F8F9FA; border-radius: 8px; margin-bottom: 0.5rem;">
-                    <span style="font-weight: 500;">{display_name}</span>
-                    <span style="color: {score_color}; font-weight: 700;">{analysis.score}/10</span>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-    
-    with col_findings:
-        st.markdown('<div class="panel-header">🔍 All Findings by Severity</div>', unsafe_allow_html=True)
-        
-        # Collect all findings
-        all_findings = []
-        for analysis in analyses:
-            for finding in analysis.findings:
-                all_findings.append(finding)
-        
-        if all_findings:
-            display_findings_by_severity(all_findings)
+
+    # Header with expand/collapse all buttons
+    header_col, btn_col1, btn_col2 = st.columns([4, 1, 1])
+    with header_col:
+        st.markdown(
+            '<div class="panel-header">📋 Section Scores</div>',
+            unsafe_allow_html=True,
+        )
+    with btn_col1:
+        if st.button("Expand All", key="expand_all", use_container_width=True):
+            for a in analyses:
+                st.session_state.expanded_sections[a.section_name] = True
+            st.rerun()
+    with btn_col2:
+        if st.button("Collapse All", key="collapse_all", use_container_width=True):
+            for a in analyses:
+                st.session_state.expanded_sections[a.section_name] = False
+            st.rerun()
+
+    # Display each section as an expandable card
+    for analysis in analyses:
+        display_name = format_section_name(analysis.section_name)
+        finding_count = len(analysis.findings)
+
+        # Score color and emoji
+        if analysis.score >= 8:
+            score_color = "#00A972"
+            score_emoji = "✅"
+        elif analysis.score >= 6:
+            score_color = "#FF9800"
+            score_emoji = "⚠️"
         else:
-            st.success("✅ No issues found across all sections!")
+            score_color = "#C62828"
+            score_emoji = "❌"
+
+        # Create expander with section name and score in the label
+        expander_label = f"{display_name} — **{analysis.score}/10**"
+        is_expanded = st.session_state.expanded_sections.get(
+            analysis.section_name, False
+        )
+
+        with st.expander(expander_label, expanded=is_expanded):
+            # Update expanded state when user interacts
+            st.session_state.expanded_sections[analysis.section_name] = True
+
+            # Summary
+            if analysis.summary:
+                st.info(f"{score_emoji} {analysis.summary}")
+
+            # Findings
+            if analysis.findings:
+                st.markdown(f"**Findings ({finding_count})**")
+                display_findings_by_severity(analysis.findings)
+            else:
+                st.success("✅ No issues found in this section!")
+
+
+# =============================================================================
+# Best Practices Page
+# =============================================================================
+
+
+def display_best_practices_page():
+    """Display the best practices documentation page."""
+    # Back button
+    if st.button("← Back to Analysis", use_container_width=False):
+        st.session_state.show_best_practices = False
+        st.rerun()
+
+    st.markdown("---")
+
+    # Load and display the markdown content
+    content = load_best_practices_content()
+    st.markdown(content)
 
 
 # =============================================================================
 # Main App
 # =============================================================================
 
+
 def main():
     """Main app entry point."""
     init_session_state()
-    
+
     # Sidebar navigation
     display_sidebar_nav()
-    
+
+    # Check if showing best practices page
+    if st.session_state.show_best_practices:
+        st.markdown(
+            '<div class="header-title">📚 Best Practices Reference</div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            '<div class="header-subtitle">Genie Space configuration guidelines organized by schema</div>',
+            unsafe_allow_html=True,
+        )
+        display_best_practices_page()
+        return
+
     # Header
     st.markdown(
         '<div class="header-title">🔍 Genie Space Analyzer</div>',
@@ -817,10 +922,10 @@ def main():
         '<div class="header-subtitle">Analyze your Databricks Genie Space configuration against best practices</div>',
         unsafe_allow_html=True,
     )
-    
+
     # Route to appropriate phase
     phase = st.session_state.phase
-    
+
     if phase == "input":
         display_input_phase()
     elif phase == "ingest":
