@@ -4,6 +4,7 @@
 databricks.yml
 /scratch
 /output
+.cursor
 
 ### Python ###
 # Byte-compiled / optimized / DLL files

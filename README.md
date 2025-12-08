@@ -1,4 +1,4 @@
-# (WIP) 🔍 GenieRX: The Genie Space Analyzer
+# (THIS IS A WORK IN PROGRESS AND EXPERIMENTAL) 🔍 GenieRX: The Genie Space Analyzer
 
 An LLM-powered linting tool that analyzes Databricks Genie Space configurations against best practices. Get actionable insights and recommendations to improve your Genie Space setup.
 
@@ -13,6 +13,7 @@ An LLM-powered linting tool that analyzes Databricks Genie Space configurations 
 - **Severity-based Findings** — Categorizes issues as high, medium, or low severity
 - **Compliance Scoring** — Provides per-section and overall compliance scores (0-100)
 - **Actionable Recommendations** — Each finding includes specific remediation guidance
+- **Interactive Wizard UI** — Step-by-step analysis with progress navigation and JSON preview
 - **Multiple Interfaces** — Use via REST API or interactive Streamlit UI
 - **MLflow Tracing** — Full observability with MLflow trace integration
 
@@ -110,14 +111,25 @@ LLM_MODEL=databricks-claude-sonnet-4
 
 ### Streamlit UI
 
-The easiest way to use the analyzer is through the Streamlit interface:
+The easiest way to use the analyzer is through the interactive Streamlit wizard:
 
 ```bash
 cd app
 streamlit run app.py
 ```
 
-Then open http://localhost:8501 in your browser, enter a Genie Space ID, and click **Analyze**.
+Then open http://localhost:8501 in your browser. The wizard guides you through 4 phases:
+
+1. **Input** — Enter your Genie Space ID and click "Fetch Space"
+2. **Ingest Preview** — Review the serialized JSON data before analysis begins
+3. **Section Analysis** — Step through each section one-by-one, viewing findings grouped by severity
+4. **Summary** — See overall compliance score and all findings across sections
+
+**UI Features:**
+- **Left Sidebar Navigation** — Track progress and jump to any completed section
+- **JSON Preview** — Inspect raw section data alongside analysis results
+- **Severity Grouping** — Findings organized by High / Medium / Low severity
+- **Save Results** — Export analysis to JSON file
 
 ### REST API
 

@@ -191,6 +191,22 @@ class GenieSpaceAnalyzer:
 
         return outputs
 
+    def get_sections_with_data(self, space: dict) -> list[tuple[str, dict | list]]:
+        """Get list of sections that have data in the space.
+
+        Args:
+            space: The serialized Genie space
+
+        Returns:
+            List of (section_name, section_data) tuples
+        """
+        sections_with_data = []
+        for section_name in SECTIONS:
+            section_data = self._get_section_data(space, section_name)
+            if section_data is not None:
+                sections_with_data.append((section_name, section_data))
+        return sections_with_data
+
     def predict_streaming(
         self, agent_input: AgentInput
     ) -> Generator[dict, None, AgentOutput]:
