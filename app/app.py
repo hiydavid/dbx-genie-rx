@@ -263,6 +263,10 @@ def init_session_state():
 
 def reset_session():
     """Reset session state to initial values."""
+    # End MLflow session if analyzer exists
+    if st.session_state.analyzer:
+        st.session_state.analyzer.end_session()
+
     st.session_state.phase = "input"
     st.session_state.genie_space_id = ""
     st.session_state.space_data = None
@@ -512,6 +516,10 @@ def display_ingest_phase():
         st.markdown("---")
         
         if st.button("🚀 Start Analysis", type="primary", use_container_width=True):
+            # Start a new MLflow session for trace grouping
+            analyzer = get_analyzer()
+            analyzer.start_session()
+
             st.session_state.phase = "analysis"
             st.session_state.current_section_idx = 0
             st.session_state.section_analyses = []
@@ -669,6 +677,10 @@ def display_analysis_phase():
 
 def display_summary_phase():
     """Display the final summary page."""
+    # End MLflow session now that analysis is complete
+    if st.session_state.analyzer:
+        st.session_state.analyzer.end_session()
+
     analyses = st.session_state.section_analyses
     genie_space_id = st.session_state.genie_space_id
     
