@@ -153,7 +153,6 @@ uv run streamlit run app.py
 - 📍 **Sidebar Navigation** — Track progress and jump to completed sections
 - 📄 **JSON Preview** — Inspect raw data alongside analysis results
 - 🎯 **Severity Grouping** — Findings organized by High / Medium / Low
-- 💾 **Save Results** — Export analysis to JSON file
 - 📚 **Best Practices** — Built-in reference documentation
 
 ### REST API
@@ -193,7 +192,7 @@ dbx-genie-rx/
 ├── docs/                   # Best practices documentation
 │   ├── best-practices-by-schema.md
 │   └── genie-space-schema.md
-├── output/                 # Analysis results (JSON)
+├── output/                 # Output files (future: saved reports)
 ├── app.py                  # Streamlit UI application
 ├── app.yaml                # Databricks Apps configuration
 ├── requirements.txt        # Python dependencies (for Databricks Apps)
@@ -309,6 +308,10 @@ All LLM calls and analysis steps are traced with MLflow. Traces are logged to yo
 ```
 metadata.`mlflow.trace.session` = '<session-id>'
 ```
+
+## 🛣️ Future Roadmap
+
+- 💾 **Save Summary Report** — Export analysis results to JSON/Markdown files
 
 ## 📜 License
 

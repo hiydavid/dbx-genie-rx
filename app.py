@@ -14,10 +14,10 @@ from dotenv import load_dotenv
 load_dotenv(dotenv_path=".env.local", override=True)
 load_dotenv(dotenv_path=".env")
 
-from agent_server.agent import GenieSpaceAnalyzer, save_analysis_output, SECTIONS
+from agent_server.agent import GenieSpaceAnalyzer, SECTIONS
 from agent_server.auth import is_running_on_databricks_apps
 from agent_server.ingest import get_serialized_space
-from agent_server.models import AgentInput, AgentOutput, Finding, SectionAnalysis
+from agent_server.models import Finding, SectionAnalysis
 
 # Page configuration
 st.set_page_config(
@@ -425,30 +425,6 @@ def display_sidebar_nav():
             st.markdown(
                 '<div class="nav-item pending">○ Summary</div>', unsafe_allow_html=True
             )
-
-        st.markdown("---")
-
-        # Save Results button - only enabled on summary phase
-        save_disabled = phase != "summary"
-        if st.button(
-            "💾 Save Results", use_container_width=True, disabled=save_disabled
-        ):
-            try:
-                analyses = st.session_state.section_analyses
-                genie_space_id = st.session_state.genie_space_id
-                total_score = sum(a.score for a in analyses)
-                overall_score = total_score // len(analyses) if analyses else 0
-
-                output = AgentOutput(
-                    genie_space_id=genie_space_id,
-                    analyses=analyses,
-                    overall_score=overall_score,
-                    trace_id="",
-                )
-                filepath = save_analysis_output(output)
-                st.success(f"✅ Saved to {filepath}")
-            except Exception as e:
-                st.error(f"❌ Failed to save: {str(e)}")
 
         st.markdown("---")
 
