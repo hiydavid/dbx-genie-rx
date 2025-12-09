@@ -1,0 +1,36 @@
+# Databricks Apps configuration
+# See: https://docs.databricks.com/dev-tools/databricks-apps/
+#
+# This app uses user-based (OBO) authentication, meaning users can only
+# access Genie Spaces they have permission to manage.
+
+command:
+  - "streamlit"
+  - "run"
+  - "app.py"
+  - "--server.port"
+  - "8000"
+  - "--server.address"
+  - "0.0.0.0"
+  - "--server.headless"
+  - "true"
+
+env:
+  - name: MLFLOW_TRACKING_URI
+    value: "databricks"
+  - name: MLFLOW_REGISTRY_URI
+    value: "databricks-uc"
+  - name: MLFLOW_EXPERIMENT_ID
+    value: "1521248874976574"
+  - name: LLM_MODEL
+    value: "databricks-claude-sonnet-4"
+
+# User authorization - enables OBO (On-behalf-of) authentication
+# Users will be authenticated with their own credentials, ensuring they
+# can only access Genie Spaces they have permission to manage
+permissions:
+  - permission: "user"
+    scopes:
+      - "genie"
+      - "serving-endpoints"
+

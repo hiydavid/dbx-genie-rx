@@ -1,42 +1,53 @@
+"""
+Genie Space data ingestion utilities.
+
+Fetches and parses Genie Space configurations from the Databricks API.
+Supports both local development (PAT) and Databricks Apps (OBO) authentication.
+"""
+
 import json
 import os
 
-import requests
 from dotenv import load_dotenv
+
+from agent_server.auth import get_workspace_client
 
 load_dotenv()
 
 
 def get_genie_space(
-    token: str | None = None,
-    base_url: str | None = None,
     genie_space_id: str | None = None,
 ) -> dict:
     """Fetch and parse a Genie space's serialized configuration.
 
+    Uses the Databricks SDK's API client which automatically handles
+    OBO authentication when running on Databricks Apps, ensuring that
+    the user's permissions are checked. Users without access to the Genie
+    Space will receive a 403/404 error.
+
     Args:
-        token: Databricks personal access token (defaults to DATABRICKS_TOKEN env var)
-        base_url: Workspace URL (defaults to DATABRICKS_HOST env var)
         genie_space_id: The Genie space ID (defaults to GENIE_SPACE_ID env var)
 
     Returns:
         Parsed serialized space configuration as a dictionary
+
+    Raises:
+        Exception: If the API request fails (e.g., 403 for no access)
     """
-    token = token or os.environ["DATABRICKS_TOKEN"]
-    base_url = base_url or os.environ["DATABRICKS_HOST"]
-    genie_space_id = genie_space_id or os.environ["GENIE_SPACE_ID"]
+    genie_space_id = genie_space_id or os.environ.get("GENIE_SPACE_ID")
+    if not genie_space_id:
+        raise ValueError("genie_space_id is required")
 
-    endpoint = f"/api/2.0/genie/spaces/{genie_space_id}"
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json",
-    }
-    params = {"include_serialized_space": "true"}
+    # Use SDK's API client - handles OBO auth automatically
+    client = get_workspace_client()
+    
+    response = client.api_client.do(
+        method="GET",
+        path=f"/api/2.0/genie/spaces/{genie_space_id}",
+        query={"include_serialized_space": "true"},
+    )
 
-    response = requests.get(f"{base_url}{endpoint}", headers=headers, params=params)
-    response.raise_for_status()
-
-    return response.json()
+    return response
 
 
 def get_serialized_space(genie_space_id: str | None = None) -> dict:
@@ -50,5 +61,3 @@ def get_serialized_space(genie_space_id: str | None = None) -> dict:
     """
     data = get_genie_space(genie_space_id=genie_space_id)
     return json.loads(data["serialized_space"])
-
-

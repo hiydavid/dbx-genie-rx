@@ -1,6 +1,8 @@
-# (THIS IS A WORK IN PROGRESS AND EXPERIMENTAL) 🔍 GenieRX: The Genie Space Analyzer
+# 🔍 GenieRX: The Genie Space Analyzer
 
 An LLM-powered linting tool that analyzes Databricks Genie Space configurations against best practices. Get actionable insights and recommendations to improve your Genie Space setup.
+
+> ⚠️ **Note:** This project is experimental and under active development.
 
 ![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)
 ![MLflow](https://img.shields.io/badge/MLflow-3.6+-green.svg)
@@ -11,25 +13,26 @@ An LLM-powered linting tool that analyzes Databricks Genie Space configurations 
 - **Comprehensive Analysis** — Evaluates 11 different sections of your Genie Space configuration
 - **Best Practice Validation** — Checks against documented Databricks Genie Space best practices
 - **Severity-based Findings** — Categorizes issues as high, medium, or low severity
-- **Compliance Scoring** — Provides per-section and overall compliance scores (0-100)
+- **Compliance Scoring** — Provides per-section and overall compliance scores (0-10)
 - **Actionable Recommendations** — Each finding includes specific remediation guidance
 - **Interactive Wizard UI** — Step-by-step analysis with progress navigation and JSON preview
 - **Multiple Interfaces** — Use via REST API or interactive Streamlit UI
-- **MLflow Tracing** — Full observability with session-grouped traces (MLflow 3.6+)
+- **MLflow Tracing** — Full observability with session-grouped traces logged to Databricks
+- **Databricks Apps Deployment** — Deploy with user-based (OBO) authentication
 
 ## 🏗️ Architecture
 
 ```
 ┌─────────────────┐     ┌──────────────────────┐     ┌─────────────────┐
 │   Streamlit UI  │────▶│   GenieSpaceAnalyzer │────▶│  Databricks LLM │
-│   (app/app.py)  │     │   (agent_server/)    │     │  (Claude Sonnet)│
+│    (app.py)     │     │   (agent_server/)    │     │  (Claude Sonnet)│
 └─────────────────┘     └──────────────────────┘     └─────────────────┘
                                   │
         ┌─────────────────────────┼─────────────────────────┐
         ▼                         ▼                         ▼
 ┌───────────────┐       ┌─────────────────┐       ┌─────────────────┐
-│ Databricks API│       │  Best Practices │       │  JSON Output    │
-│ (Genie Space) │       │    (docs/*.md)  │       │   (output/)     │
+│ Databricks API│       │  Best Practices │       │   MLflow Traces │
+│ (Genie Space) │       │    (docs/*.md)  │       │   (Databricks)  │
 └───────────────┘       └─────────────────┘       └─────────────────┘
 ```
 
@@ -54,96 +57,118 @@ The analyzer evaluates the following Genie Space configuration sections:
 ## 📋 Prerequisites
 
 - Python 3.13+
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) (Python package manager)
+- [Databricks CLI](https://docs.databricks.com/dev-tools/cli/install) (v0.200+)
 - Access to a Databricks workspace with Genie Spaces
-- Databricks personal access token with Genie Space read permissions
 - Access to a Databricks-hosted LLM endpoint (Claude Sonnet recommended)
 
-## 🚀 Installation
+## 🚀 Quick Start
 
-### Using uv (Recommended)
-
-```bash
-# Clone the repository
-git clone https://github.com/your-org/dbx-genie-rx.git
-cd dbx-genie-rx
-
-# Install dependencies with uv
-uv sync
-```
-
-### Using pip
+### 1. Clone and Setup
 
 ```bash
 # Clone the repository
 git clone https://github.com/your-org/dbx-genie-rx.git
 cd dbx-genie-rx
 
-# Create and activate virtual environment
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-# Install dependencies
-pip install -e .
+# Run the quickstart script
+./scripts/quickstart.sh
 ```
+
+The quickstart script will:
+1. ✅ Check for required tools (uv, Databricks CLI)
+2. ✅ Set up Databricks authentication (OAuth via CLI)
+3. ✅ Create an MLflow experiment for tracing
+4. ✅ Update `app.yaml` with your experiment ID
+5. ✅ Create `.env.local` with your configuration
+6. ✅ Install Python dependencies
+
+### 2. Run Locally
+
+```bash
+# Run the Streamlit UI
+uv run streamlit run app.py
+```
+
+Open http://localhost:8501 in your browser.
+
+### 3. Deploy to Databricks Apps
+
+```bash
+# Sync and deploy
+./scripts/deploy.sh genie-space-analyzer
+```
+
+Then deploy via the Databricks UI (see [Deploying to Databricks Apps](#-deploying-to-databricks-apps)).
 
 ## ⚙️ Configuration
 
-Create a `.env.local` file in the project root:
+### Environment Variables
+
+The quickstart script creates `.env.local` with your configuration:
 
 ```bash
-# Required
+# Databricks workspace URL
 DATABRICKS_HOST=https://your-workspace.cloud.databricks.com
-DATABRICKS_TOKEN=your-personal-access-token
 
-# Optional
-GENIE_SPACE_ID=your-default-genie-space-id
+# Authentication (OAuth via Databricks CLI - recommended)
+DATABRICKS_CONFIG_PROFILE=DEFAULT
+
+# MLflow configuration - logs traces to Databricks
+MLFLOW_TRACKING_URI=databricks
+MLFLOW_REGISTRY_URI=databricks-uc
+MLFLOW_EXPERIMENT_ID=123456789
+
+# LLM model for analysis
 LLM_MODEL=databricks-claude-sonnet-4
 ```
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `DATABRICKS_HOST` | Yes | Your Databricks workspace URL |
-| `DATABRICKS_TOKEN` | Yes | Personal access token with Genie Space permissions |
-| `GENIE_SPACE_ID` | No | Default Genie Space ID for testing |
+| `DATABRICKS_HOST` | Yes (local) | Your Databricks workspace URL |
+| `DATABRICKS_CONFIG_PROFILE` | No | Databricks CLI profile (default: DEFAULT) |
+| `DATABRICKS_TOKEN` | Optional | PAT token (alternative to OAuth) |
+| `MLFLOW_TRACKING_URI` | Yes | Set to `databricks` to log traces to workspace |
+| `MLFLOW_EXPERIMENT_ID` | Yes | MLflow experiment ID for tracing |
 | `LLM_MODEL` | No | LLM model name (default: `databricks-claude-sonnet-4`) |
+
+> **Note:** When deployed to Databricks Apps, authentication is handled automatically via OAuth (OBO). Environment variables are configured in `app.yaml`.
 
 ## 📖 Usage
 
 ### Streamlit UI
 
-The easiest way to use the analyzer is through the interactive Streamlit wizard:
+The interactive wizard guides you through 4 phases:
 
 ```bash
-cd app
-streamlit run app.py
+uv run streamlit run app.py
 ```
 
-Then open http://localhost:8501 in your browser. The wizard guides you through 4 phases:
-
 1. **Input** — Enter your Genie Space ID and click "Fetch Space"
-2. **Ingest Preview** — Review the serialized JSON data before analysis begins
-3. **Section Analysis** — Step through each section one-by-one, viewing findings grouped by severity
-4. **Summary** — See overall compliance score and all findings across sections
+2. **Ingest Preview** — Review the serialized JSON data before analysis
+3. **Section Analysis** — Step through each section, view findings by severity
+4. **Summary** — See overall compliance score and all findings
 
 **UI Features:**
-- **Left Sidebar Navigation** — Track progress and jump to any completed section
-- **JSON Preview** — Inspect raw section data alongside analysis results
-- **Severity Grouping** — Findings organized by High / Medium / Low severity
-- **Save Results** — Export analysis to JSON file
+- 📍 **Sidebar Navigation** — Track progress and jump to completed sections
+- 📄 **JSON Preview** — Inspect raw data alongside analysis results
+- 🎯 **Severity Grouping** — Findings organized by High / Medium / Low
+- 💾 **Save Results** — Export analysis to JSON file
+- 📚 **Best Practices** — Built-in reference documentation
 
 ### REST API
 
 Start the MLflow Agent Server:
 
 ```bash
-# Using uv
+# Start server
 uv run start-server
 
 # With hot-reload for development
 uv run start-server --reload
 ```
 
-The server runs at http://localhost:8000. Send analysis requests:
+Send analysis requests to http://localhost:8000:
 
 ```bash
 curl -X POST http://localhost:8000/invocations \
@@ -156,43 +181,105 @@ curl -X POST http://localhost:8000/invocations \
 ```
 dbx-genie-rx/
 ├── agent_server/           # Core analyzer backend
-│   ├── agent.py           # GenieSpaceAnalyzer class & invoke decorator
-│   ├── ingest.py          # Databricks API client for fetching Genie Spaces
-│   ├── models.py          # Pydantic models (AgentInput, AgentOutput, Finding)
+│   ├── agent.py           # GenieSpaceAnalyzer class & MLflow tracing
+│   ├── auth.py            # Authentication (PAT local, OBO for Apps)
+│   ├── ingest.py          # Databricks SDK client for Genie Spaces
+│   ├── models.py          # Pydantic models (AgentInput, AgentOutput)
 │   ├── prompts.py         # LLM prompt templates
 │   └── start_server.py    # MLflow AgentServer entry point
-├── app/                    # Streamlit UI
-│   ├── app.py             # Main Streamlit application
-│   ├── app.yaml           # Databricks Apps configuration
-│   └── requirements.txt   # App-specific dependencies
+├── scripts/
+│   ├── quickstart.sh      # Local development setup
+│   └── deploy.sh          # Databricks Apps deployment
 ├── docs/                   # Best practices documentation
 │   ├── best-practices-by-schema.md
 │   └── genie-space-schema.md
 ├── output/                 # Analysis results (JSON)
-├── pyproject.toml         # Project configuration
-└── test_agent.py          # Test script
+├── app.py                  # Streamlit UI application
+├── app.yaml                # Databricks Apps configuration
+├── requirements.txt        # Python dependencies (for Databricks Apps)
+├── pyproject.toml          # Project configuration (for local dev)
+└── test_agent.py           # Test script
+```
+
+## 🚀 Deploying to Databricks Apps
+
+Deploy the Genie Space Analyzer to Databricks Apps for production use. The app uses **user-based (OBO) authentication**, meaning users can only analyze Genie Spaces they have permission to access.
+
+### Prerequisites
+
+Before deploying, ensure you've run the quickstart script:
+
+```bash
+./scripts/quickstart.sh
+```
+
+This creates the MLflow experiment and configures `app.yaml` with the experiment ID.
+
+### Deploy
+
+```bash
+./scripts/deploy.sh genie-space-analyzer
+```
+
+The deploy script will:
+1. ✅ Verify Databricks CLI and authentication
+2. ✅ Check/prompt for MLflow experiment ID in `app.yaml`
+3. ✅ Sync files to your workspace
+4. ✅ Provide UI deployment instructions
+
+Then complete deployment via the Databricks UI:
+
+1. Go to **Compute > Apps** in your workspace
+2. Click **Create App** (if first time) and name it `genie-space-analyzer`
+3. Click **Deploy** and select the synced folder:
+   ```
+   /Workspace/Users/<your-email>/apps/genie-space-analyzer
+   ```
+4. Click **Deploy** to start
+
+### Authentication
+
+| Environment | Auth Method | Description |
+|-------------|-------------|-------------|
+| Local Development | PAT / OAuth | Uses `DATABRICKS_TOKEN` or CLI OAuth |
+| Databricks Apps | OBO (User) | Uses the logged-in user's OAuth token |
+
+**OBO (On-behalf-of) Authentication:**
+- Users must authenticate with Databricks to use the app
+- Users can only analyze Genie Spaces they have **Manage** permission on
+- If a user lacks access, they'll see an appropriate error
+
+### Updating the Deployed App
+
+After making code changes:
+
+```bash
+# Re-sync files
+./scripts/deploy.sh genie-space-analyzer
+
+# Then in Databricks UI: click Deploy on your app
 ```
 
 ## 📊 Output Format
 
-Analysis results are saved as JSON in the `output/` directory:
+Analysis results are saved as JSON:
 
 ```json
 {
-  "genie_space_id": "aaageniespaceidaaabbbcccdddd",
-  "overall_score": 72,
+  "genie_space_id": "01f0627099691651968d0a92a26b06e9",
+  "overall_score": 7,
   "trace_id": "abc123...",
   "analyses": [
     {
       "section_name": "config.sample_questions",
-      "score": 85,
-      "summary": "Sample questions are well-defined but could benefit from more variety.",
+      "score": 8,
+      "summary": "Sample questions are well-defined but could use more variety.",
       "findings": [
         {
           "category": "suggestion",
           "severity": "low",
-          "description": "Consider adding questions that demonstrate aggregation capabilities.",
-          "recommendation": "Add 2-3 sample questions showing GROUP BY and aggregate functions.",
+          "description": "Consider adding questions demonstrating aggregations.",
+          "recommendation": "Add 2-3 sample questions with GROUP BY.",
           "reference": "Best Practices: Sample Questions"
         }
       ]
@@ -204,38 +291,25 @@ Analysis results are saved as JSON in the `output/` directory:
 ## 🧪 Testing
 
 ```bash
-# Test with default Genie Space ID from .env
-python test_agent.py
-
-# Test with specific Genie Space ID
+# Test with Genie Space ID
 python test_agent.py --genie-space-id <your-genie-space-id>
 ```
 
-## 🔄 Development
+## 📊 MLflow Tracing
 
-### Hot Reload
+All LLM calls and analysis steps are traced with MLflow. Traces are logged to your Databricks workspace and grouped by session.
 
-For development, use the `--reload` flag to automatically restart on code changes:
+**View traces:**
+1. Go to your Databricks workspace
+2. Navigate to **Machine Learning > Experiments**
+3. Find your experiment: `/Users/<your-email>/genie-space-analyzer`
+4. Click on **Traces** to see all analysis traces
 
-```bash
-uv run start-server --reload
-```
-
-### MLflow Tracing
-
-All LLM calls and analysis steps are traced with MLflow. Traces from a single analysis session are grouped together using MLflow 3.6's session ID feature, making it easy to correlate all section analyses for a given Genie Space.
-
-**Querying Traces by Session:**
-
-In the MLflow UI, you can filter traces by session ID:
-
+**Filter by session:**
 ```
 metadata.`mlflow.trace.session` = '<session-id>'
 ```
 
-View traces in the MLflow UI or access via the trace ID returned in the response.
-
 ## 📜 License
 
 MIT License — see [LICENSE](LICENSE) for details.
-

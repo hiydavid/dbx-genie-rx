@@ -7,11 +7,14 @@ from pathlib import Path
 import mlflow
 from mlflow.entities import SpanType
 from mlflow.genai.agent_server import invoke as invoke_decorator
-from openai import OpenAI
 
+from agent_server.auth import get_workspace_client
 from agent_server.ingest import get_serialized_space
 from agent_server.models import AgentInput, AgentOutput, Finding, SectionAnalysis
 from agent_server.prompts import get_section_analysis_prompt
+
+# Enable MLflow tracing
+mlflow.tracing.enable()
 
 # Sections to analyze (in order for future UI walkthrough)
 SECTIONS = [
@@ -33,14 +36,35 @@ class GenieSpaceAnalyzer:
     """Analyzes Genie Space configurations against best practices."""
 
     def __init__(self):
-        self.llm_client = OpenAI(
-            base_url=f"{os.environ['DATABRICKS_HOST']}/serving-endpoints",
-            api_key=os.environ["DATABRICKS_TOKEN"],
-        )
         self.model = os.environ.get("LLM_MODEL", "databricks-claude-sonnet-4")
         self.best_practices = self._load_best_practices()
         self.schema_docs = self._load_schema_docs()
         self._session_id: str | None = None
+
+    def _call_serving_endpoint(self, messages: list[dict]) -> str:
+        """Call the LLM serving endpoint using the SDK's API client.
+
+        Uses the SDK's api_client.do() which handles OBO authentication
+        automatically on Databricks Apps.
+
+        Args:
+            messages: List of chat messages in OpenAI format
+
+        Returns:
+            The assistant's response content
+        """
+        client = get_workspace_client()
+
+        response = client.api_client.do(
+            method="POST",
+            path=f"/serving-endpoints/{self.model}/invocations",
+            body={
+                "messages": messages,
+            },
+        )
+
+        # Response is in OpenAI-compatible format
+        return response["choices"][0]["message"]["content"]
 
     def start_session(self) -> str:
         """Start a new analysis session and return the session ID."""
@@ -119,26 +143,29 @@ class GenieSpaceAnalyzer:
         self, section_name: str, section_data: dict | list
     ) -> SectionAnalysis:
         """Analyze a single section against best practices."""
-        # Tag trace with session ID if active
-        if self._session_id:
-            mlflow.update_current_trace(
-                metadata={
-                    "mlflow.trace.session": self._session_id,
-                }
-            )
+        # Tag trace with session ID if there's an active trace
+        if self._session_id and mlflow.get_current_active_span() is not None:
+            try:
+                mlflow.update_current_trace(
+                    metadata={
+                        "mlflow.trace.session": self._session_id,
+                    }
+                )
+            except Exception:
+                pass  # Ignore if trace update fails
 
         relevant_practices = self._get_relevant_best_practices(section_name)
         prompt = get_section_analysis_prompt(
             section_name, relevant_practices, section_data
         )
 
-        response = self.llm_client.chat.completions.create(
-            model=self.model,
-            messages=[{"role": "user", "content": prompt}],
+        # Call serving endpoint using SDK (handles OBO auth automatically)
+        content = self._call_serving_endpoint(
+            messages=[{"role": "user", "content": prompt}]
         )
 
         # Parse response, handling potential markdown code blocks
-        content = response.choices[0].message.content.strip()
+        content = content.strip()
         if content.startswith("```"):
             # Remove markdown code fences
             lines = content.split("\n")
@@ -244,67 +271,79 @@ class GenieSpaceAnalyzer:
         if not self._session_id:
             self.start_session()
 
-        try:
-            # Fetch the Genie space
-            yield {"status": "fetching", "message": "Fetching Genie space..."}
-            with mlflow.start_span(name="fetch_genie_space") as span:
-                span.set_inputs({"genie_space_id": genie_space_id})
-                space = get_serialized_space(genie_space_id)
-                span.set_outputs({"keys": list(space.keys())})
+        # Create a trace for the entire streaming operation
+        with mlflow.start_span(
+            name="predict_streaming", span_type=SpanType.AGENT
+        ) as root_span:
+            root_span.set_inputs({"genie_space_id": genie_space_id})
 
-            # Analyze each section sequentially
-            analyses = []
-            total_score = 0
-            section_count = 0
+            try:
+                # Fetch the Genie space
+                yield {"status": "fetching", "message": "Fetching Genie space..."}
+                with mlflow.start_span(name="fetch_genie_space") as span:
+                    span.set_inputs({"genie_space_id": genie_space_id})
+                    space = get_serialized_space(genie_space_id)
+                    span.set_outputs({"keys": list(space.keys())})
 
-            # First, determine which sections have data to get accurate total
-            sections_with_data = [
-                (name, self._get_section_data(space, name)) for name in SECTIONS
-            ]
-            sections_with_data = [
-                (name, data) for name, data in sections_with_data if data is not None
-            ]
-            total_sections = len(sections_with_data)
+                # Analyze each section sequentially
+                analyses = []
+                total_score = 0
+                section_count = 0
 
-            for i, (section_name, section_data) in enumerate(sections_with_data, 1):
-                yield {
-                    "status": "analyzing",
-                    "section": section_name,
-                    "current": i,
-                    "total": total_sections,
-                    "message": f"Analyzing {section_name}...",
-                }
+                # First, determine which sections have data to get accurate total
+                sections_with_data = [
+                    (name, self._get_section_data(space, name)) for name in SECTIONS
+                ]
+                sections_with_data = [
+                    (name, data)
+                    for name, data in sections_with_data
+                    if data is not None
+                ]
+                total_sections = len(sections_with_data)
 
-                with mlflow.start_span(name=f"analyze_{section_name}") as span:
-                    span.set_inputs({"section_name": section_name})
-                    analysis = self.analyze_section(section_name, section_data)
-                    analyses.append(analysis)
-                    total_score += analysis.score
-                    section_count += 1
-                    span.set_outputs(
-                        {
-                            "score": analysis.score,
-                            "findings_count": len(analysis.findings),
-                        }
-                    )
+                for i, (section_name, section_data) in enumerate(sections_with_data, 1):
+                    yield {
+                        "status": "analyzing",
+                        "section": section_name,
+                        "current": i,
+                        "total": total_sections,
+                        "message": f"Analyzing {section_name}...",
+                    }
 
-            overall_score = total_score // section_count if section_count > 0 else 0
-            trace_id = (
-                mlflow.get_current_active_span().request_id
-                if mlflow.get_current_active_span()
-                else None
-            )
+                    with mlflow.start_span(name=f"analyze_{section_name}") as span:
+                        span.set_inputs({"section_name": section_name})
+                        analysis = self.analyze_section(section_name, section_data)
+                        analyses.append(analysis)
+                        total_score += analysis.score
+                        section_count += 1
+                        span.set_outputs(
+                            {
+                                "score": analysis.score,
+                                "findings_count": len(analysis.findings),
+                            }
+                        )
 
-            yield {"status": "complete", "message": "Analysis complete!"}
+                overall_score = total_score // section_count if section_count > 0 else 0
+                trace_id = root_span.request_id if root_span else None
 
-            return AgentOutput(
-                genie_space_id=genie_space_id,
-                analyses=analyses,
-                overall_score=overall_score,
-                trace_id=trace_id or "",
-            )
-        finally:
-            self.end_session()
+                yield {"status": "complete", "message": "Analysis complete!"}
+
+                # Set outputs on root span
+                root_span.set_outputs(
+                    {
+                        "overall_score": overall_score,
+                        "sections_analyzed": section_count,
+                    }
+                )
+
+                return AgentOutput(
+                    genie_space_id=genie_space_id,
+                    analyses=analyses,
+                    overall_score=overall_score,
+                    trace_id=trace_id or "",
+                )
+            finally:
+                self.end_session()
 
 
 OUTPUT_DIR = Path(__file__).parent.parent / "output"

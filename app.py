@@ -5,20 +5,17 @@ Provides a multi-step wizard interface for analyzing Genie Spaces against best p
 """
 
 import os
-import sys
 from pathlib import Path
-
-# Add parent directory to path to import agent_server modules
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import streamlit as st
 from dotenv import load_dotenv
 
 # Load environment variables
-load_dotenv(dotenv_path="../.env.local", override=True)
-load_dotenv(dotenv_path="../.env")
+load_dotenv(dotenv_path=".env.local", override=True)
+load_dotenv(dotenv_path=".env")
 
 from agent_server.agent import GenieSpaceAnalyzer, save_analysis_output, SECTIONS
+from agent_server.auth import is_running_on_databricks_apps
 from agent_server.ingest import get_serialized_space
 from agent_server.models import AgentInput, AgentOutput, Finding, SectionAnalysis
 
@@ -327,10 +324,7 @@ def group_findings_by_severity(findings: list[Finding]) -> dict[str, list[Findin
 
 def load_best_practices_content() -> str:
     """Load the best practices markdown content."""
-    # Use absolute path resolution to handle different working directories
-    docs_path = (
-        Path(__file__).resolve().parent.parent / "docs" / "best-practices-by-schema.md"
-    )
+    docs_path = Path(__file__).resolve().parent / "docs" / "best-practices-by-schema.md"
     return docs_path.read_text()
 
 
@@ -467,18 +461,19 @@ def display_sidebar_nav():
 
 def display_input_phase():
     """Display the initial input phase."""
-    # Check for required environment variables
+    # Check for required environment variables (only needed for local development)
     missing_vars = []
-    if not os.environ.get("DATABRICKS_HOST"):
-        missing_vars.append("DATABRICKS_HOST")
-    if not os.environ.get("DATABRICKS_TOKEN"):
-        missing_vars.append("DATABRICKS_TOKEN")
+    if not is_running_on_databricks_apps():
+        if not os.environ.get("DATABRICKS_HOST"):
+            missing_vars.append("DATABRICKS_HOST")
+        if not os.environ.get("DATABRICKS_TOKEN"):
+            missing_vars.append("DATABRICKS_TOKEN")
 
-    if missing_vars:
-        st.warning(
-            f"⚠️ Missing environment variables: {', '.join(missing_vars)}. "
-            "Please set these in your `.env.local` or `.env` file."
-        )
+        if missing_vars:
+            st.warning(
+                f"⚠️ Missing environment variables: {', '.join(missing_vars)}. "
+                "Please set these in your `.env.local` or `.env` file."
+            )
 
     st.markdown("### Enter Genie Space ID")
 
@@ -938,3 +933,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
