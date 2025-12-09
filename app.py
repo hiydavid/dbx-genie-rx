@@ -189,6 +189,12 @@ st.markdown(
         color: #9E9E9E;
     }
     
+    .nav-item.missing {
+        background-color: #FFF3E0;
+        color: #E65100;
+        border-left: 3px solid #FF9800;
+    }
+    
     /* Severity group headers */
     .severity-group-header {
         padding: 0.5rem 0;
@@ -368,8 +374,9 @@ def display_sidebar_nav():
         st.markdown("**Sections**")
 
         # Section steps
-        for i, (section_name, _) in enumerate(sections):
+        for i, (section_name, section_data) in enumerate(sections):
             short_name = get_short_section_name(section_name)
+            is_missing = section_data is None
 
             if (
                 phase == "analysis"
@@ -377,14 +384,17 @@ def display_sidebar_nav():
                 and not st.session_state.show_best_practices
             ):
                 # Current section
+                icon = "⚠️" if is_missing else "🔍"
                 st.markdown(
-                    f'<div class="nav-item current">🔍 {short_name}</div>',
+                    f'<div class="nav-item current">{icon} {short_name}</div>',
                     unsafe_allow_html=True,
                 )
             elif i < completed_analyses:
                 # Completed section - clickable
+                # Show different icon for missing sections
+                icon = "⚠️" if is_missing else "✓"
                 if st.button(
-                    f"✓ {short_name}", key=f"nav_section_{i}", use_container_width=True
+                    f"{icon} {short_name}", key=f"nav_section_{i}", use_container_width=True
                 ):
                     st.session_state.phase = "analysis"
                     st.session_state.current_section_idx = i
@@ -392,8 +402,9 @@ def display_sidebar_nav():
                     st.rerun()
             else:
                 # Pending section
+                icon = "⚠️" if is_missing else "○"
                 st.markdown(
-                    f'<div class="nav-item pending">○ {short_name}</div>',
+                    f'<div class="nav-item pending">{icon} {short_name}</div>',
                     unsafe_allow_html=True,
                 )
 
@@ -502,11 +513,12 @@ def display_input_phase():
                 try:
                     space_data = get_serialized_space(genie_space_id)
                     analyzer = get_analyzer()
-                    sections_with_data = analyzer.get_sections_with_data(space_data)
+                    # Get ALL sections (including missing ones) for schema-aware analysis
+                    all_sections = analyzer.get_all_sections(space_data)
 
                     st.session_state.genie_space_id = genie_space_id
                     st.session_state.space_data = space_data
-                    st.session_state.sections_with_data = sections_with_data
+                    st.session_state.sections_with_data = all_sections
                     st.session_state.phase = "ingest"
                     st.rerun()
                 except Exception as e:
@@ -565,23 +577,46 @@ def display_ingest_phase():
         # Display each section in collapsible expanders
         for section_name, section_data in sections_with_data:
             display_name = format_section_name(section_name)
-            item_count = len(section_data) if isinstance(section_data, list) else 1
-
-            with st.expander(
-                f"**{display_name}** ({item_count} item{'s' if item_count != 1 else ''})"
-            ):
-                st.json(section_data)
+            
+            if section_data is None:
+                # Show missing section with warning style
+                with st.expander(f"⚠️ **{display_name}** (not configured)"):
+                    st.warning("This section is not configured in your Genie Space.")
+            else:
+                item_count = len(section_data) if isinstance(section_data, list) else 1
+                with st.expander(
+                    f"✓ **{display_name}** ({item_count} item{'s' if item_count != 1 else ''})"
+                ):
+                    st.json(section_data)
 
     with col_info:
         st.markdown(
             '<div class="panel-header">ℹ️ Analysis Info</div>', unsafe_allow_html=True
         )
 
-        st.markdown(f"**Sections to analyze:** {len(sections_with_data)}")
+        # Count configured vs missing sections
+        configured_count = sum(1 for _, data in sections_with_data if data is not None)
+        missing_count = sum(1 for _, data in sections_with_data if data is None)
 
-        for section_name, _ in sections_with_data:
-            short_name = get_short_section_name(section_name)
-            st.markdown(f"- {short_name}")
+        st.markdown(f"**Total sections:** {len(sections_with_data)}")
+        st.markdown(f"**Configured:** {configured_count}")
+        st.markdown(f"**Missing:** {missing_count}")
+        
+        st.markdown("---")
+        
+        st.markdown("**Configured sections:**")
+        for section_name, section_data in sections_with_data:
+            if section_data is not None:
+                short_name = get_short_section_name(section_name)
+                st.markdown(f"- ✓ {short_name}")
+        
+        if missing_count > 0:
+            st.markdown("---")
+            st.markdown("**Missing sections:**")
+            for section_name, section_data in sections_with_data:
+                if section_data is None:
+                    short_name = get_short_section_name(section_name)
+                    st.markdown(f"- ⚠️ {short_name}")
 
         st.markdown("---")
 
@@ -708,7 +743,10 @@ def display_analysis_phase():
         st.markdown(
             '<div class="panel-header">📄 Section Data</div>', unsafe_allow_html=True
         )
-        st.json(section_data)
+        if section_data is None:
+            st.warning("⚠️ This section is not configured in your Genie Space.")
+        else:
+            st.json(section_data)
 
     with col_findings:
         # Score display at top

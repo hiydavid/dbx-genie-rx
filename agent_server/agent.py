@@ -138,11 +138,66 @@ class GenieSpaceAnalyzer:
 
         return "\n".join(section_lines) if section_lines else self.best_practices
 
+    def _create_missing_section_analysis(self, section_name: str) -> SectionAnalysis:
+        """Create analysis for a missing/unconfigured section.
+
+        Args:
+            section_name: Name of the missing section
+
+        Returns:
+            SectionAnalysis with a low score and finding for the missing section
+        """
+        # Human-readable descriptions for each section
+        section_descriptions = {
+            "config.sample_questions": "Sample questions help users understand what questions the space can answer",
+            "data_sources.tables": "Tables are required for the space to query data",
+            "data_sources.metric_views": "Metric views provide pre-computed aggregations for better accuracy",
+            "instructions.text_instructions": "Text instructions help Genie understand business context and terminology",
+            "instructions.example_question_sqls": "Example SQL queries teach Genie complex query patterns",
+            "instructions.sql_functions": "SQL functions register custom UDFs for specialized calculations",
+            "instructions.join_specs": "Join specifications help Genie correctly join tables",
+            "instructions.sql_snippets.filters": "Filter snippets define common filtering patterns (e.g., 'last quarter')",
+            "instructions.sql_snippets.expressions": "Expression snippets define common categorizations or derivations",
+            "instructions.sql_snippets.measures": "Measure snippets define standard business metrics",
+            "benchmarks.questions": "Benchmark questions help evaluate and improve Genie accuracy",
+        }
+
+        description = section_descriptions.get(
+            section_name, f"The {section_name} section is not configured"
+        )
+
+        finding = Finding(
+            category="suggestion",
+            severity="medium",
+            description=f"Section '{section_name}' is not configured",
+            recommendation=f"Consider adding {section_name}. {description}.",
+            reference=f"See best practices documentation for {section_name}",
+        )
+
+        return SectionAnalysis(
+            section_name=section_name,
+            findings=[finding],
+            score=3,  # Uniform penalty for missing sections
+            summary=f"This section is not configured. {description}.",
+        )
+
     @mlflow.trace(span_type=SpanType.LLM)
     def analyze_section(
-        self, section_name: str, section_data: dict | list
+        self, section_name: str, section_data: dict | list | None
     ) -> SectionAnalysis:
-        """Analyze a single section against best practices."""
+        """Analyze a single section against best practices.
+
+        Args:
+            section_name: Name of the section to analyze
+            section_data: The section data, or None if not configured
+
+        Returns:
+            SectionAnalysis with findings and score
+        """
+        # Handle missing sections
+        if section_data is None:
+            return self._create_missing_section_analysis(section_name)
+
         # Tag trace with session ID if there's an active trace
         if self._session_id and mlflow.get_current_active_span() is not None:
             try:
@@ -207,19 +262,19 @@ class GenieSpaceAnalyzer:
                 for section_name in SECTIONS:
                     section_data = self._get_section_data(space, section_name)
 
-                    if section_data is not None:
-                        with mlflow.start_span(name=f"analyze_{section_name}") as span:
-                            span.set_inputs({"section_name": section_name})
-                            analysis = self.analyze_section(section_name, section_data)
-                            analyses.append(analysis)
-                            total_score += analysis.score
-                            section_count += 1
-                            span.set_outputs(
-                                {
-                                    "score": analysis.score,
-                                    "findings_count": len(analysis.findings),
-                                }
-                            )
+                    # Analyze ALL sections (including missing ones)
+                    with mlflow.start_span(name=f"analyze_{section_name}") as span:
+                        span.set_inputs({"section_name": section_name})
+                        analysis = self.analyze_section(section_name, section_data)
+                        analyses.append(analysis)
+                        total_score += analysis.score
+                        section_count += 1
+                        span.set_outputs(
+                            {
+                                "score": analysis.score,
+                                "findings_count": len(analysis.findings),
+                            }
+                        )
 
                 overall_score = total_score // section_count if section_count > 0 else 0
                 trace_id = (
@@ -248,7 +303,7 @@ class GenieSpaceAnalyzer:
             space: The serialized Genie space
 
         Returns:
-            List of (section_name, section_data) tuples
+            List of (section_name, section_data) tuples for sections with data only
         """
         sections_with_data = []
         for section_name in SECTIONS:
@@ -256,6 +311,21 @@ class GenieSpaceAnalyzer:
             if section_data is not None:
                 sections_with_data.append((section_name, section_data))
         return sections_with_data
+
+    def get_all_sections(self, space: dict) -> list[tuple[str, dict | list | None]]:
+        """Get all sections with their data (or None if missing).
+
+        Args:
+            space: The serialized Genie space
+
+        Returns:
+            List of (section_name, section_data) tuples for ALL sections.
+            section_data is None if the section is not configured.
+        """
+        return [
+            (section_name, self._get_section_data(space, section_name))
+            for section_name in SECTIONS
+        ]
 
     def predict_streaming(
         self, agent_input: AgentInput
@@ -285,23 +355,18 @@ class GenieSpaceAnalyzer:
                     space = get_serialized_space(genie_space_id)
                     span.set_outputs({"keys": list(space.keys())})
 
-                # Analyze each section sequentially
+                # Analyze each section sequentially (including missing sections)
                 analyses = []
                 total_score = 0
                 section_count = 0
+                total_sections = len(SECTIONS)
 
-                # First, determine which sections have data to get accurate total
-                sections_with_data = [
+                # Prepare all sections with their data (None for missing sections)
+                all_sections = [
                     (name, self._get_section_data(space, name)) for name in SECTIONS
                 ]
-                sections_with_data = [
-                    (name, data)
-                    for name, data in sections_with_data
-                    if data is not None
-                ]
-                total_sections = len(sections_with_data)
 
-                for i, (section_name, section_data) in enumerate(sections_with_data, 1):
+                for i, (section_name, section_data) in enumerate(all_sections, 1):
                     yield {
                         "status": "analyzing",
                         "section": section_name,
