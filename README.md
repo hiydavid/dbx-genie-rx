@@ -259,41 +259,6 @@ After making code changes:
 # Then in Databricks UI: click Deploy on your app
 ```
 
-## 📊 Output Format
-
-Analysis results are saved as JSON:
-
-```json
-{
-  "genie_space_id": "01f0627099691651968d0a92a26b06e9",
-  "overall_score": 7,
-  "trace_id": "abc123...",
-  "analyses": [
-    {
-      "section_name": "config.sample_questions",
-      "score": 8,
-      "summary": "Sample questions are well-defined but could use more variety.",
-      "findings": [
-        {
-          "category": "suggestion",
-          "severity": "low",
-          "description": "Consider adding questions demonstrating aggregations.",
-          "recommendation": "Add 2-3 sample questions with GROUP BY.",
-          "reference": "Best Practices: Sample Questions"
-        }
-      ]
-    }
-  ]
-}
-```
-
-## 🧪 Testing
-
-```bash
-# Test with Genie Space ID
-python test_agent.py --genie-space-id <your-genie-space-id>
-```
-
 ## 📊 MLflow Tracing
 
 All LLM calls and analysis steps are traced with MLflow. Traces are logged to your Databricks workspace and grouped by session.
