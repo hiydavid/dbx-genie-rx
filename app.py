@@ -17,7 +17,7 @@ load_dotenv(dotenv_path=".env")
 from agent_server.agent import GenieSpaceAnalyzer, SECTIONS
 from agent_server.auth import is_running_on_databricks_apps
 from agent_server.ingest import get_serialized_space
-from agent_server.models import Finding, SectionAnalysis
+from agent_server.models import ChecklistItem
 
 # Page configuration
 st.set_page_config(
@@ -238,6 +238,59 @@ st.markdown(
     section[data-testid="stSidebar"] .block-container {
         padding-top: 1rem;
     }
+    
+    /* Checklist item cards */
+    .checklist-item {
+        display: flex;
+        align-items: flex-start;
+        padding: 0.6rem 0.8rem;
+        border-radius: 8px;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+        line-height: 1.4;
+    }
+    
+    .checklist-item.passed {
+        background-color: #E8F5E9;
+        border-left: 4px solid #00A972;
+        color: #1B5E20;
+    }
+    
+    .checklist-item.failed {
+        background-color: #FFEBEE;
+        border-left: 4px solid #C62828;
+        color: #B71C1C;
+    }
+    
+    .checklist-icon {
+        font-size: 1rem;
+        margin-right: 0.6rem;
+        flex-shrink: 0;
+    }
+    
+    .checklist-content {
+        flex: 1;
+    }
+    
+    .checklist-description {
+        font-weight: 500;
+    }
+    
+    .checklist-details {
+        font-size: 0.8rem;
+        opacity: 0.85;
+        margin-top: 0.2rem;
+    }
+    
+    .checklist-group-header {
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: #5A6872;
+        margin-top: 1rem;
+        margin-bottom: 0.5rem;
+        padding-bottom: 0.25rem;
+        border-bottom: 1px solid #E0E0E0;
+    }
 </style>
 """,
     unsafe_allow_html=True,
@@ -260,7 +313,7 @@ def init_session_state():
         "section_analyses": [],
         "analyzer": None,
         "all_sections_analyzed": False,
-        "show_best_practices": False,  # Toggle for best practices page
+        "show_checklist": False,  # Toggle for checklist reference page
         "expanded_sections": {},  # Track which sections are expanded on summary page
     }
     for key, value in defaults.items():
@@ -288,15 +341,6 @@ def reset_session():
 # =============================================================================
 
 
-def get_score_class(score: int) -> str:
-    """Get CSS class based on score (0-10 scale)."""
-    if score >= 8:
-        return "good"
-    elif score >= 6:
-        return "medium"
-    return ""
-
-
 def get_severity_badge(severity: str) -> str:
     """Get HTML for severity badge."""
     return f'<span class="severity-{severity}">{severity.upper()}</span>'
@@ -319,18 +363,68 @@ def get_analyzer() -> GenieSpaceAnalyzer:
     return st.session_state.analyzer
 
 
-def group_findings_by_severity(findings: list[Finding]) -> dict[str, list[Finding]]:
-    """Group findings by severity level."""
-    grouped = {"high": [], "medium": [], "low": []}
-    for finding in findings:
-        if finding.severity in grouped:
-            grouped[finding.severity].append(finding)
-    return grouped
+def display_checklist_progress(checklist: list[ChecklistItem]):
+    """Display checklist progress with visual card items."""
+    passed = sum(1 for item in checklist if item.passed)
+    total = len(checklist)
+    percentage = (passed / total * 100) if total > 0 else 0
+
+    # Progress header
+    st.markdown(f"**Checklist Progress: {passed}/{total} items passed**")
+
+    # Progress bar
+    st.progress(percentage / 100)
+
+    # Group checklist by check_type
+    programmatic_items = [item for item in checklist if item.check_type == "programmatic"]
+    llm_items = [item for item in checklist if item.check_type == "llm"]
+
+    # Display programmatic checks
+    if programmatic_items:
+        st.markdown(
+            '<div class="checklist-group-header">Programmatic Checks [P]</div>',
+            unsafe_allow_html=True,
+        )
+        for item in programmatic_items:
+            status_class = "passed" if item.passed else "failed"
+            status_icon = "✓" if item.passed else "✗"
+            details_html = f'<div class="checklist-details">{item.details}</div>' if item.details else ""
+            st.markdown(
+                f'''<div class="checklist-item {status_class}">
+                    <span class="checklist-icon">{status_icon}</span>
+                    <div class="checklist-content">
+                        <div class="checklist-description">{item.description}</div>
+                        {details_html}
+                    </div>
+                </div>''',
+                unsafe_allow_html=True,
+            )
+
+    # Display LLM-evaluated checks
+    if llm_items:
+        st.markdown(
+            '<div class="checklist-group-header">LLM-Evaluated Checks [L]</div>',
+            unsafe_allow_html=True,
+        )
+        for item in llm_items:
+            status_class = "passed" if item.passed else "failed"
+            status_icon = "✓" if item.passed else "✗"
+            details_html = f'<div class="checklist-details">{item.details}</div>' if item.details else ""
+            st.markdown(
+                f'''<div class="checklist-item {status_class}">
+                    <span class="checklist-icon">{status_icon}</span>
+                    <div class="checklist-content">
+                        <div class="checklist-description">{item.description}</div>
+                        {details_html}
+                    </div>
+                </div>''',
+                unsafe_allow_html=True,
+            )
 
 
-def load_best_practices_content() -> str:
-    """Load the best practices markdown content."""
-    docs_path = Path(__file__).resolve().parent / "docs" / "best-practices-by-schema.md"
+def load_checklist_content() -> str:
+    """Load the checklist markdown content."""
+    docs_path = Path(__file__).resolve().parent / "docs" / "checklist-by-schema.md"
     return docs_path.read_text()
 
 
@@ -357,7 +451,7 @@ def display_sidebar_nav():
             return
 
         # Ingest step
-        if phase == "ingest" and not st.session_state.show_best_practices:
+        if phase == "ingest" and not st.session_state.show_checklist:
             st.markdown(
                 '<div class="nav-item current">📥 Ingest Preview</div>',
                 unsafe_allow_html=True,
@@ -367,7 +461,7 @@ def display_sidebar_nav():
                 "✓ Ingest Preview", key="nav_ingest", use_container_width=True
             ):
                 st.session_state.phase = "ingest"
-                st.session_state.show_best_practices = False
+                st.session_state.show_checklist = False
                 st.rerun()
 
         st.markdown("---")
@@ -381,7 +475,7 @@ def display_sidebar_nav():
             if (
                 phase == "analysis"
                 and i == current_idx
-                and not st.session_state.show_best_practices
+                and not st.session_state.show_checklist
             ):
                 # Current section
                 icon = "⚠️" if is_missing else "🔍"
@@ -398,7 +492,7 @@ def display_sidebar_nav():
                 ):
                     st.session_state.phase = "analysis"
                     st.session_state.current_section_idx = i
-                    st.session_state.show_best_practices = False
+                    st.session_state.show_checklist = False
                     st.rerun()
             else:
                 # Pending section
@@ -411,7 +505,7 @@ def display_sidebar_nav():
         st.markdown("---")
 
         # Summary step - clickable if all sections are analyzed
-        if phase == "summary" and not st.session_state.show_best_practices:
+        if phase == "summary" and not st.session_state.show_checklist:
             st.markdown(
                 '<div class="nav-item current">📊 Summary</div>', unsafe_allow_html=True
             )
@@ -419,7 +513,7 @@ def display_sidebar_nav():
             # All sections analyzed - summary is clickable
             if st.button("📊 Summary", key="nav_summary", use_container_width=True):
                 st.session_state.phase = "summary"
-                st.session_state.show_best_practices = False
+                st.session_state.show_checklist = False
                 st.rerun()
         else:
             st.markdown(
@@ -428,9 +522,9 @@ def display_sidebar_nav():
 
         st.markdown("---")
 
-        # Best Practices button
-        if st.button("📚 Best Practices", use_container_width=True):
-            st.session_state.show_best_practices = True
+        # Checklist button
+        if st.button("📋 Checklist", use_container_width=True):
+            st.session_state.show_checklist = True
             st.rerun()
 
         st.markdown("---")
@@ -512,90 +606,11 @@ def display_ingest_phase():
     sections_with_data = st.session_state.sections_with_data
     genie_space_id = st.session_state.genie_space_id
 
-    # Display space ID
-    st.markdown(f"**Space ID:** `{genie_space_id}`")
-    st.markdown("---")
-
-    # Metadata summary
-    tables_count = len(space_data.get("data_sources", {}).get("tables", []))
-    metric_views_count = len(space_data.get("data_sources", {}).get("metric_views", []))
-    instructions_count = len(
-        space_data.get("instructions", {}).get("text_instructions", [])
-    )
-    examples_count = len(
-        space_data.get("instructions", {}).get("example_question_sqls", [])
-    )
-    benchmarks_count = len(space_data.get("benchmarks", {}).get("questions", []))
-
-    col1, col2, col3, col4, col5 = st.columns(5)
-    with col1:
-        st.metric("📊 Tables", tables_count)
-    with col2:
-        st.metric("📈 Metrics", metric_views_count)
-    with col3:
-        st.metric("📝 Instructions", instructions_count)
-    with col4:
-        st.metric("💡 Examples", examples_count)
-    with col5:
-        st.metric("✅ Benchmarks", benchmarks_count)
-
-    st.markdown("---")
-
-    # Two-column layout: JSON on left, sections list on right
-    col_json, col_info = st.columns([2, 1])
-
-    with col_json:
-        st.markdown(
-            '<div class="panel-header">📄 Serialized Space Data</div>',
-            unsafe_allow_html=True,
-        )
-
-        # Display each section in collapsible expanders
-        for section_name, section_data in sections_with_data:
-            display_name = format_section_name(section_name)
-            
-            if section_data is None:
-                # Show missing section with warning style
-                with st.expander(f"⚠️ **{display_name}** (not configured)"):
-                    st.warning("This section is not configured in your Genie Space.")
-            else:
-                item_count = len(section_data) if isinstance(section_data, list) else 1
-                with st.expander(
-                    f"✓ **{display_name}** ({item_count} item{'s' if item_count != 1 else ''})"
-                ):
-                    st.json(section_data)
-
-    with col_info:
-        st.markdown(
-            '<div class="panel-header">ℹ️ Analysis Info</div>', unsafe_allow_html=True
-        )
-
-        # Count configured vs missing sections
-        configured_count = sum(1 for _, data in sections_with_data if data is not None)
-        missing_count = sum(1 for _, data in sections_with_data if data is None)
-
-        st.markdown(f"**Total sections:** {len(sections_with_data)}")
-        st.markdown(f"**Configured:** {configured_count}")
-        st.markdown(f"**Missing:** {missing_count}")
-        
-        st.markdown("---")
-        
-        st.markdown("**Configured sections:**")
-        for section_name, section_data in sections_with_data:
-            if section_data is not None:
-                short_name = get_short_section_name(section_name)
-                st.markdown(f"- ✓ {short_name}")
-        
-        if missing_count > 0:
-            st.markdown("---")
-            st.markdown("**Missing sections:**")
-            for section_name, section_data in sections_with_data:
-                if section_data is None:
-                    short_name = get_short_section_name(section_name)
-                    st.markdown(f"- ⚠️ {short_name}")
-
-        st.markdown("---")
-
+    # Display space ID and Start Analysis button at top
+    col_id, col_btn = st.columns([3, 1])
+    with col_id:
+        st.markdown(f"**Space ID:** `{genie_space_id}`")
+    with col_btn:
         if st.button("🚀 Start Analysis", type="primary", use_container_width=True):
             # Start a new MLflow session for trace grouping
             analyzer = get_analyzer()
@@ -607,47 +622,87 @@ def display_ingest_phase():
             st.session_state.all_sections_analyzed = False
             st.rerun()
 
+    st.markdown("---")
+
+    # Metadata summary - all element counts
+    tables_count = len(space_data.get("data_sources", {}).get("tables", []))
+    metric_views_count = len(space_data.get("data_sources", {}).get("metric_views", []))
+    instructions_count = len(
+        space_data.get("instructions", {}).get("text_instructions", [])
+    )
+    examples_count = len(
+        space_data.get("instructions", {}).get("example_question_sqls", [])
+    )
+    sql_functions_count = len(
+        space_data.get("instructions", {}).get("sql_functions", [])
+    )
+    join_specs_count = len(
+        space_data.get("instructions", {}).get("join_specs", [])
+    )
+    sql_snippets = space_data.get("instructions", {}).get("sql_snippets", {})
+    filters_count = len(sql_snippets.get("filters", []))
+    expressions_count = len(sql_snippets.get("expressions", []))
+    measures_count = len(sql_snippets.get("measures", []))
+    benchmarks_count = len(space_data.get("benchmarks", {}).get("questions", []))
+    sample_questions_count = len(space_data.get("config", {}).get("sample_questions", []))
+
+    # First row of metrics
+    col1, col2, col3, col4, col5, col6 = st.columns(6)
+    with col1:
+        st.metric("📊 Tables", tables_count)
+    with col2:
+        st.metric("📈 Metric Views", metric_views_count)
+    with col3:
+        st.metric("📝 Instructions", instructions_count)
+    with col4:
+        st.metric("💡 Examples", examples_count)
+    with col5:
+        st.metric("🔧 SQL Functions", sql_functions_count)
+    with col6:
+        st.metric("🔗 JOIN Specs", join_specs_count)
+
+    # Second row of metrics
+    col7, col8, col9, col10, col11, col12 = st.columns(6)
+    with col7:
+        st.metric("🔍 Filters", filters_count)
+    with col8:
+        st.metric("📐 Expressions", expressions_count)
+    with col9:
+        st.metric("📏 Measures", measures_count)
+    with col10:
+        st.metric("✅ Benchmarks", benchmarks_count)
+    with col11:
+        st.metric("❓ Sample Questions", sample_questions_count)
+    with col12:
+        pass  # Empty column for balance
+
+    st.markdown("---")
+
+    # Full-width JSON viewer
+    st.markdown(
+        '<div class="panel-header">📄 Serialized Space Data</div>',
+        unsafe_allow_html=True,
+    )
+
+    # Display each section in collapsible expanders
+    for section_name, section_data in sections_with_data:
+        display_name = format_section_name(section_name)
+        
+        if section_data is None:
+            # Show missing section with warning style
+            with st.expander(f"⚠️ **{display_name}** (not configured)"):
+                st.warning("This section is not configured in your Genie Space.")
+        else:
+            item_count = len(section_data) if isinstance(section_data, list) else 1
+            with st.expander(
+                f"✓ **{display_name}** ({item_count} item{'s' if item_count != 1 else ''})"
+            ):
+                st.json(section_data)
+
 
 # =============================================================================
 # Phase 3: Section Analysis Phase
 # =============================================================================
-
-
-def display_finding(finding: Finding):
-    """Display a single finding with recommendation inline."""
-    st.markdown(
-        f"""
-        <div class="finding-card {finding.severity}">
-            <div style="font-weight: 500; margin-bottom: 0.5rem;">{finding.description}</div>
-            <div style="color: #555; font-size: 0.9rem; padding-top: 0.5rem; border-top: 1px solid #E0E0E0;">
-                💡 {finding.recommendation}
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-def display_findings_by_severity(findings: list[Finding]):
-    """Display findings grouped by severity."""
-    grouped = group_findings_by_severity(findings)
-
-    severity_labels = {
-        "high": ("🔴 High Severity", "#C62828"),
-        "medium": ("🟠 Medium Severity", "#E65100"),
-        "low": ("🔵 Low Severity", "#1565C0"),
-    }
-
-    for severity in ["high", "medium", "low"]:
-        severity_findings = grouped[severity]
-        if severity_findings:
-            label, color = severity_labels[severity]
-            st.markdown(
-                f'<div class="severity-group-header {severity}">{label} ({len(severity_findings)})</div>',
-                unsafe_allow_html=True,
-            )
-            for finding in severity_findings:
-                display_finding(finding)
 
 
 def display_analysis_phase():
@@ -656,6 +711,7 @@ def display_analysis_phase():
     current_idx = st.session_state.current_section_idx
     analyses = st.session_state.section_analyses
     genie_space_id = st.session_state.genie_space_id
+    space_data = st.session_state.space_data
 
     # Display space ID
     st.markdown(f"**Space ID:** `{genie_space_id}`")
@@ -672,7 +728,9 @@ def display_analysis_phase():
         with st.spinner(f"Analyzing {display_name}..."):
             try:
                 analyzer = get_analyzer()
-                analysis = analyzer.analyze_section(section_name, section_data)
+                analysis = analyzer.analyze_section(
+                    section_name, section_data, full_space=space_data
+                )
                 st.session_state.section_analyses.append(analysis)
 
                 # Check if all sections are now analyzed
@@ -712,8 +770,8 @@ def display_analysis_phase():
 
     st.markdown("---")
 
-    # Three-column layout: JSON | Score | Findings
-    col_json, col_findings = st.columns([1, 1])
+    # Two-column layout: JSON | Score + Checklist
+    col_json, col_checklist = st.columns([1, 1])
 
     with col_json:
         st.markdown(
@@ -724,40 +782,19 @@ def display_analysis_phase():
         else:
             st.json(section_data)
 
-    with col_findings:
-        # Score display at top
-        if analysis.score >= 8:
-            score_color = "#00A972"
-            score_emoji = "✅"
-        elif analysis.score >= 6:
-            score_color = "#FF9800"
-            score_emoji = "⚠️"
-        else:
-            score_color = "#C62828"
-            score_emoji = "❌"
-
+    with col_checklist:
         st.markdown(
-            f"""
-            <div style="background-color: {score_color}; color: white; 
-                        border-radius: 12px; padding: 1rem; text-align: center; margin-bottom: 1rem;">
-                <div style="font-size: 2rem; font-weight: 800;">{analysis.score}/10</div>
-                <div style="font-size: 0.85rem; opacity: 0.9;">Section Score</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
+            '<div class="panel-header">📋 Checklist</div>', unsafe_allow_html=True
         )
 
         if analysis.summary:
-            st.info(f"{score_emoji} {analysis.summary}")
+            st.info(analysis.summary)
 
-        st.markdown(
-            '<div class="panel-header">🔍 Findings</div>', unsafe_allow_html=True
-        )
-
-        if analysis.findings:
-            display_findings_by_severity(analysis.findings)
+        # Display checklist progress
+        if analysis.checklist:
+            display_checklist_progress(analysis.checklist)
         else:
-            st.success("✅ No issues found in this section!")
+            st.info("No checklist items for this section.")
 
 
 # =============================================================================
@@ -782,19 +819,27 @@ def display_summary_phase():
     st.markdown(f"**Space ID:** `{genie_space_id}`")
     st.markdown("---")
 
-    # Calculate overall score
-    total_score = sum(a.score for a in analyses)
-    overall_score = total_score // len(analyses) if analyses else 0
+    # Calculate checklist totals
+    total_checklist = sum(len(a.checklist) for a in analyses)
+    passed_checklist = sum(1 for a in analyses for c in a.checklist if c.passed)
+    percentage = (passed_checklist / total_checklist * 100) if total_checklist > 0 else 0
 
-    # Overall Score Card centered
+    # Determine color based on percentage
+    if percentage >= 80:
+        score_class = "good"
+    elif percentage >= 60:
+        score_class = "medium"
+    else:
+        score_class = ""
+
+    # Overall Checklist Card centered
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        score_class = get_score_class(overall_score)
         st.markdown(
             f"""
             <div class="score-card {score_class}">
-                <div class="score-value">{overall_score}</div>
-                <div class="score-label">Overall Compliance Score</div>
+                <div class="score-value">{passed_checklist}/{total_checklist}</div>
+                <div class="score-label">Checklist Items Passed</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -802,31 +847,13 @@ def display_summary_phase():
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Summary statistics
-    total_findings = sum(len(a.findings) for a in analyses)
-    high_count = sum(1 for a in analyses for f in a.findings if f.severity == "high")
-    medium_count = sum(
-        1 for a in analyses for f in a.findings if f.severity == "medium"
-    )
-    low_count = sum(1 for a in analyses for f in a.findings if f.severity == "low")
-
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric("Total Findings", total_findings)
-    with col2:
-        st.metric("🔴 High", high_count)
-    with col3:
-        st.metric("🟠 Medium", medium_count)
-    with col4:
-        st.metric("🔵 Low", low_count)
-
     st.markdown("---")
 
     # Header with expand/collapse all buttons
     header_col, btn_col1, btn_col2 = st.columns([4, 1, 1])
     with header_col:
         st.markdown(
-            '<div class="panel-header">📋 Section Scores</div>',
+            '<div class="panel-header">📋 Section Results</div>',
             unsafe_allow_html=True,
         )
     with btn_col1:
@@ -843,21 +870,11 @@ def display_summary_phase():
     # Display each section as an expandable card
     for analysis in analyses:
         display_name = format_section_name(analysis.section_name)
-        finding_count = len(analysis.findings)
+        checklist_passed = sum(1 for c in analysis.checklist if c.passed)
+        checklist_total = len(analysis.checklist)
 
-        # Score color and emoji
-        if analysis.score >= 8:
-            score_color = "#00A972"
-            score_emoji = "✅"
-        elif analysis.score >= 6:
-            score_color = "#FF9800"
-            score_emoji = "⚠️"
-        else:
-            score_color = "#C62828"
-            score_emoji = "❌"
-
-        # Create expander with section name and score in the label
-        expander_label = f"{display_name} — **{analysis.score}/10**"
+        # Create expander with section name and checklist progress
+        expander_label = f"{display_name} — {checklist_passed}/{checklist_total} passed"
         is_expanded = st.session_state.expanded_sections.get(
             analysis.section_name, False
         )
@@ -868,32 +885,32 @@ def display_summary_phase():
 
             # Summary
             if analysis.summary:
-                st.info(f"{score_emoji} {analysis.summary}")
+                st.info(analysis.summary)
 
-            # Findings
-            if analysis.findings:
-                st.markdown(f"**Findings ({finding_count})**")
-                display_findings_by_severity(analysis.findings)
+            # Checklist
+            st.markdown("**Checklist**")
+            if analysis.checklist:
+                display_checklist_progress(analysis.checklist)
             else:
-                st.success("✅ No issues found in this section!")
+                st.info("No checklist items for this section.")
 
 
 # =============================================================================
-# Best Practices Page
+# Checklist Reference Page
 # =============================================================================
 
 
-def display_best_practices_page():
-    """Display the best practices documentation page."""
+def display_checklist_page():
+    """Display the checklist documentation page."""
     # Back button
     if st.button("← Back to Analysis", use_container_width=False):
-        st.session_state.show_best_practices = False
+        st.session_state.show_checklist = False
         st.rerun()
 
     st.markdown("---")
 
     # Load and display the markdown content
-    content = load_best_practices_content()
+    content = load_checklist_content()
     st.markdown(content)
 
 
@@ -909,17 +926,17 @@ def main():
     # Sidebar navigation
     display_sidebar_nav()
 
-    # Check if showing best practices page
-    if st.session_state.show_best_practices:
+    # Check if showing checklist page
+    if st.session_state.show_checklist:
         st.markdown(
-            '<div class="header-title">📚 Best Practices Reference</div>',
+            '<div class="header-title">📋 Checklist Reference</div>',
             unsafe_allow_html=True,
         )
         st.markdown(
-            '<div class="header-subtitle">Genie Space configuration guidelines organized by schema</div>',
+            '<div class="header-subtitle">Genie Space configuration checklist organized by schema</div>',
             unsafe_allow_html=True,
         )
-        display_best_practices_page()
+        display_checklist_page()
         return
 
     # Header
@@ -928,7 +945,7 @@ def main():
         unsafe_allow_html=True,
     )
     st.markdown(
-        '<div class="header-subtitle">Analyze your Databricks Genie Space configuration against best practices</div>',
+        '<div class="header-subtitle">Analyze your Databricks Genie Space configuration against checklist</div>',
         unsafe_allow_html=True,
     )
 

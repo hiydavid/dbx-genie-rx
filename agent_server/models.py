@@ -7,6 +7,16 @@ class AgentInput(BaseModel):
     genie_space_id: str
 
 
+class ChecklistItem(BaseModel):
+    """A single checklist item from the analysis."""
+
+    id: str  # e.g., "tables_count_limit"
+    description: str  # Human-readable description
+    check_type: str  # "programmatic" | "llm"
+    passed: bool  # Whether the check passed
+    details: str | None = None  # Additional context (e.g., "Found 3 tables")
+
+
 class Finding(BaseModel):
     """A single finding from the analysis."""
 
@@ -21,8 +31,9 @@ class SectionAnalysis(BaseModel):
     """Analysis results for a single section."""
 
     section_name: str  # e.g., "config.sample_questions", "data_sources.tables"
-    findings: list[Finding]
-    score: int  # 0-10 compliance score
+    checklist: list[ChecklistItem]  # Structured checklist results
+    findings: list[Finding]  # Detailed findings for failed items
+    score: int  # 0-10 compliance score (passed_items / total_items * 10)
     summary: str
 
 

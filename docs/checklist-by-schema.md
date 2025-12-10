@@ -1,6 +1,8 @@
 # Genie Space Checklist (Organized by Schema)
 
-Based on the [best practices documentation](best-practices-by-schema.md). Each item is tagged:
+Based on the [official Databricks Genie Best Practice doc](https://docs.databricks.com/aws/en/genie/best-practices). Last updated 11/05/2025.
+
+This checklist was reorganizes according to the serialized Genie Space JSON schema structure. Each item is tagged:
 - **[P]** = Programmatic check (verified automatically)
 - **[L]** = LLM evaluation (requires qualitative assessment)
 

@@ -9,9 +9,19 @@ from mlflow.entities import SpanType
 from mlflow.genai.agent_server import invoke as invoke_decorator
 
 from agent_server.auth import get_workspace_client
+from agent_server.checks import (
+    get_llm_checklist_items_for_section,
+    get_programmatic_checks_for_section,
+)
 from agent_server.ingest import get_serialized_space
-from agent_server.models import AgentInput, AgentOutput, Finding, SectionAnalysis
-from agent_server.prompts import get_section_analysis_prompt
+from agent_server.models import (
+    AgentInput,
+    AgentOutput,
+    ChecklistItem,
+    Finding,
+    SectionAnalysis,
+)
+from agent_server.prompts import get_checklist_evaluation_prompt, get_section_analysis_prompt
 
 # Enable MLflow tracing
 mlflow.tracing.enable()
@@ -138,11 +148,14 @@ class GenieSpaceAnalyzer:
 
         return "\n".join(section_lines) if section_lines else self.best_practices
 
-    def _create_missing_section_analysis(self, section_name: str) -> SectionAnalysis:
+    def _create_missing_section_analysis(
+        self, section_name: str, full_space: dict | None = None
+    ) -> SectionAnalysis:
         """Create analysis for a missing/unconfigured section.
 
         Args:
             section_name: Name of the missing section
+            full_space: The full space data for cross-section checks
 
         Returns:
             SectionAnalysis with a low score and finding for the missing section
@@ -166,37 +179,69 @@ class GenieSpaceAnalyzer:
             section_name, f"The {section_name} section is not configured"
         )
 
+        # Create checklist items for missing section
+        checklist = []
+
+        # Run programmatic checks (they'll return failed items for missing data)
+        programmatic_checks = get_programmatic_checks_for_section(
+            section_name, None, full_space
+        )
+        checklist.extend(programmatic_checks)
+
+        # Add LLM checklist items as failed
+        llm_items = get_llm_checklist_items_for_section(section_name)
+        for item in llm_items:
+            checklist.append(
+                ChecklistItem(
+                    id=item["id"],
+                    description=item["description"],
+                    check_type="llm",
+                    passed=False,
+                    details="Section not configured",
+                )
+            )
+
+        # Calculate score based on checklist
+        passed_count = sum(1 for item in checklist if item.passed)
+        total_count = len(checklist)
+        score = round(passed_count / total_count * 10) if total_count > 0 else 0
+
         finding = Finding(
             category="suggestion",
             severity="medium",
             description=f"Section '{section_name}' is not configured",
             recommendation=f"Consider adding {section_name}. {description}.",
-            reference=f"See best practices documentation for {section_name}",
+            reference=f"See checklist documentation for {section_name}",
         )
 
         return SectionAnalysis(
             section_name=section_name,
+            checklist=checklist,
             findings=[finding],
-            score=3,  # Uniform penalty for missing sections
+            score=score,
             summary=f"This section is not configured. {description}.",
         )
 
     @mlflow.trace(span_type=SpanType.LLM)
     def analyze_section(
-        self, section_name: str, section_data: dict | list | None
+        self,
+        section_name: str,
+        section_data: dict | list | None,
+        full_space: dict | None = None,
     ) -> SectionAnalysis:
-        """Analyze a single section against best practices.
+        """Analyze a single section using hybrid checklist approach.
 
         Args:
             section_name: Name of the section to analyze
             section_data: The section data, or None if not configured
+            full_space: The full space data for cross-section checks
 
         Returns:
-            SectionAnalysis with findings and score
+            SectionAnalysis with checklist items, findings and score
         """
         # Handle missing sections
         if section_data is None:
-            return self._create_missing_section_analysis(section_name)
+            return self._create_missing_section_analysis(section_name, full_space)
 
         # Tag trace with session ID if there's an active trace
         if self._session_id and mlflow.get_current_active_span() is not None:
@@ -209,33 +254,82 @@ class GenieSpaceAnalyzer:
             except Exception:
                 pass  # Ignore if trace update fails
 
-        relevant_practices = self._get_relevant_best_practices(section_name)
-        prompt = get_section_analysis_prompt(
-            section_name, relevant_practices, section_data
+        # Step 1: Run programmatic checks
+        checklist = []
+        programmatic_checks = get_programmatic_checks_for_section(
+            section_name, section_data, full_space
         )
+        checklist.extend(programmatic_checks)
 
-        # Call serving endpoint using SDK (handles OBO auth automatically)
-        content = self._call_serving_endpoint(
-            messages=[{"role": "user", "content": prompt}]
-        )
+        # Step 2: Get LLM checklist items and evaluate them
+        llm_items = get_llm_checklist_items_for_section(section_name)
+        findings = []
 
-        # Parse response, handling potential markdown code blocks
-        content = content.strip()
-        if content.startswith("```"):
-            # Remove markdown code fences
-            lines = content.split("\n")
-            content = (
-                "\n".join(lines[1:-1]) if lines[-1] == "```" else "\n".join(lines[1:])
+        if llm_items:
+            # Call LLM to evaluate qualitative items
+            prompt = get_checklist_evaluation_prompt(
+                section_name, section_data, llm_items
             )
-        result = json.loads(content)
 
-        findings = [Finding(**f) for f in result.get("findings", [])]
+            content = self._call_serving_endpoint(
+                messages=[{"role": "user", "content": prompt}]
+            )
+
+            # Parse response, handling potential markdown code blocks
+            content = content.strip()
+            if content.startswith("```"):
+                lines = content.split("\n")
+                content = (
+                    "\n".join(lines[1:-1])
+                    if lines[-1] == "```"
+                    else "\n".join(lines[1:])
+                )
+            result = json.loads(content)
+
+            # Process LLM evaluations into ChecklistItems
+            evaluations = {e["id"]: e for e in result.get("evaluations", [])}
+            for item in llm_items:
+                eval_result = evaluations.get(item["id"], {})
+                checklist.append(
+                    ChecklistItem(
+                        id=item["id"],
+                        description=item["description"],
+                        check_type="llm",
+                        passed=eval_result.get("passed", False),
+                        details=eval_result.get("details"),
+                    )
+                )
+
+            # Get findings from LLM response
+            findings = [Finding(**f) for f in result.get("findings", [])]
+            summary = result.get("summary", "")
+        else:
+            summary = "Section analyzed with programmatic checks only."
+
+        # Step 3: Generate findings for failed programmatic checks
+        for check in programmatic_checks:
+            if not check.passed:
+                findings.append(
+                    Finding(
+                        category="best_practice",
+                        severity="medium",
+                        description=f"Check failed: {check.description}",
+                        recommendation=f"Address this issue: {check.details or check.description}",
+                        reference=check.id,
+                    )
+                )
+
+        # Step 4: Calculate score based on checklist items
+        passed_count = sum(1 for item in checklist if item.passed)
+        total_count = len(checklist)
+        score = round(passed_count / total_count * 10) if total_count > 0 else 0
 
         return SectionAnalysis(
             section_name=section_name,
+            checklist=checklist,
             findings=findings,
-            score=result.get("score", 0),
-            summary=result.get("summary", ""),
+            score=score,
+            summary=summary,
         )
 
     @mlflow.trace(name="predict", span_type=SpanType.AGENT)
@@ -265,7 +359,9 @@ class GenieSpaceAnalyzer:
                     # Analyze ALL sections (including missing ones)
                     with mlflow.start_span(name=f"analyze_{section_name}") as span:
                         span.set_inputs({"section_name": section_name})
-                        analysis = self.analyze_section(section_name, section_data)
+                        analysis = self.analyze_section(
+                            section_name, section_data, full_space=space
+                        )
                         analyses.append(analysis)
                         total_score += analysis.score
                         section_count += 1
@@ -273,6 +369,10 @@ class GenieSpaceAnalyzer:
                             {
                                 "score": analysis.score,
                                 "findings_count": len(analysis.findings),
+                                "checklist_passed": sum(
+                                    1 for c in analysis.checklist if c.passed
+                                ),
+                                "checklist_total": len(analysis.checklist),
                             }
                         )
 
@@ -377,7 +477,9 @@ class GenieSpaceAnalyzer:
 
                     with mlflow.start_span(name=f"analyze_{section_name}") as span:
                         span.set_inputs({"section_name": section_name})
-                        analysis = self.analyze_section(section_name, section_data)
+                        analysis = self.analyze_section(
+                            section_name, section_data, full_space=space
+                        )
                         analyses.append(analysis)
                         total_score += analysis.score
                         section_count += 1
@@ -385,6 +487,10 @@ class GenieSpaceAnalyzer:
                             {
                                 "score": analysis.score,
                                 "findings_count": len(analysis.findings),
+                                "checklist_passed": sum(
+                                    1 for c in analysis.checklist if c.passed
+                                ),
+                                "checklist_total": len(analysis.checklist),
                             }
                         )
 
@@ -431,7 +537,7 @@ def format_analysis_as_markdown(output: AgentOutput) -> str:
     lines = []
 
     # Title
-    lines.append(f"# Genie Space Analysis Report")
+    lines.append("# Genie Space Analysis Report")
     lines.append("")
     lines.append(f"**Space ID:** `{output.genie_space_id}`")
     lines.append("")
@@ -454,8 +560,15 @@ def format_analysis_as_markdown(output: AgentOutput) -> str:
         1 for a in output.analyses for f in a.findings if f.severity == "low"
     )
 
+    # Checklist statistics
+    total_checklist = sum(len(a.checklist) for a in output.analyses)
+    passed_checklist = sum(
+        1 for a in output.analyses for c in a.checklist if c.passed
+    )
+
     lines.append("### Summary Statistics")
     lines.append("")
+    lines.append(f"- **Checklist Items Passed:** {passed_checklist}/{total_checklist}")
     lines.append(f"- **Total Findings:** {total_findings}")
     lines.append(f"- **High Severity:** {high_count}")
     lines.append(f"- **Medium Severity:** {medium_count}")
@@ -475,12 +588,28 @@ def format_analysis_as_markdown(output: AgentOutput) -> str:
         # Section header with score
         lines.append(f"### {display_name}")
         lines.append("")
+
+        # Checklist progress
+        passed = sum(1 for c in analysis.checklist if c.passed)
+        total = len(analysis.checklist)
+        lines.append(f"**Checklist:** {passed}/{total} items passed")
         lines.append(f"**Score:** {analysis.score}/10")
         lines.append("")
 
         # Summary
         if analysis.summary:
             lines.append(f"**Summary:** {analysis.summary}")
+            lines.append("")
+
+        # Checklist items
+        if analysis.checklist:
+            lines.append("#### Checklist")
+            lines.append("")
+            for item in analysis.checklist:
+                status = "✓" if item.passed else "✗"
+                check_type = "[P]" if item.check_type == "programmatic" else "[L]"
+                details = f" - {item.details}" if item.details else ""
+                lines.append(f"- {status} **{check_type}** {item.description}{details}")
             lines.append("")
 
         # Findings grouped by severity
