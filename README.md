@@ -10,6 +10,10 @@ An LLM-powered linting tool that analyzes Databricks Genie Space configurations 
 
 ## ✨ Features
 
+<p align="center">
+  <img src="docs/genie_analyzer_app.png" alt="Genie Space Analyzer App" width="1000">
+</p>
+
 - **Comprehensive Analysis** — Evaluates 11 different sections of your Genie Space configuration
 - **Best Practice Validation** — Checks against documented Databricks Genie Space best practices
 - **Severity-based Findings** — Categorizes issues as high, medium, or low severity
@@ -139,10 +143,6 @@ LLM_MODEL=databricks-claude-sonnet-4
 ### Streamlit UI
 
 The interactive wizard guides you through 4 phases:
-
-```bash
-uv run streamlit run app.py
-```
 
 1. **Input** — Enter your Genie Space ID and click "Fetch Space"
 2. **Ingest Preview** — Review the serialized JSON data before analysis
