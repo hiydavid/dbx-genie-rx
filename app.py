@@ -4,7 +4,10 @@ Streamlit UI for the Genie Space Analyzer.
 Provides a multi-step wizard interface for analyzing Genie Spaces against best practices.
 """
 
+import ast
+import json
 import os
+from datetime import datetime
 from pathlib import Path
 
 import streamlit as st
@@ -542,57 +545,152 @@ def display_sidebar_nav():
 
 def display_input_phase():
     """Display the initial input phase."""
-    # Check for required environment variables (only needed for local development)
-    missing_vars = []
-    if not is_running_on_databricks_apps():
-        if not os.environ.get("DATABRICKS_HOST"):
-            missing_vars.append("DATABRICKS_HOST")
-        if not os.environ.get("DATABRICKS_TOKEN"):
-            missing_vars.append("DATABRICKS_TOKEN")
+    # Input method toggle
+    input_method = st.radio(
+        "Input Method",
+        ["Fetch by Genie Space ID", "Paste JSON"],
+        horizontal=True,
+    )
 
-        if missing_vars:
-            st.warning(
-                f"⚠️ Missing environment variables: {', '.join(missing_vars)}. "
-                "Please set these in your `.env.local` or `.env` file."
+    if input_method == "Fetch by Genie Space ID":
+        # Check for required environment variables (only needed for local development)
+        missing_vars = []
+        if not is_running_on_databricks_apps():
+            if not os.environ.get("DATABRICKS_HOST"):
+                missing_vars.append("DATABRICKS_HOST")
+            if not os.environ.get("DATABRICKS_TOKEN"):
+                missing_vars.append("DATABRICKS_TOKEN")
+
+            if missing_vars:
+                st.warning(
+                    f"⚠️ Missing environment variables: {', '.join(missing_vars)}. "
+                    "Please set these in your `.env.local` or `.env` file."
+                )
+
+        st.markdown("### Enter Genie Space ID")
+
+        col1, col2 = st.columns([3, 1])
+
+        with col1:
+            genie_space_id = st.text_input(
+                "Genie Space ID",
+                placeholder="e.g., 01f0627099691651968d0a92a26b06e9",
+                help="The unique identifier for your Databricks Genie Space",
+                label_visibility="collapsed",
             )
 
-    st.markdown("### Enter Genie Space ID")
+        with col2:
+            fetch_button = st.button(
+                "📥 Fetch Space", type="primary", use_container_width=True
+            )
 
-    col1, col2 = st.columns([3, 1])
+        if fetch_button:
+            if not genie_space_id:
+                st.warning("Please enter a Genie Space ID")
+            elif missing_vars:
+                st.error("Cannot fetch space without required environment variables")
+            else:
+                with st.spinner("Fetching Genie Space..."):
+                    try:
+                        space_data = get_serialized_space(genie_space_id)
+                        analyzer = get_analyzer()
+                        # Get ALL sections (including missing ones) for schema-aware analysis
+                        all_sections = analyzer.get_all_sections(space_data)
 
-    with col1:
-        genie_space_id = st.text_input(
-            "Genie Space ID",
-            placeholder="e.g., 01f0627099691651968d0a92a26b06e9",
-            help="The unique identifier for your Databricks Genie Space",
+                        st.session_state.genie_space_id = genie_space_id
+                        st.session_state.space_data = space_data
+                        st.session_state.sections_with_data = all_sections
+                        st.session_state.phase = "ingest"
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"❌ Failed to fetch Genie Space: {str(e)}")
+
+    else:  # Paste JSON
+        st.markdown("### Paste Genie Space JSON")
+
+        json_input = st.text_area(
+            "Paste JSON",
+            placeholder='{"serialized_space": "{\\"config\\": {...}, \\"data_sources\\": {...}, ...}", ...}',
+            help="Paste the raw API response from GET /api/2.0/genie/spaces/{id}?include_serialized_space=true",
+            height=200,
             label_visibility="collapsed",
         )
 
-    with col2:
-        fetch_button = st.button(
-            "📥 Fetch Space", type="primary", use_container_width=True
+        load_button = st.button(
+            "📋 Load JSON", type="primary", use_container_width=False
         )
 
-    if fetch_button:
-        if not genie_space_id:
-            st.warning("Please enter a Genie Space ID")
-        elif missing_vars:
-            st.error("Cannot fetch space without required environment variables")
-        else:
-            with st.spinner("Fetching Genie Space..."):
-                try:
-                    space_data = get_serialized_space(genie_space_id)
-                    analyzer = get_analyzer()
-                    # Get ALL sections (including missing ones) for schema-aware analysis
-                    all_sections = analyzer.get_all_sections(space_data)
+        with st.expander("How to get the serialized JSON"):
+            st.code(
+                '''import requests
 
-                    st.session_state.genie_space_id = genie_space_id
-                    st.session_state.space_data = space_data
-                    st.session_state.sections_with_data = all_sections
-                    st.session_state.phase = "ingest"
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"❌ Failed to fetch Genie Space: {str(e)}")
+your_workspace_url = "https://your-workspace.cloud.databricks.com"
+your_genie_space_id = ""
+
+response = requests.get(
+    f"{your_workspace_url}/api/2.0/genie/spaces/{your_genie_space_id}",
+    headers={
+        "Authorization": f"Bearer {token}",  # enter PAT token
+        "Content-Type": "application/json",
+    },
+    params={
+        "include_serialized_space": "true",
+    },
+)
+
+response.json()''',
+                language="python",
+            )
+
+        if load_button:
+            if not json_input.strip():
+                st.warning("Please paste JSON content")
+            else:
+                try:
+                    # Try JSON first, then fall back to Python dict syntax
+                    try:
+                        raw_response = json.loads(json_input)
+                    except json.JSONDecodeError:
+                        # Fall back to Python dict syntax (single quotes)
+                        raw_response = ast.literal_eval(json_input)
+
+                    # Extract and parse the serialized_space field
+                    if "serialized_space" not in raw_response:
+                        st.error(
+                            "❌ Invalid input: missing 'serialized_space' field. "
+                            "Please paste the raw API response from the Genie Spaces endpoint."
+                        )
+                    else:
+                        serialized = raw_response["serialized_space"]
+                        # serialized_space may be a JSON string or already parsed dict
+                        if isinstance(serialized, str):
+                            space_data = json.loads(serialized)
+                        else:
+                            space_data = serialized
+
+                        # Basic structure validation
+                        expected_keys = {"config", "data_sources", "instructions", "benchmarks"}
+                        missing_keys = expected_keys - set(space_data.keys())
+                        if missing_keys:
+                            st.warning(
+                                f"⚠️ Input is missing expected keys: {', '.join(missing_keys)}. "
+                                "Analysis may be incomplete."
+                            )
+
+                        # Generate placeholder ID
+                        genie_space_id = f"pasted-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+
+                        analyzer = get_analyzer()
+                        all_sections = analyzer.get_all_sections(space_data)
+
+                        st.session_state.genie_space_id = genie_space_id
+                        st.session_state.space_data = space_data
+                        st.session_state.sections_with_data = all_sections
+                        st.session_state.phase = "ingest"
+                        st.rerun()
+
+                except (json.JSONDecodeError, ValueError, SyntaxError) as e:
+                    st.error(f"❌ Invalid input: {str(e)}")
 
 
 # =============================================================================

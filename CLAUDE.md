@@ -20,10 +20,15 @@ uv run start-server
 uv run start-server --reload  # with hot-reload
 
 # Test with a specific Genie Space
-python test_agent.py --genie-space-id <id>
+uv run python test_agent.py --genie-space-id <id>
 
 # Deploy to Databricks Apps
 ./scripts/deploy.sh genie-space-analyzer
+
+# REST API usage
+curl -X POST http://localhost:8000/invocations \
+  -H "Content-Type: application/json" \
+  -d '{"genie_space_id": "your-genie-space-id"}'
 ```
 
 ## Architecture
@@ -46,7 +51,7 @@ python test_agent.py --genie-space-id <id>
 
 | File | Purpose |
 |------|---------|
-| `app.py` | Multi-phase Streamlit wizard: Input → Ingest Preview → Section Analysis → Summary |
+| `app.py` | Multi-phase Streamlit wizard: Input (ID fetch or JSON paste) → Ingest Preview → Section Analysis → Summary |
 | `agent_server/agent.py` | `GenieSpaceAnalyzer` class with LLM integration, MLflow tracing, streaming |
 | `agent_server/auth.py` | OBO authentication for Databricks Apps, PAT token for local dev |
 | `agent_server/ingest.py` | Databricks SDK wrapper for fetching Genie Space configs |
