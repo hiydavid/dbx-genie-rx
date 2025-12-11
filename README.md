@@ -279,7 +279,3 @@ metadata.`mlflow.trace.session` = '<session-id>'
 ## 🛣️ Future Roadmap
 
 - 💾 **Save Summary Report** — Export analysis results to JSON/Markdown files
-
-## 📜 License
-
-MIT License — see [LICENSE](LICENSE) for details.
