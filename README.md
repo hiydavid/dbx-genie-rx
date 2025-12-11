@@ -1,8 +1,10 @@
 # 🔍 GenieRX: The Genie Space Analyzer
 
-An LLM-powered linting tool that analyzes Databricks Genie Space configurations against best practices. Get actionable insights and recommendations to improve your Genie Space setup.
-
 > ⚠️ **Note:** This project is experimental and under active development.
+
+An LLM-powered linting tool that analyzes Databricks Genie Space configurations against best practices. Get actionable insights and recommendations to improve your Genie Space setup. 
+
+Simply clone the repo in your local development environment, run `quickstart.sh` to setup authentication and MLflow experiment to start testing locally. This app was designed to be deployed on Databricks Apps, so to deploy, simply run `deploy.sh` and then follow the instruction to create and deploy a Databricks App.
 
 ![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)
 ![MLflow](https://img.shields.io/badge/MLflow-3.6+-green.svg)
