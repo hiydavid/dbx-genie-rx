@@ -19,12 +19,21 @@ uv run uvicorn agent_server.start_server:app --reload --port 5001  # with hot-re
 # Frontend development (localhost:5173, proxies to backend)
 cd frontend && npm run dev
 
+# Frontend linting and type-check
+cd frontend && npm run lint
+cd frontend && npm run build  # TypeScript checked during build
+
+# Test agent against a Genie Space (requires running server on port 5001)
+GENIE_SPACE_ID=<id> uv run python test_agent.py --url http://localhost:5001
+
 # Build frontend for production
 ./scripts/build.sh
 
 # Deploy to Databricks Apps
 ./scripts/deploy.sh genie-space-analyzer
 ```
+
+Note: `app.py` at the root is a deprecated Streamlit UI; use `agent_server/` for active development.
 
 ## Architecture
 
@@ -53,7 +62,8 @@ cd frontend && npm run dev
 | `agent_server/ingest.py` | Databricks SDK wrapper for fetching Genie Space configs |
 | `agent_server/models.py` | Pydantic models: `AgentInput`, `AgentOutput`, `Finding`, `SectionAnalysis`, `ChecklistItem` |
 | `agent_server/prompts.py` | LLM prompt templates for checklist evaluation |
-| `frontend/src/App.tsx` | Main React app with 4-phase wizard (Input → Ingest → Analysis → Summary) |
+| `frontend/src/App.tsx` | Main React app orchestrating the 4-phase wizard |
+| `frontend/src/components/*Phase.tsx` | Phase-specific UI: `InputPhase`, `IngestPhase`, `AnalysisPhase`, `SummaryPhase` |
 
 ### Analysis Approach
 
@@ -65,8 +75,9 @@ Each section is evaluated using:
 
 - **MLflow Tracing**: All LLM calls traced with session grouping via `mlflow.start_span()`
 - **Hybrid Checklist**: `get_programmatic_checks_for_section()` + `get_llm_checklist_items_for_section()` in `checks.py`
-- **Streaming SSE**: `predict_streaming()` yields progress updates; frontend consumes via `/api/analyze/stream`
+- **Streaming SSE**: `predict_streaming()` yields progress updates; frontend consumes via `/api/analyze/stream`. Events have `status` field: `fetching`, `analyzing` (with `current`/`total`), `complete`, `result`
 - **OBO Auth**: In Databricks Apps, uses on-behalf-of tokens; locally uses PAT/OAuth from CLI
+- **Section Constants**: The 11 analyzed sections are defined in `SECTIONS` list in `agent.py`
 
 ## Environment Configuration
 
