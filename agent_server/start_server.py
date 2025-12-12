@@ -42,22 +42,41 @@ app.include_router(api_router)
 
 # Serve static files from React build (production)
 FRONTEND_DIST = Path(__file__).parent.parent / "frontend" / "dist"
-if FRONTEND_DIST.exists():
-    # Serve static assets
+
+# Mount static assets if they exist
+if FRONTEND_DIST.exists() and (FRONTEND_DIST / "assets").exists():
     app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="assets")
-    
-    # Serve index.html for all non-API routes (SPA routing)
-    @app.get("/{full_path:path}")
-    async def serve_spa(full_path: str):
-        """Serve React SPA for all non-API routes."""
-        # Don't serve SPA for API routes or invocations
-        if full_path.startswith("api/") or full_path.startswith("invocations"):
-            return None
-        
-        index_path = FRONTEND_DIST / "index.html"
-        if index_path.exists():
-            return FileResponse(index_path)
-        return {"error": "Frontend not built"}
+
+
+# Always register root route (helps debug if frontend is missing)
+@app.get("/")
+async def serve_root():
+    """Serve React SPA for root route."""
+    index_path = FRONTEND_DIST / "index.html"
+    if index_path.exists():
+        return FileResponse(index_path)
+    # Return helpful debug info if frontend is missing
+    return {
+        "error": "Frontend not built or not deployed",
+        "expected_path": str(FRONTEND_DIST),
+        "frontend_dist_exists": FRONTEND_DIST.exists(),
+        "index_html_exists": index_path.exists() if FRONTEND_DIST.exists() else False,
+        "hint": "Ensure frontend/dist/ is included in deployment (check .databricksignore)",
+    }
+
+
+# Serve index.html for all non-API routes (SPA routing)
+@app.get("/{full_path:path}")
+async def serve_spa(full_path: str):
+    """Serve React SPA for all non-API routes."""
+    # Don't serve SPA for API routes or invocations
+    if full_path.startswith("api/") or full_path.startswith("invocations"):
+        return None
+
+    index_path = FRONTEND_DIST / "index.html"
+    if index_path.exists():
+        return FileResponse(index_path)
+    return {"error": "Frontend not deployed", "path": full_path}
 
 
 # Add streaming endpoint for progress updates (legacy)
