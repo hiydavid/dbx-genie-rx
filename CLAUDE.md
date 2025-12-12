@@ -4,39 +4,34 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-GenieRX is an LLM-powered linting tool that analyzes Databricks Genie Space configurations against best practices. It evaluates 11 configuration sections, provides severity-based findings with remediation guidance, and outputs compliance scores.
+GenieRX is an LLM-powered linting tool that analyzes Databricks Genie Space configurations against best practices. It evaluates 11 configuration sections using a hybrid approach (programmatic checks + LLM evaluation), provides severity-based findings with remediation guidance, and outputs compliance scores.
 
 ## Development Commands
 
 ```bash
-# Local development setup (creates .env.local, sets up MLflow experiment)
+# Initial setup (creates .env.local, sets up MLflow experiment)
 ./scripts/quickstart.sh
 
-# Run Streamlit UI (localhost:8501)
-uv run streamlit run app.py
-
-# Run REST API server (localhost:8000)
+# Backend server (localhost:5001)
 uv run start-server
-uv run start-server --reload  # with hot-reload
+uv run uvicorn agent_server.start_server:app --reload --port 5001  # with hot-reload
 
-# Test with a specific Genie Space
-uv run python test_agent.py --genie-space-id <id>
+# Frontend development (localhost:5173, proxies to backend)
+cd frontend && npm run dev
+
+# Build frontend for production
+./scripts/build.sh
 
 # Deploy to Databricks Apps
 ./scripts/deploy.sh genie-space-analyzer
-
-# REST API usage
-curl -X POST http://localhost:8000/invocations \
-  -H "Content-Type: application/json" \
-  -d '{"genie_space_id": "your-genie-space-id"}'
 ```
 
 ## Architecture
 
 ```
 ┌─────────────────┐     ┌──────────────────────┐     ┌──────────────────┐
-│  Streamlit UI   │────▶│ GenieSpaceAnalyzer   │────▶│ Databricks LLM   │
-│  (app.py)       │     │ (agent_server/)      │     │ (Claude Sonnet)  │
+│  React Frontend │────▶│  FastAPI + Agent     │────▶│ Databricks LLM   │
+│  (frontend/)    │     │  (agent_server/)     │     │ (Claude Sonnet)  │
 └─────────────────┘     └──────────────────────┘     └──────────────────┘
                                  │
         ┌────────────────────────┼────────────────────────┐
@@ -51,33 +46,27 @@ curl -X POST http://localhost:8000/invocations \
 
 | File | Purpose |
 |------|---------|
-| `app.py` | Multi-phase Streamlit wizard: Input (ID fetch or JSON paste) → Ingest Preview → Section Analysis → Summary |
 | `agent_server/agent.py` | `GenieSpaceAnalyzer` class with LLM integration, MLflow tracing, streaming |
-| `agent_server/auth.py` | OBO authentication for Databricks Apps, PAT token for local dev |
+| `agent_server/api.py` | REST API endpoints for frontend (`/api/space/fetch`, `/api/analyze/section`, etc.) |
+| `agent_server/checks.py` | Programmatic checks and LLM checklist item definitions per section |
+| `agent_server/auth.py` | OBO authentication for Databricks Apps, PAT/OAuth for local dev |
 | `agent_server/ingest.py` | Databricks SDK wrapper for fetching Genie Space configs |
-| `agent_server/models.py` | Pydantic models: `AgentInput`, `AgentOutput`, `Finding`, `SectionAnalysis` |
-| `agent_server/prompts.py` | LLM prompt templates for section analysis |
+| `agent_server/models.py` | Pydantic models: `AgentInput`, `AgentOutput`, `Finding`, `SectionAnalysis`, `ChecklistItem` |
+| `agent_server/prompts.py` | LLM prompt templates for checklist evaluation |
+| `frontend/src/App.tsx` | Main React app with 4-phase wizard (Input → Ingest → Analysis → Summary) |
 
-### Analyzed Sections (11)
+### Analysis Approach
 
-1. `config.sample_questions` - Sample questions shown to users
-2. `data_sources.tables` - Table configurations and metadata
-3. `data_sources.metric_views` - Metric view definitions
-4. `instructions.text_instructions` - Natural language instructions
-5. `instructions.example_question_sqls` - Example question-SQL pairs
-6. `instructions.sql_functions` - Custom SQL function definitions
-7. `instructions.join_specs` - Table join specifications
-8. `instructions.sql_snippets.filters` - Reusable filter snippets
-9. `instructions.sql_snippets.expressions` - Reusable expression snippets
-10. `instructions.sql_snippets.measures` - Reusable measure snippets
-11. `benchmarks.questions` - Benchmark question configurations
+Each section is evaluated using:
+1. **Programmatic checks** (defined in `checks.py`) - deterministic validations (e.g., count limits, required fields)
+2. **LLM checks** (defined in `LLM_CHECKLIST_ITEMS`) - qualitative evaluations (e.g., "descriptions provide clear context")
 
 ## Key Patterns
 
 - **MLflow Tracing**: All LLM calls traced with session grouping via `mlflow.start_span()`
-- **Streaming**: `predict_streaming()` yields progressive updates during analysis
-- **OBO Auth**: In Databricks Apps, uses on-behalf-of tokens; locally uses PAT from `.env.local`
-- **Lazy Init**: Singleton pattern for `GenieSpaceAnalyzer` instance in `app.py`
+- **Hybrid Checklist**: `get_programmatic_checks_for_section()` + `get_llm_checklist_items_for_section()` in `checks.py`
+- **Streaming SSE**: `predict_streaming()` yields progress updates; frontend consumes via `/api/analyze/stream`
+- **OBO Auth**: In Databricks Apps, uses on-behalf-of tokens; locally uses PAT/OAuth from CLI
 
 ## Environment Configuration
 
@@ -91,7 +80,7 @@ LLM_MODEL=databricks-claude-sonnet-4
 
 ## Technology Stack
 
-- Python 3.13+, Streamlit 1.40+, Databricks SDK 0.38+, MLflow 3.6+
-- Package manager: `uv` (required)
-- Build backend: Hatchling
-- LLM: Databricks-hosted Claude Sonnet via OpenAI SDK
+- **Backend**: Python 3.11+, FastAPI, Databricks SDK 0.38+, MLflow 3.6+
+- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS
+- **Package managers**: `uv` (Python), `npm` (frontend)
+- **LLM**: Databricks-hosted Claude Sonnet via serving endpoints
