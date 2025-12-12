@@ -1,4 +1,6 @@
 import json
+import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -7,6 +9,10 @@ load_dotenv()  # Also load from .env as fallback
 
 import agent_server.agent
 
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from mlflow.genai.agent_server import (
     AgentServer,
     setup_mlflow_git_based_version_tracking,
@@ -14,6 +20,7 @@ from mlflow.genai.agent_server import (
 from starlette.responses import StreamingResponse
 
 from agent_server.agent import get_analyzer, save_analysis_output
+from agent_server.api import router as api_router
 from agent_server.models import AgentInput
 
 agent_server = AgentServer()
@@ -21,8 +28,39 @@ agent_server = AgentServer()
 app = agent_server.app  # noqa: F841
 setup_mlflow_git_based_version_tracking()
 
+# Add CORS middleware for development
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],  # Vite dev server
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# Add streaming endpoint for progress updates
+# Mount API router
+app.include_router(api_router)
+
+# Serve static files from React build (production)
+FRONTEND_DIST = Path(__file__).parent.parent / "frontend" / "dist"
+if FRONTEND_DIST.exists():
+    # Serve static assets
+    app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="assets")
+    
+    # Serve index.html for all non-API routes (SPA routing)
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        """Serve React SPA for all non-API routes."""
+        # Don't serve SPA for API routes or invocations
+        if full_path.startswith("api/") or full_path.startswith("invocations"):
+            return None
+        
+        index_path = FRONTEND_DIST / "index.html"
+        if index_path.exists():
+            return FileResponse(index_path)
+        return {"error": "Frontend not built"}
+
+
+# Add streaming endpoint for progress updates (legacy)
 @app.post("/invocations/stream")
 async def invoke_stream(data: dict):
     """Streaming invocation endpoint that sends progress updates."""

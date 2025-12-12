@@ -1,10 +1,12 @@
 # Requirements for Databricks Apps deployment
 # Pinned versions for stability
 
-streamlit==1.41.1
 databricks-sdk==0.38.0
 pydantic==2.10.3
 python-dotenv==1.0.1
 mlflow==3.6.0
+databricks-agents==1.4.0
+fastapi==0.115.0
+uvicorn[standard]==0.34.0
 openai==1.58.1
 requests==2.32.3

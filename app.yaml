@@ -3,17 +3,18 @@
 #
 # This app uses user-based (OBO) authentication, meaning users can only
 # access Genie Spaces they have permission to manage.
+#
+# The FastAPI server serves both:
+# - Static React frontend files from /frontend/dist
+# - REST API endpoints under /api
 
 command:
-  - "streamlit"
-  - "run"
-  - "app.py"
-  - "--server.port"
-  - "8000"
-  - "--server.address"
+  - "uvicorn"
+  - "agent_server.start_server:app"
+  - "--host"
   - "0.0.0.0"
-  - "--server.headless"
-  - "true"
+  - "--port"
+  - "8000"
 
 env:
   - name: MLFLOW_TRACKING_URI
@@ -33,4 +34,3 @@ permissions:
     scopes:
       - "genie"
       - "serving-endpoints"
-

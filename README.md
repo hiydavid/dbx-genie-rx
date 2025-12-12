@@ -6,9 +6,10 @@ An LLM-powered linting tool that analyzes Databricks Genie Space configurations 
 
 Simply clone the repo in your local development environment, run `quickstart.sh` to setup authentication and MLflow experiment to start testing locally. This app was designed to be deployed on Databricks Apps, so to deploy, simply run `deploy.sh` and then follow the instruction to create and deploy a Databricks App.
 
-![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)
+![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)
 ![MLflow](https://img.shields.io/badge/MLflow-3.6+-green.svg)
-![Streamlit](https://img.shields.io/badge/Streamlit-1.40+-red.svg)
+![React](https://img.shields.io/badge/React-18+-61DAFB.svg)
+![TypeScript](https://img.shields.io/badge/TypeScript-5+-3178C6.svg)
 
 ## ✨ Features
 
@@ -22,7 +23,7 @@ Simply clone the repo in your local development environment, run `quickstart.sh`
 - **Compliance Scoring** — Provides per-section and overall compliance scores (0-10)
 - **Actionable Recommendations** — Each finding includes specific remediation guidance
 - **Interactive Wizard UI** — Step-by-step analysis with progress navigation and JSON preview
-- **Multiple Interfaces** — Use via REST API or interactive Streamlit UI
+- **Modern React Frontend** — Beautiful, responsive UI built with React, TypeScript, and Tailwind CSS
 - **MLflow Tracing** — Full observability with session-grouped traces logged to Databricks
 - **Databricks Apps Deployment** — Deploy with user-based (OBO) authentication
 
@@ -30,8 +31,8 @@ Simply clone the repo in your local development environment, run `quickstart.sh`
 
 ```
 ┌─────────────────┐     ┌──────────────────────┐     ┌─────────────────┐
-│   Streamlit UI  │────▶│   GenieSpaceAnalyzer │────▶│  Databricks LLM │
-│    (app.py)     │     │   (agent_server/)    │     │  (Claude Sonnet)│
+│   React Frontend│────▶│   FastAPI + Agent    │────▶│  Databricks LLM │
+│    (frontend/)  │     │   (agent_server/)    │     │  (Claude Sonnet)│
 └─────────────────┘     └──────────────────────┘     └─────────────────┘
                                   │
         ┌─────────────────────────┼─────────────────────────┐
@@ -62,7 +63,8 @@ The analyzer evaluates the following Genie Space configuration sections:
 
 ## 📋 Prerequisites
 
-- Python 3.13+
+- Python 3.11+
+- Node.js 18+ and npm
 - [uv](https://docs.astral.sh/uv/getting-started/installation/) (Python package manager)
 - [Databricks CLI](https://docs.databricks.com/dev-tools/cli/install) (v0.200+)
 - Access to a Databricks workspace with Genie Spaces
@@ -89,23 +91,57 @@ The quickstart script will:
 5. ✅ Create `.env.local` with your configuration
 6. ✅ Install Python dependencies
 
-### 2. Run Locally
+### 2. Build the Frontend
 
 ```bash
-# Run the Streamlit UI
-uv run streamlit run app.py
+# Build the React frontend
+./scripts/build.sh
 ```
 
-Open http://localhost:8501 in your browser.
+This will:
+1. Install Python dependencies
+2. Build the React frontend to `frontend/dist`
 
-### 3. Deploy to Databricks Apps
+### 3. Run Locally (Development)
+
+For local development, run the frontend and backend separately:
+
+**Terminal 1 - Backend (FastAPI):**
+```bash
+uv run start-server
+```
+
+**Terminal 2 - Frontend (Vite dev server):**
+```bash
+cd frontend
+npm run dev
+```
+
+Open http://localhost:5173 in your browser. The frontend dev server proxies API requests to the backend.
+
+### 4. Run Locally (Production Mode)
+
+To test the production build locally:
 
 ```bash
-# Sync and deploy
+# Build the frontend first
+./scripts/build.sh
+
+# Start the server (serves both API and frontend)
+uv run start-server
+```
+
+Open http://localhost:5001 in your browser.
+
+### 5. Deploy to Databricks Apps
+
+```bash
+# Build and deploy
+./scripts/build.sh
 ./scripts/deploy.sh genie-space-analyzer
 ```
 
-Then deploy via the Databricks UI (see [Deploying to Databricks Apps](#-deploying-to-databricks-apps)).
+Then complete deployment via the Databricks UI (see [Deploying to Databricks Apps](#-deploying-to-databricks-apps)).
 
 ## ⚙️ Configuration
 
@@ -142,37 +178,40 @@ LLM_MODEL=databricks-claude-sonnet-4
 
 ## 📖 Usage
 
-### Streamlit UI
+### React UI
 
 The interactive wizard guides you through 4 phases:
 
-1. **Input** — Enter your Genie Space ID and click "Fetch Space"
-2. **Ingest Preview** — Review the serialized JSON data before analysis
-3. **Section Analysis** — Step through each section, view findings by severity
-4. **Summary** — See overall compliance score and all findings
+1. **Input** — Enter your Genie Space ID or paste JSON, then click "Fetch" or "Load JSON"
+2. **Ingest Preview** — Review the serialized JSON data and metrics before analysis
+3. **Section Analysis** — Step through each section, view checklist progress and findings
+4. **Summary** — See overall compliance score with expandable section results
 
 **UI Features:**
 - 📍 **Sidebar Navigation** — Track progress and jump to completed sections
 - 📄 **JSON Preview** — Inspect raw data alongside analysis results
-- 🎯 **Severity Grouping** — Findings organized by High / Medium / Low
-- 📚 **Best Practices** — Built-in reference documentation
+- ✅ **Checklist Progress** — Visual pass/fail indicators for each check
+- 📊 **Score Cards** — Color-coded compliance scores
+- 📚 **Checklist Reference** — Built-in documentation
 
 ### REST API
 
-Start the MLflow Agent Server:
+The backend exposes the following API endpoints:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/space/fetch` | POST | Fetch a Genie Space by ID |
+| `/api/space/parse` | POST | Parse pasted Genie Space JSON |
+| `/api/analyze/section` | POST | Analyze a single section |
+| `/api/analyze/stream` | POST | Stream analysis progress (SSE) |
+| `/api/checklist` | GET | Get checklist documentation |
+| `/api/sections` | GET | List all section names |
+| `/invocations` | POST | Legacy MLflow agent endpoint |
+
+Example API call:
 
 ```bash
-# Start server
-uv run start-server
-
-# With hot-reload for development
-uv run start-server --reload
-```
-
-Send analysis requests to http://localhost:8000:
-
-```bash
-curl -X POST http://localhost:8000/invocations \
+curl -X POST http://localhost:5001/api/space/fetch \
   -H "Content-Type: application/json" \
   -d '{"genie_space_id": "your-genie-space-id"}'
 ```
@@ -183,23 +222,39 @@ curl -X POST http://localhost:8000/invocations \
 dbx-genie-rx/
 ├── agent_server/           # Core analyzer backend
 │   ├── agent.py           # GenieSpaceAnalyzer class & MLflow tracing
+│   ├── api.py             # REST API endpoints for React frontend
 │   ├── auth.py            # Authentication (PAT local, OBO for Apps)
+│   ├── checks.py          # Programmatic and LLM-based checks
 │   ├── ingest.py          # Databricks SDK client for Genie Spaces
 │   ├── models.py          # Pydantic models (AgentInput, AgentOutput)
 │   ├── prompts.py         # LLM prompt templates
-│   └── start_server.py    # MLflow AgentServer entry point
+│   └── start_server.py    # FastAPI server entry point
+├── frontend/               # React frontend application
+│   ├── src/
+│   │   ├── components/    # React components
+│   │   │   ├── ui/       # Reusable UI components (Button, Card, etc.)
+│   │   │   ├── InputPhase.tsx
+│   │   │   ├── IngestPhase.tsx
+│   │   │   ├── AnalysisPhase.tsx
+│   │   │   ├── SummaryPhase.tsx
+│   │   │   └── SidebarNav.tsx
+│   │   ├── hooks/        # Custom React hooks
+│   │   ├── lib/          # Utilities and API client
+│   │   └── types/        # TypeScript type definitions
+│   ├── package.json
+│   └── vite.config.ts
 ├── scripts/
 │   ├── quickstart.sh      # Local development setup
+│   ├── build.sh           # Build frontend and backend
 │   └── deploy.sh          # Databricks Apps deployment
 ├── docs/                   # Best practices documentation
 │   ├── best-practices-by-schema.md
 │   └── genie-space-schema.md
-├── output/                 # Output files (future: saved reports)
-├── app.py                  # Streamlit UI application
+├── output/                 # Output files (saved analysis reports)
+├── app.py                  # Legacy Streamlit UI (deprecated)
 ├── app.yaml                # Databricks Apps configuration
 ├── requirements.txt        # Python dependencies (for Databricks Apps)
-├── pyproject.toml          # Project configuration (for local dev)
-└── test_agent.py           # Test script
+└── pyproject.toml          # Project configuration
 ```
 
 ## 🚀 Deploying to Databricks Apps
@@ -208,13 +263,9 @@ Deploy the Genie Space Analyzer to Databricks Apps for production use. The app u
 
 ### Prerequisites
 
-Before deploying, ensure you've run the quickstart script:
-
-```bash
-./scripts/quickstart.sh
-```
-
-This creates the MLflow experiment and configures `app.yaml` with the experiment ID.
+Before deploying, ensure you've:
+1. Run the quickstart script: `./scripts/quickstart.sh`
+2. Built the frontend: `./scripts/build.sh`
 
 ### Deploy
 
@@ -255,7 +306,8 @@ Then complete deployment via the Databricks UI:
 After making code changes:
 
 ```bash
-# Re-sync files
+# Rebuild frontend and re-sync files
+./scripts/build.sh
 ./scripts/deploy.sh genie-space-analyzer
 
 # Then in Databricks UI: click Deploy on your app
@@ -276,6 +328,41 @@ All LLM calls and analysis steps are traced with MLflow. Traces are logged to yo
 metadata.`mlflow.trace.session` = '<session-id>'
 ```
 
+## 🛠️ Development
+
+### Frontend Development
+
+```bash
+cd frontend
+
+# Install dependencies
+npm install
+
+# Start development server (with hot reload)
+npm run dev
+
+# Build for production
+npm run build
+
+# Type checking
+npm run build  # TypeScript is checked during build
+```
+
+### Backend Development
+
+```bash
+# Install dependencies
+uv sync
+
+# Start server with hot reload
+uv run uvicorn agent_server.start_server:app --reload --port 5001
+
+# Run tests
+uv run python test_agent.py
+```
+
 ## 🛣️ Future Roadmap
 
 - 💾 **Save Summary Report** — Export analysis results to JSON/Markdown files
+- 📈 **Historical Comparison** — Track improvements over time
+- 🔧 **Auto-fix Suggestions** — Generate fix scripts for common issues
