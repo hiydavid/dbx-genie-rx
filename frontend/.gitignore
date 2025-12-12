@@ -8,7 +8,8 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-dist
+# dist - NOT ignored because it needs to be deployed to Databricks Apps
+# The built frontend must be committed for databricks sync to include it
 dist-ssr
 *.local
 
