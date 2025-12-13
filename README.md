@@ -1,12 +1,14 @@
+<!-- markdownlint-disable MD033 -->
 # 🔍 GenieRX: The Genie Space Analyzer
 
 > ⚠️ **Note:** This project is experimental and under active development.
 
-An LLM-powered linting tool that analyzes Databricks Genie Space configurations against best practices. Get actionable insights and recommendations to improve your Genie Space setup. 
+An LLM-powered linting tool that analyzes Databricks Genie Space configurations against best practices. Get actionable insights and recommendations to improve your Genie Space setup.
 
 This app was designed to be deployed on Databricks Apps. You can either:
-- **Quick deploy**: Clone the repo directly into your Databricks workspace and deploy via the UI (see [UI-Only Deployment](#option-a-ui-only-deployment-quick-start))
-- **Local development**: Clone locally, run `quickstart.sh` to setup authentication, then `deploy.sh` to deploy
+
+- **Quick deploy**: Clone the repo directly into your Databricks workspace and deploy via Databricks Apps (see [Quick Start](#-quick-start))
+- **Local development**: Clone locally and use the shell scripts for development and deployment
 
 ![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)
 ![MLflow](https://img.shields.io/badge/MLflow-3.6+-green.svg)
@@ -26,12 +28,13 @@ This app was designed to be deployed on Databricks Apps. You can either:
 - **Actionable Recommendations** — Each finding includes specific remediation guidance
 - **Interactive Wizard UI** — Step-by-step analysis with progress navigation and JSON preview
 - **Modern React Frontend** — Beautiful, responsive UI built with React, TypeScript, and Tailwind CSS
-- **MLflow Tracing** — Full observability with session-grouped traces logged to Databricks
+- **MLflow Tracing** — (Optional) Enable by setting `MLFLOW_EXPERIMENT_ID` in `app.yaml`
+- **Configurable LLM** — Defaults to Claude Sonnet 4, configurable to any Databricks-hosted model
 - **Databricks Apps Deployment** — Deploy with user-based (OBO) authentication
 
 ## 🏗️ Architecture
 
-```
+```text
 ┌─────────────────┐     ┌──────────────────────┐     ┌─────────────────┐
 │   React Frontend│────▶│   FastAPI + Agent    │────▶│  Databricks LLM │
 │    (frontend/)  │     │   (agent_server/)    │     │  (Claude Sonnet)│
@@ -74,7 +77,40 @@ The analyzer evaluates the following Genie Space configuration sections:
 
 ## 🚀 Quick Start
 
-### 1. Clone and Setup
+There are two main ways to deploy the app:
+
+### Option 1: Deploy Directly in Databricks (Recommended)
+
+If you want to use the app as-is, simply clone the repo into your Databricks workspace and deploy via Databricks Apps:
+
+1. **Import the repo** into your workspace:
+   - Go to **Workspace > Repos > Add Repo**
+   - Enter the Git URL: `https://github.com/your-org/dbx-genie-rx.git`
+   - Click **Create Repo**
+
+2. **Configure the app** (optional):
+   - Open `app.yaml` in the workspace editor
+   - Set `MLFLOW_EXPERIMENT_ID` to enable tracing (optional)
+   - Change `LLM_MODEL` if you want to use a different Databricks-hosted model
+
+3. **Deploy the app**:
+   - Go to **Compute > Apps > Create App**
+   - Name it (e.g., `genie-space-analyzer`)
+   - Click **Deploy** and select your repo folder as the source
+   - Click **Deploy** to start
+
+4. **Grant permissions** to the app's service principal:
+   - Go to **Compute > Apps > [your app] > Authorization** to find the SP name
+   - Add the SP to each Genie Space you want to analyze with **Can Edit** permission
+   - Add the SP to the LLM serving endpoint with **Can Query** permission
+
+> **Note:** The frontend is pre-built and included in the repo (`frontend/dist/`), so no build step is required.
+
+### Option 2: Local Development with Shell Scripts
+
+For local development or when you need to customize the app:
+
+#### 1. Clone and Setup
 
 ```bash
 # Clone the repository
@@ -86,64 +122,47 @@ cd dbx-genie-rx
 ```
 
 The quickstart script will:
+
 1. ✅ Check for required tools (uv, Databricks CLI)
 2. ✅ Set up Databricks authentication (OAuth via CLI)
-3. ✅ Create an MLflow experiment for tracing
+3. ✅ Create an MLflow experiment for tracing (optional)
 4. ✅ Update `app.yaml` with your experiment ID
 5. ✅ Create `.env.local` with your configuration
 6. ✅ Install Python dependencies
 
-### 2. Build the Frontend
+#### 2. Build the Frontend
 
 ```bash
-# Build the React frontend
 ./scripts/build.sh
 ```
 
-This will:
-1. Install Python dependencies
-2. Build the React frontend to `frontend/dist`
+#### 3. Run Locally
 
-### 3. Run Locally (Development)
-
-For local development, run the frontend and backend separately:
-
-**Terminal 1 - Backend (FastAPI):**
 ```bash
 uv run start-server
 ```
 
-**Terminal 2 - Frontend (Vite dev server):**
-```bash
-cd frontend
-npm run dev
-```
+Open <http://localhost:8000> in your browser. The server serves both the API and the pre-built frontend.
 
-Open http://localhost:5173 in your browser. The frontend dev server proxies API requests to the backend.
-
-### 4. Run Locally (Production Mode)
-
-To test the production build locally:
+**For frontend development with hot-reload**, run the backend and Vite dev server separately:
 
 ```bash
-# Build the frontend first
-./scripts/build.sh
-
-# Start the server (serves both API and frontend)
+# Terminal 1 - Backend
 uv run start-server
+
+# Terminal 2 - Frontend (hot-reload)
+cd frontend && npm run dev
 ```
 
-Open http://localhost:5001 in your browser.
+Then open <http://localhost:5173> instead.
 
-### 5. Deploy to Databricks Apps
+#### 4. Deploy to Databricks Apps
 
 ```bash
-# Build and deploy
-./scripts/build.sh
 ./scripts/deploy.sh genie-space-analyzer
 ```
 
-Then complete deployment via the Databricks UI (see [Deploying to Databricks Apps](#-deploying-to-databricks-apps)).
+Then complete deployment via the Databricks UI. After deployment, grant the app's service principal permissions as described in Option 1, Step 4.
 
 ## ⚙️ Configuration
 
@@ -172,11 +191,11 @@ LLM_MODEL=databricks-claude-sonnet-4
 | `DATABRICKS_HOST` | Yes (local) | Your Databricks workspace URL |
 | `DATABRICKS_CONFIG_PROFILE` | No | Databricks CLI profile (default: DEFAULT) |
 | `DATABRICKS_TOKEN` | Optional | PAT token (alternative to OAuth) |
-| `MLFLOW_TRACKING_URI` | Yes | Set to `databricks` to log traces to workspace |
-| `MLFLOW_EXPERIMENT_ID` | Yes | MLflow experiment ID for tracing |
-| `LLM_MODEL` | No | LLM model name (default: `databricks-claude-sonnet-4`) |
+| `MLFLOW_TRACKING_URI` | No | Set to `databricks` to log traces to workspace |
+| `MLFLOW_EXPERIMENT_ID` | No | MLflow experiment ID - set to enable tracing |
+| `LLM_MODEL` | Yes | LLM model name (default: `databricks-claude-sonnet-4`) |
 
-> **Note:** When deployed to Databricks Apps, authentication is handled automatically via OAuth (OBO). Environment variables are configured in `app.yaml`.
+> **Note:** When deployed to Databricks Apps, configure these in `app.yaml`. MLflow tracing is optional—leave `MLFLOW_EXPERIMENT_ID` empty to disable it. Authentication is handled automatically via OAuth (OBO).
 
 ## 📖 Usage
 
@@ -190,6 +209,7 @@ The interactive wizard guides you through 4 phases:
 4. **Summary** — See overall compliance score with expandable section results
 
 **UI Features:**
+
 - 📍 **Sidebar Navigation** — Track progress and jump to completed sections
 - 📄 **JSON Preview** — Inspect raw data alongside analysis results
 - ✅ **Checklist Progress** — Visual pass/fail indicators for each check
@@ -220,7 +240,7 @@ curl -X POST http://localhost:5001/api/space/fetch \
 
 ## 📁 Project Structure
 
-```
+```text
 dbx-genie-rx/
 ├── agent_server/           # Core analyzer backend
 │   ├── agent.py           # GenieSpaceAnalyzer class & MLflow tracing
@@ -261,98 +281,36 @@ dbx-genie-rx/
 
 ## 🚀 Deploying to Databricks Apps
 
-Deploy the Genie Space Analyzer to Databricks Apps for production use. The app uses **user-based (OBO) authentication**, meaning users can only analyze Genie Spaces they have permission to access.
+See the [Quick Start](#-quick-start) section for step-by-step deployment instructions.
 
-### Option A: UI-Only Deployment (Quick Start)
+### Service Principal Permissions
 
-If you want to deploy without running any scripts, you can clone the repo directly into your Databricks workspace and deploy via the UI:
+After deploying, you must grant the app's service principal (SP) access to required resources:
 
-#### Prerequisites
+1. **Find the SP**: Go to **Compute > Apps > [your app] > Authorization**
+   - The SP name follows the pattern: `app-XXXXX [app-name]`
 
-> ⚠️ **Important:** This app uses OBO (On-Behalf-Of) authentication to access Genie Spaces. A **workspace admin** must enable this preview feature first:
-> 
-> 1. Go to **Settings > Previews** (or Admin Console > Previews)
-> 2. Enable **"On-behalf-of user authentication for Databricks Apps"**
-> 
-> Without this, the app won't be able to fetch Genie Spaces via API.
+2. **Grant Genie Space access**: For each Genie Space you want to analyze:
+   - Open the Genie Space settings
+   - Add the SP with **Can Edit** permission
 
-#### Deployment Steps
-
-1. **Import the repo** into your Databricks workspace:
-   - Go to **Workspace > Repos > Add Repo**
-   - Enter the Git URL and click **Create Repo**
-
-2. **Create an MLflow Experiment** (optional, for tracing):
-   - Go to **Machine Learning > Experiments > Create Experiment**
-   - Name it (e.g., `genie-space-analyzer`)
-   - Copy the **Experiment ID** from the URL or experiment details
-
-3. **Update `app.yaml`** with your experiment ID:
-   - Open `app.yaml` in the workspace editor
-   - Find `MLFLOW_EXPERIMENT_ID` and set its value to your experiment ID:
-     ```yaml
-     - name: MLFLOW_EXPERIMENT_ID
-       value: "YOUR_EXPERIMENT_ID_HERE"
-     ```
-   - Save the file (or leave empty to skip tracing)
-
-4. **Deploy the app**:
-   - Go to **Compute > Apps > Create App**
-   - Name it (e.g., `genie-space-analyzer`)
-   - Click **Deploy** and select your repo folder as the source
-   - Click **Deploy** to start
-
-> **Note:** The frontend is pre-built and included in the repo (`frontend/dist/`), so no build step is required.
-
-#### Troubleshooting
-
-If you get "Unable to get space" errors when fetching a Genie Space:
-- **Verify OBO is enabled** (see Prerequisites above)
-- **Use the "Paste JSON" option** as a workaround - manually fetch the space JSON and paste it into the app
-
-### Option B: Script-Based Deployment (Recommended)
-
-For local development or when you need to customize the build:
-
-#### Prerequisites
-
-Before deploying, ensure you've:
-1. Run the quickstart script: `./scripts/quickstart.sh`
-2. Built the frontend: `./scripts/build.sh`
-
-#### Deploy
-
-```bash
-./scripts/deploy.sh genie-space-analyzer
-```
-
-The deploy script will:
-1. ✅ Verify Databricks CLI and authentication
-2. ✅ Check/prompt for MLflow experiment ID in `app.yaml`
-3. ✅ Sync files to your workspace
-4. ✅ Provide UI deployment instructions
-
-Then complete deployment via the Databricks UI:
-
-1. Go to **Compute > Apps** in your workspace
-2. Click **Create App** (if first time) and name it `genie-space-analyzer`
-3. Click **Deploy** and select the synced folder:
-   ```
-   /Workspace/Users/<your-email>/apps/genie-space-analyzer
-   ```
-4. Click **Deploy** to start
+3. **Grant LLM endpoint access**:
+   - Go to **Serving > [your LLM endpoint] > Permissions**
+   - Add the SP with **Can Query** permission
 
 ### Authentication
 
 | Environment | Auth Method | Description |
 |-------------|-------------|-------------|
 | Local Development | PAT / OAuth | Uses `DATABRICKS_TOKEN` or CLI OAuth |
-| Databricks Apps | OBO (User) | Uses the logged-in user's OAuth token |
+| Databricks Apps | SP + OBO | SP accesses resources; OBO for user context |
 
-**OBO (On-behalf-of) Authentication:**
-- Users must authenticate with Databricks to use the app
-- Users can only analyze Genie Spaces they have **Manage** permission on
-- If a user lacks access, they'll see an appropriate error
+### Troubleshooting
+
+If you get "Unable to get space" errors:
+
+- **Verify SP permissions**: Ensure the app's SP has **Can Edit** on the Genie Space
+- **Use the "Paste JSON" option** as a workaround—manually fetch the space JSON and paste it into the app
 
 ### Updating the Deployed App
 
@@ -366,18 +324,22 @@ After making code changes:
 # Then in Databricks UI: click Deploy on your app
 ```
 
-## 📊 MLflow Tracing
+## 📊 MLflow Tracing (Optional)
 
-All LLM calls and analysis steps are traced with MLflow. Traces are logged to your Databricks workspace and grouped by session.
+MLflow tracing is optional. To enable it, set `MLFLOW_EXPERIMENT_ID` in `app.yaml` to a valid experiment ID.
+
+When enabled, all LLM calls and analysis steps are traced and logged to your Databricks workspace, grouped by session.
 
 **View traces:**
+
 1. Go to your Databricks workspace
 2. Navigate to **Machine Learning > Experiments**
 3. Find your experiment: `/Users/<your-email>/genie-space-analyzer`
 4. Click on **Traces** to see all analysis traces
 
 **Filter by session:**
-```
+
+```text
 metadata.`mlflow.trace.session` = '<session-id>'
 ```
 
