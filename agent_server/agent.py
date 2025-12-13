@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import uuid
 from collections.abc import Generator
@@ -23,8 +24,26 @@ from agent_server.models import (
 )
 from agent_server.prompts import get_checklist_evaluation_prompt, get_section_analysis_prompt
 
-# Enable MLflow tracing
-mlflow.tracing.enable()
+logger = logging.getLogger(__name__)
+
+# Check if MLflow experiment is configured before enabling tracing
+_mlflow_experiment_id = os.environ.get("MLFLOW_EXPERIMENT_ID", "").strip()
+_mlflow_tracing_enabled = False
+
+if _mlflow_experiment_id:
+    try:
+        mlflow.tracing.enable()
+        _mlflow_tracing_enabled = True
+        logger.info(f"MLflow tracing enabled with experiment ID: {_mlflow_experiment_id}")
+    except Exception as e:
+        logger.warning(f"Failed to enable MLflow tracing: {e}. Tracing will be disabled.")
+        mlflow.tracing.disable()
+else:
+    logger.warning(
+        "MLFLOW_EXPERIMENT_ID is not set. MLflow tracing is disabled. "
+        "Set MLFLOW_EXPERIMENT_ID in app.yaml to enable trace logging."
+    )
+    mlflow.tracing.disable()
 
 # Sections to analyze (in order for future UI walkthrough)
 SECTIONS = [
