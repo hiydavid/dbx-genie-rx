@@ -191,3 +191,44 @@ async def get_sections():
     """Get the list of all section names."""
     return {"sections": SECTIONS}
 
+
+@router.get("/debug/auth")
+async def debug_auth():
+    """Debug endpoint to check authentication status.
+    
+    Returns information about the current authentication context.
+    Useful for troubleshooting OBO and API access issues.
+    """
+    import os
+    from agent_server.auth import get_workspace_client, is_running_on_databricks_apps
+    
+    try:
+        client = get_workspace_client()
+        
+        # Try to get current user to verify auth is working
+        try:
+            current_user = client.current_user.me()
+            user_info = {
+                "user_name": current_user.user_name,
+                "display_name": current_user.display_name,
+            }
+        except Exception as e:
+            user_info = {"error": str(e)}
+        
+        return {
+            "running_on_databricks_apps": is_running_on_databricks_apps(),
+            "host": client.config.host,
+            "auth_type": client.config.auth_type,
+            "current_user": user_info,
+            "env_vars": {
+                "DATABRICKS_HOST": os.environ.get("DATABRICKS_HOST", "[not set]"),
+                "DATABRICKS_APP_PORT": os.environ.get("DATABRICKS_APP_PORT", "[not set]"),
+                "DATABRICKS_TOKEN": "[set]" if os.environ.get("DATABRICKS_TOKEN") else "[not set]",
+            }
+        }
+    except Exception as e:
+        return {
+            "error": str(e),
+            "running_on_databricks_apps": is_running_on_databricks_apps(),
+        }
+
