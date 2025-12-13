@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 from pathlib import Path
 
@@ -6,6 +7,60 @@ from dotenv import load_dotenv
 
 load_dotenv(dotenv_path=".env.local", override=True)
 load_dotenv()  # Also load from .env as fallback
+
+# Configure logging early
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+def _validate_mlflow_experiment() -> bool:
+    """Validate that MLFLOW_EXPERIMENT_ID exists in the tracking server.
+    
+    If validation fails, clears the environment variable to prevent AgentServer
+    from failing during initialization.
+    
+    Returns:
+        True if experiment is valid or validation was skipped, False if invalid.
+    """
+    experiment_id = os.environ.get("MLFLOW_EXPERIMENT_ID", "").strip()
+    
+    if not experiment_id:
+        logger.warning(
+            "MLFLOW_EXPERIMENT_ID is not set. MLflow tracing will be disabled. "
+            "Set MLFLOW_EXPERIMENT_ID in app.yaml to enable trace logging."
+        )
+        return False
+    
+    # Try to validate the experiment exists
+    try:
+        import mlflow
+        
+        # Set tracking URI if specified
+        tracking_uri = os.environ.get("MLFLOW_TRACKING_URI")
+        if tracking_uri:
+            mlflow.set_tracking_uri(tracking_uri)
+        
+        # Try to get the experiment - this will fail if it doesn't exist
+        experiment = mlflow.get_experiment(experiment_id)
+        if experiment is None:
+            raise ValueError(f"Experiment {experiment_id} not found")
+        
+        logger.info(f"MLflow experiment validated: {experiment.name} (ID: {experiment_id})")
+        return True
+        
+    except Exception as e:
+        logger.warning(
+            f"MLflow experiment ID '{experiment_id}' is not valid: {e}. "
+            "MLflow tracing will be disabled. "
+            "Create an experiment in your workspace and update MLFLOW_EXPERIMENT_ID in app.yaml."
+        )
+        # Clear the environment variable to prevent AgentServer from failing
+        os.environ.pop("MLFLOW_EXPERIMENT_ID", None)
+        return False
+
+
+# Validate MLflow experiment before importing agent module (which enables tracing)
+_mlflow_configured = _validate_mlflow_experiment()
 
 import agent_server.agent
 
@@ -26,7 +81,13 @@ from agent_server.models import AgentInput
 agent_server = AgentServer()
 # Define the app as a module level variable to enable multiple workers
 app = agent_server.app  # noqa: F841
-setup_mlflow_git_based_version_tracking()
+
+# Set up MLflow git-based version tracking (graceful fallback if not configured)
+if _mlflow_configured:
+    try:
+        setup_mlflow_git_based_version_tracking()
+    except Exception as e:
+        logger.warning(f"MLflow git-based version tracking not configured: {e}")
 
 # Add CORS middleware for development
 app.add_middleware(

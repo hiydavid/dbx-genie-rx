@@ -4,7 +4,9 @@
 
 An LLM-powered linting tool that analyzes Databricks Genie Space configurations against best practices. Get actionable insights and recommendations to improve your Genie Space setup. 
 
-Simply clone the repo in your local development environment, run `quickstart.sh` to setup authentication and MLflow experiment to start testing locally. This app was designed to be deployed on Databricks Apps, so to deploy, simply run `deploy.sh` and then follow the instruction to create and deploy a Databricks App.
+This app was designed to be deployed on Databricks Apps. You can either:
+- **Quick deploy**: Clone the repo directly into your Databricks workspace and deploy via the UI (see [UI-Only Deployment](#option-a-ui-only-deployment-quick-start))
+- **Local development**: Clone locally, run `quickstart.sh` to setup authentication, then `deploy.sh` to deploy
 
 ![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)
 ![MLflow](https://img.shields.io/badge/MLflow-3.6+-green.svg)
@@ -261,13 +263,47 @@ dbx-genie-rx/
 
 Deploy the Genie Space Analyzer to Databricks Apps for production use. The app uses **user-based (OBO) authentication**, meaning users can only analyze Genie Spaces they have permission to access.
 
-### Prerequisites
+### Option A: UI-Only Deployment (Quick Start)
+
+If you want to deploy without running any scripts, you can clone the repo directly into your Databricks workspace and deploy via the UI:
+
+1. **Import the repo** into your Databricks workspace:
+   - Go to **Workspace > Repos > Add Repo**
+   - Enter the Git URL and click **Create Repo**
+
+2. **Create an MLflow Experiment**:
+   - Go to **Machine Learning > Experiments > Create Experiment**
+   - Name it (e.g., `genie-space-analyzer`)
+   - Copy the **Experiment ID** from the URL or experiment details
+
+3. **Update `app.yaml`** with your experiment ID:
+   - Open `app.yaml` in the workspace editor
+   - Find `MLFLOW_EXPERIMENT_ID` and set its value to your experiment ID:
+     ```yaml
+     - name: MLFLOW_EXPERIMENT_ID
+       value: "YOUR_EXPERIMENT_ID_HERE"
+     ```
+   - Save the file
+
+4. **Deploy the app**:
+   - Go to **Compute > Apps > Create App**
+   - Name it (e.g., `genie-space-analyzer`)
+   - Click **Deploy** and select your repo folder as the source
+   - Click **Deploy** to start
+
+> **Note:** The frontend is pre-built and included in the repo (`frontend/dist/`), so no build step is required.
+
+### Option B: Script-Based Deployment (Recommended)
+
+For local development or when you need to customize the build:
+
+#### Prerequisites
 
 Before deploying, ensure you've:
 1. Run the quickstart script: `./scripts/quickstart.sh`
 2. Built the frontend: `./scripts/build.sh`
 
-### Deploy
+#### Deploy
 
 ```bash
 ./scripts/deploy.sh genie-space-analyzer
