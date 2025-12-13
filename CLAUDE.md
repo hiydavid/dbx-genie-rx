@@ -12,19 +12,21 @@ GenieRX is an LLM-powered linting tool that analyzes Databricks Genie Space conf
 # Initial setup (creates .env.local, sets up MLflow experiment)
 ./scripts/quickstart.sh
 
-# Backend server (localhost:5001)
+# Backend server (localhost:8000, serves API + pre-built frontend)
 uv run start-server
-uv run uvicorn agent_server.start_server:app --reload --port 5001  # with hot-reload
 
-# Frontend development (localhost:5173, proxies to backend)
+# Backend with hot-reload (localhost:5001)
+uv run uvicorn agent_server.start_server:app --reload --port 5001
+
+# Frontend development (localhost:5173, proxies to backend on 5001)
 cd frontend && npm run dev
 
 # Frontend linting and type-check
 cd frontend && npm run lint
 cd frontend && npm run build  # TypeScript checked during build
 
-# Test agent against a Genie Space (requires running server on port 5001)
-GENIE_SPACE_ID=<id> uv run python test_agent.py --url http://localhost:5001
+# Test agent against a Genie Space (requires running server)
+GENIE_SPACE_ID=<id> uv run python test_agent.py --url http://localhost:8000
 
 # Build frontend for production
 ./scripts/build.sh
@@ -37,7 +39,7 @@ Note: `app.py` at the root is a deprecated Streamlit UI; use `agent_server/` for
 
 ## Architecture
 
-```
+```text
 ┌─────────────────┐     ┌──────────────────────┐     ┌──────────────────┐
 │  React Frontend │────▶│  FastAPI + Agent     │────▶│ Databricks LLM   │
 │  (frontend/)    │     │  (agent_server/)     │     │ (Claude Sonnet)  │
@@ -68,6 +70,7 @@ Note: `app.py` at the root is a deprecated Streamlit UI; use `agent_server/` for
 ### Analysis Approach
 
 Each section is evaluated using:
+
 1. **Programmatic checks** (defined in `checks.py`) - deterministic validations (e.g., count limits, required fields)
 2. **LLM checks** (defined in `LLM_CHECKLIST_ITEMS`) - qualitative evaluations (e.g., "descriptions provide clear context")
 
@@ -81,13 +84,16 @@ Each section is evaluated using:
 
 ## Environment Configuration
 
-Required in `.env.local` (created by quickstart.sh):
+Configuration in `.env.local` (created by quickstart.sh):
+
 ```bash
 DATABRICKS_HOST=https://your-workspace.cloud.databricks.com
 DATABRICKS_CONFIG_PROFILE=DEFAULT   # or DATABRICKS_TOKEN for PAT
-MLFLOW_EXPERIMENT_ID=<id>           # MLflow experiment for tracing
+MLFLOW_EXPERIMENT_ID=<id>           # Optional: set to enable tracing
 LLM_MODEL=databricks-claude-sonnet-4
 ```
+
+Note: MLflow tracing is optional. Leave `MLFLOW_EXPERIMENT_ID` empty to disable it.
 
 ## Technology Stack
 
