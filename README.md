@@ -267,11 +267,22 @@ Deploy the Genie Space Analyzer to Databricks Apps for production use. The app u
 
 If you want to deploy without running any scripts, you can clone the repo directly into your Databricks workspace and deploy via the UI:
 
+#### Prerequisites
+
+> ⚠️ **Important:** This app uses OBO (On-Behalf-Of) authentication to access Genie Spaces. A **workspace admin** must enable this preview feature first:
+> 
+> 1. Go to **Settings > Previews** (or Admin Console > Previews)
+> 2. Enable **"On-behalf-of user authentication for Databricks Apps"**
+> 
+> Without this, the app won't be able to fetch Genie Spaces via API.
+
+#### Deployment Steps
+
 1. **Import the repo** into your Databricks workspace:
    - Go to **Workspace > Repos > Add Repo**
    - Enter the Git URL and click **Create Repo**
 
-2. **Create an MLflow Experiment**:
+2. **Create an MLflow Experiment** (optional, for tracing):
    - Go to **Machine Learning > Experiments > Create Experiment**
    - Name it (e.g., `genie-space-analyzer`)
    - Copy the **Experiment ID** from the URL or experiment details
@@ -283,7 +294,7 @@ If you want to deploy without running any scripts, you can clone the repo direct
      - name: MLFLOW_EXPERIMENT_ID
        value: "YOUR_EXPERIMENT_ID_HERE"
      ```
-   - Save the file
+   - Save the file (or leave empty to skip tracing)
 
 4. **Deploy the app**:
    - Go to **Compute > Apps > Create App**
@@ -292,6 +303,12 @@ If you want to deploy without running any scripts, you can clone the repo direct
    - Click **Deploy** to start
 
 > **Note:** The frontend is pre-built and included in the repo (`frontend/dist/`), so no build step is required.
+
+#### Troubleshooting
+
+If you get "Unable to get space" errors when fetching a Genie Space:
+- **Verify OBO is enabled** (see Prerequisites above)
+- **Use the "Paste JSON" option** as a workaround - manually fetch the space JSON and paste it into the app
 
 ### Option B: Script-Based Deployment (Recommended)
 

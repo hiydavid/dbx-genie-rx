@@ -28,9 +28,15 @@ env:
 
 # User authorization - enables OBO (On-behalf-of) authentication
 # Users will be authenticated with their own credentials, ensuring they
-# can only access Genie Spaces they have permission to manage
+# can only access Genie Spaces they have permission to access.
+#
+# NOTE: OBO requires workspace admin to enable the preview feature:
+#   Settings > Previews > "On-behalf-of user authentication for Databricks Apps"
+#
+# Alternative: Add Genie Spaces as resources (see docs/deployment.md)
 permissions:
   - permission: "user"
     scopes:
-      - "genie"
+      - "dashboards.genie"
       - "serving-endpoints"
+      - "sql"

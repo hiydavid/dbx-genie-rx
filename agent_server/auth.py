@@ -5,9 +5,15 @@ Provides OBO (On-behalf-of) authentication when running on Databricks Apps,
 and falls back to PAT token authentication for local development.
 """
 
+import logging
 import os
 
 from databricks.sdk import WorkspaceClient
+
+logger = logging.getLogger(__name__)
+
+# Track if we've logged auth info
+_auth_logged = False
 
 
 def is_running_on_databricks_apps() -> bool:
@@ -30,17 +36,39 @@ def get_workspace_client() -> WorkspaceClient:
     Returns:
         WorkspaceClient configured for the current environment
     """
-    if is_running_on_databricks_apps():
-        # On Databricks Apps, the SDK automatically uses OBO auth
-        # when initialized without explicit credentials
-        # Must create a new client for each request to get fresh user context
-        return WorkspaceClient()
-    else:
-        # Local development - use PAT token from environment
-        return WorkspaceClient(
-            host=os.environ.get("DATABRICKS_HOST"),
-            token=os.environ.get("DATABRICKS_TOKEN"),
-        )
+    global _auth_logged
+
+    # Let the SDK auto-detect the environment and authentication
+    # On Databricks (Apps, Notebooks, Jobs), it will use the appropriate auth
+    # Locally, it will use DATABRICKS_HOST + DATABRICKS_TOKEN or CLI profile
+    client = WorkspaceClient()
+
+    # Log auth info for debugging (first time only)
+    if not _auth_logged:
+        logger.info("=== Databricks SDK Authentication ===")
+        logger.info(f"  Host: {client.config.host}")
+        logger.info(f"  Auth type: {client.config.auth_type}")
+        logger.info(f"  Running on Databricks Apps: {is_running_on_databricks_apps()}")
+
+        # Log relevant env vars (without exposing secrets)
+        env_vars = [
+            "DATABRICKS_HOST",
+            "DATABRICKS_APP_PORT",
+            "DATABRICKS_RUNTIME_VERSION",
+            "DATABRICKS_TOKEN",  # Just check if set, don't log value
+        ]
+        for var in env_vars:
+            val = os.environ.get(var)
+            if val:
+                # Mask tokens
+                if "TOKEN" in var:
+                    logger.info(f"  {var}: [SET - {len(val)} chars]")
+                else:
+                    logger.info(f"  {var}: {val}")
+
+        _auth_logged = True
+
+    return client
 
 
 def get_databricks_host() -> str:

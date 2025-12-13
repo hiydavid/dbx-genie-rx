@@ -6,13 +6,16 @@ Supports both local development (PAT) and Databricks Apps (OBO) authentication.
 """
 
 import json
+import logging
 import os
 
 from dotenv import load_dotenv
 
-from agent_server.auth import get_workspace_client
+from agent_server.auth import get_workspace_client, is_running_on_databricks_apps
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 
 def get_genie_space(
@@ -41,13 +44,22 @@ def get_genie_space(
     # Use SDK's API client - handles OBO auth automatically
     client = get_workspace_client()
     
-    response = client.api_client.do(
-        method="GET",
-        path=f"/api/2.0/genie/spaces/{genie_space_id}",
-        query={"include_serialized_space": "true"},
-    )
-
-    return response
+    # Log diagnostic info for debugging
+    logger.info(f"Fetching Genie Space: {genie_space_id}")
+    logger.info(f"Running on Databricks Apps: {is_running_on_databricks_apps()}")
+    logger.info(f"Workspace host: {client.config.host}")
+    logger.info(f"Auth type: {client.config.auth_type}")
+    
+    try:
+        response = client.api_client.do(
+            method="GET",
+            path=f"/api/2.0/genie/spaces/{genie_space_id}",
+            query={"include_serialized_space": "true"},
+        )
+        return response
+    except Exception as e:
+        logger.error(f"Failed to fetch Genie Space {genie_space_id}: {e}")
+        raise ValueError(f"Unable to get space [{genie_space_id}]. {e}")
 
 
 def get_serialized_space(genie_space_id: str | None = None) -> dict:
