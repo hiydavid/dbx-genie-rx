@@ -8,7 +8,7 @@ and stream analysis progress.
 import json
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
@@ -193,14 +193,18 @@ async def get_sections():
 
 
 @router.get("/debug/auth")
-async def debug_auth():
+async def debug_auth(request: Request):
     """Debug endpoint to check authentication status.
     
     Returns information about the current authentication context.
     Useful for troubleshooting OBO and API access issues.
     """
     import os
-    from agent_server.auth import get_workspace_client, is_running_on_databricks_apps
+    from agent_server.auth import get_workspace_client, is_running_on_databricks_apps, get_user_token
+    
+    # Check for OBO token in request header
+    obo_token = request.headers.get("x-forwarded-access-token")
+    obo_token_from_context = get_user_token()
     
     try:
         client = get_workspace_client()
@@ -217,6 +221,8 @@ async def debug_auth():
         
         return {
             "running_on_databricks_apps": is_running_on_databricks_apps(),
+            "obo_token_in_header": f"[{len(obo_token)} chars]" if obo_token else "[not present]",
+            "obo_token_in_context": f"[{len(obo_token_from_context)} chars]" if obo_token_from_context else "[not set]",
             "host": client.config.host,
             "auth_type": client.config.auth_type,
             "current_user": user_info,
@@ -230,5 +236,6 @@ async def debug_auth():
         return {
             "error": str(e),
             "running_on_databricks_apps": is_running_on_databricks_apps(),
+            "obo_token_in_header": f"[{len(obo_token)} chars]" if obo_token else "[not present]",
         }
 

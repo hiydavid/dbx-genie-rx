@@ -64,7 +64,7 @@ _mlflow_configured = _validate_mlflow_experiment()
 
 import agent_server.agent
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -72,11 +72,43 @@ from mlflow.genai.agent_server import (
     AgentServer,
     setup_mlflow_git_based_version_tracking,
 )
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import StreamingResponse
 
 from agent_server.agent import get_analyzer, save_analysis_output
 from agent_server.api import router as api_router
+from agent_server.auth import set_user_token
 from agent_server.models import AgentInput
+
+
+class OBOAuthMiddleware(BaseHTTPMiddleware):
+    """Middleware to extract OBO user token from Databricks Apps requests.
+    
+    When Databricks Apps is configured with user authorization (OBO),
+    the user's access token is passed via the 'x-forwarded-access-token' header.
+    This middleware extracts that token and makes it available for API calls.
+    """
+    
+    async def dispatch(self, request: Request, call_next):
+        # Extract OBO token from Databricks Apps header
+        user_token = request.headers.get("x-forwarded-access-token")
+        
+        if user_token:
+            # Log once that OBO token was found
+            if not getattr(OBOAuthMiddleware, '_logged', False):
+                logger.info(f"OBO token found in request header ({len(user_token)} chars)")
+                OBOAuthMiddleware._logged = True
+            
+            # Set the token in context for this request
+            set_user_token(user_token)
+        
+        response = await call_next(request)
+        
+        # Clear token after request
+        set_user_token(None)
+        
+        return response
+
 
 agent_server = AgentServer()
 # Define the app as a module level variable to enable multiple workers
@@ -88,6 +120,9 @@ if _mlflow_configured:
         setup_mlflow_git_based_version_tracking()
     except Exception as e:
         logger.warning(f"MLflow git-based version tracking not configured: {e}")
+
+# Add OBO authentication middleware (must be added before other middleware)
+app.add_middleware(OBOAuthMiddleware)
 
 # Add CORS middleware for development
 app.add_middleware(
