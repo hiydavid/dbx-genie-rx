@@ -22,7 +22,7 @@ env:
   - name: MLFLOW_REGISTRY_URI
     value: "databricks-uc"
   - name: MLFLOW_EXPERIMENT_ID
-    value: ""  # REQUIRED: Set to your MLflow experiment ID before deploying
+    value: ""  # OPTIONAL: Set to your MLflow experiment ID if you want to enable tracing
   - name: LLM_MODEL
     value: "databricks-claude-sonnet-4"
 
