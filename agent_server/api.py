@@ -8,7 +8,7 @@ and stream analysis progress.
 import json
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
@@ -193,23 +193,19 @@ async def get_sections():
 
 
 @router.get("/debug/auth")
-async def debug_auth(request: Request):
+async def debug_auth():
     """Debug endpoint to check authentication status.
     
     Returns information about the current authentication context.
-    Useful for troubleshooting OBO and API access issues.
+    Useful for troubleshooting service principal and API access issues.
     """
     import os
-    from agent_server.auth import get_workspace_client, is_running_on_databricks_apps, get_user_token
-    
-    # Check for OBO token in request header
-    obo_token = request.headers.get("x-forwarded-access-token")
-    obo_token_from_context = get_user_token()
+    from agent_server.auth import get_workspace_client, is_running_on_databricks_apps
     
     try:
         client = get_workspace_client()
         
-        # Try to get current user to verify auth is working
+        # Try to get current user/service principal to verify auth is working
         try:
             current_user = client.current_user.me()
             user_info = {
@@ -221,21 +217,18 @@ async def debug_auth(request: Request):
         
         return {
             "running_on_databricks_apps": is_running_on_databricks_apps(),
-            "obo_token_in_header": f"[{len(obo_token)} chars]" if obo_token else "[not present]",
-            "obo_token_in_context": f"[{len(obo_token_from_context)} chars]" if obo_token_from_context else "[not set]",
             "host": client.config.host,
             "auth_type": client.config.auth_type,
             "current_user": user_info,
             "env_vars": {
                 "DATABRICKS_HOST": os.environ.get("DATABRICKS_HOST", "[not set]"),
                 "DATABRICKS_APP_PORT": os.environ.get("DATABRICKS_APP_PORT", "[not set]"),
-                "DATABRICKS_TOKEN": "[set]" if os.environ.get("DATABRICKS_TOKEN") else "[not set]",
+                "DATABRICKS_CLIENT_ID": os.environ.get("DATABRICKS_CLIENT_ID", "[not set]")[:8] + "..." if os.environ.get("DATABRICKS_CLIENT_ID") else "[not set]",
             }
         }
     except Exception as e:
         return {
             "error": str(e),
             "running_on_databricks_apps": is_running_on_databricks_apps(),
-            "obo_token_in_header": f"[{len(obo_token)} chars]" if obo_token else "[not present]",
         }
 

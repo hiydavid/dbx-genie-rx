@@ -26,17 +26,11 @@ env:
   - name: LLM_MODEL
     value: "databricks-claude-sonnet-4"
 
-# User authorization - enables OBO (On-behalf-of) authentication
-# Users will be authenticated with their own credentials, ensuring they
-# can only access Genie Spaces they have permission to access.
+# Service Principal authorization
+# The app uses its own service principal identity to access Databricks resources.
+# You must grant the app's service principal access to:
+#   1. Genie Spaces: Add SP with "Can Edit" permission
+#   2. LLM Serving Endpoints: Add SP with "Can Query" permission
 #
-# NOTE: OBO requires workspace admin to enable the preview feature:
-#   Settings > Previews > "On-behalf-of user authentication for Databricks Apps"
-#
-# Alternative: Add Genie Spaces as resources (see docs/deployment.md)
-permissions:
-  - permission: "user"
-    scopes:
-      - "dashboards.genie"
-      - "serving-endpoints"
-      - "sql"
+# Find the service principal in: Compute > Apps > [your app] > Authorization
+# The SP name follows the pattern: app-XXXXX [app-name]
