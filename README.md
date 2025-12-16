@@ -1,5 +1,5 @@
 <!-- markdownlint-disable MD033 -->
-# 🔍 GenieRX: The Genie Space Analyzer
+# 🔍 GenieRx: The Genie Space Analyzer
 
 > ⚠️ **Note:** This project is experimental and under active development.
 
