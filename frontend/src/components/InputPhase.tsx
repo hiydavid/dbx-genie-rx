@@ -7,7 +7,7 @@ import { Search, FileJson, Loader2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 
 interface InputPhaseProps {
@@ -39,14 +39,25 @@ export function InputPhase({
   }
 
   return (
-    <div className="flex items-center justify-center min-h-[60vh]">
+    <div className="flex flex-col items-center justify-center min-h-[60vh]">
+      {/* Welcome intro */}
+      <div className="text-center mb-8 max-w-2xl">
+        <h1 className="text-3xl font-bold text-slate-900 mb-3">
+          Welcome to GenieRx
+        </h1>
+        <p className="text-base text-slate-600">
+          Getting the most out of your Genie Space starts with a solid configuration.
+          GenieRx reviews your setup across 10 key areas, flags potential issues, and
+          gives you clear guidance on how to fix them. Whether you're fine-tuning an
+          existing space or validating a new one, we'll help you spot what's working
+          and what could be better.
+        </p>
+      </div>
+
       <Card className="w-full max-w-2xl shadow-lg">
         <CardHeader className="text-center pb-2">
-          <CardTitle className="text-2xl font-bold text-slate-900">
-            Get Started
-          </CardTitle>
           <CardDescription className="text-base">
-            Enter your Genie Space ID or paste the JSON configuration
+            <span className="font-bold">Get Started:</span> Enter your Genie Space ID or paste the JSON configuration
           </CardDescription>
         </CardHeader>
         <CardContent>
