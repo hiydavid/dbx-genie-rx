@@ -10,9 +10,8 @@ class AgentInput(BaseModel):
 class ChecklistItem(BaseModel):
     """A single checklist item from the analysis."""
 
-    id: str  # e.g., "tables_count_limit"
+    id: str  # e.g., "at-least-1-table-is-configured"
     description: str  # Human-readable description
-    check_type: str  # "programmatic" | "llm"
     passed: bool  # Whether the check passed
     details: str | None = None  # Additional context (e.g., "Found 3 tables")
 

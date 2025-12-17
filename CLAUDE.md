@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-GenieRX is an LLM-powered linting tool that analyzes Databricks Genie Space configurations against best practices. It evaluates 11 configuration sections using a hybrid approach (programmatic checks + LLM evaluation), provides severity-based findings with remediation guidance, and outputs compliance scores.
+GenieRX is an LLM-powered linting tool that analyzes Databricks Genie Space configurations against best practices. It evaluates 10 configuration sections using LLM-based evaluation, provides severity-based findings with remediation guidance, and outputs compliance scores.
+
+**Key design principle**: `docs/checklist-by-schema.md` is the single source of truth for all checklist items. Non-developers can customize checks by editing this markdown file.
 
 ## Development Commands
 
@@ -59,7 +61,8 @@ Note: `app.py` at the root is a deprecated Streamlit UI; use `agent_server/` for
 |------|---------|
 | `agent_server/agent.py` | `GenieSpaceAnalyzer` class with LLM integration, MLflow tracing, streaming |
 | `agent_server/api.py` | REST API endpoints for frontend (`/api/space/fetch`, `/api/analyze/section`, etc.) |
-| `agent_server/checks.py` | Programmatic checks and LLM checklist item definitions per section |
+| `agent_server/checklist_parser.py` | Parses `docs/checklist-by-schema.md` to extract checklist items by section |
+| `agent_server/checks.py` | Thin wrapper around checklist_parser for getting items per section |
 | `agent_server/auth.py` | OBO authentication for Databricks Apps, PAT/OAuth for local dev |
 | `agent_server/ingest.py` | Databricks SDK wrapper for fetching Genie Space configs |
 | `agent_server/models.py` | Pydantic models: `AgentInput`, `AgentOutput`, `Finding`, `SectionAnalysis`, `ChecklistItem` |
@@ -69,18 +72,15 @@ Note: `app.py` at the root is a deprecated Streamlit UI; use `agent_server/` for
 
 ### Analysis Approach
 
-Each section is evaluated using:
-
-1. **Programmatic checks** (defined in `checks.py`) - deterministic validations (e.g., count limits, required fields)
-2. **LLM checks** (defined in `LLM_CHECKLIST_ITEMS`) - qualitative evaluations (e.g., "descriptions provide clear context")
+All checklist items are defined in `docs/checklist-by-schema.md` and evaluated by the LLM. The markdown file is parsed at runtime, so users can add/remove/modify checks without changing code.
 
 ## Key Patterns
 
+- **Markdown-driven checklist**: `docs/checklist-by-schema.md` is parsed at runtime; all items evaluated by LLM
 - **MLflow Tracing**: All LLM calls traced with session grouping via `mlflow.start_span()`
-- **Hybrid Checklist**: `get_programmatic_checks_for_section()` + `get_llm_checklist_items_for_section()` in `checks.py`
 - **Streaming SSE**: `predict_streaming()` yields progress updates; frontend consumes via `/api/analyze/stream`. Events have `status` field: `fetching`, `analyzing` (with `current`/`total`), `complete`, `result`
 - **OBO Auth**: In Databricks Apps, uses on-behalf-of tokens; locally uses PAT/OAuth from CLI
-- **Section Constants**: The 11 analyzed sections are defined in `SECTIONS` list in `agent.py`
+- **Section Constants**: The 10 analyzed sections are defined in `SECTIONS` list in `agent.py`
 
 ## Environment Configuration
 
