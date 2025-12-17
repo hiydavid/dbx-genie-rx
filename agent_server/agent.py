@@ -10,10 +10,7 @@ from mlflow.entities import SpanType
 from mlflow.genai.agent_server import invoke as invoke_decorator
 
 from agent_server.auth import get_workspace_client
-from agent_server.checks import (
-    get_llm_checklist_items_for_section,
-    get_programmatic_checks_for_section,
-)
+from agent_server.checks import get_llm_checklist_items_for_section
 from agent_server.ingest import get_serialized_space
 from agent_server.models import (
     AgentInput,
@@ -22,7 +19,7 @@ from agent_server.models import (
     Finding,
     SectionAnalysis,
 )
-from agent_server.prompts import get_checklist_evaluation_prompt, get_section_analysis_prompt
+from agent_server.prompts import get_checklist_evaluation_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +44,6 @@ else:
 
 # Sections to analyze (in order for future UI walkthrough)
 SECTIONS = [
-    "config.sample_questions",
     "data_sources.tables",
     "data_sources.metric_views",
     "instructions.text_instructions",
@@ -66,8 +62,6 @@ class GenieSpaceAnalyzer:
 
     def __init__(self):
         self.model = os.environ.get("LLM_MODEL", "databricks-claude-sonnet-4")
-        self.best_practices = self._load_best_practices()
-        self.schema_docs = self._load_schema_docs()
         self._session_id: str | None = None
 
     def _call_serving_endpoint(self, messages: list[dict]) -> str:
@@ -104,18 +98,6 @@ class GenieSpaceAnalyzer:
         """Clear the current session."""
         self._session_id = None
 
-    def _load_best_practices(self) -> str:
-        """Load the best practices documentation."""
-        docs_path = (
-            Path(__file__).parent.parent / "docs" / "best-practices-by-schema.md"
-        )
-        return docs_path.read_text()
-
-    def _load_schema_docs(self) -> str:
-        """Load the schema documentation."""
-        docs_path = Path(__file__).parent.parent / "docs" / "genie-space-schema.md"
-        return docs_path.read_text()
-
     def _get_section_data(self, space: dict, section_path: str) -> dict | list | None:
         """Extract a section from the Genie space by dot-notation path."""
         parts = section_path.split(".")
@@ -126,46 +108,6 @@ class GenieSpaceAnalyzer:
             else:
                 return None
         return current
-
-    def _get_relevant_best_practices(self, section_name: str) -> str:
-        """Extract best practices relevant to a specific section."""
-        # Map section names to their headers in the best practices doc
-        section_headers = {
-            "config.sample_questions": "## `config`",
-            "data_sources.tables": "### `tables`",
-            "data_sources.metric_views": "### `metric_views`",
-            "instructions.text_instructions": "### `text_instructions`",
-            "instructions.example_question_sqls": "### `example_question_sqls`",
-            "instructions.sql_functions": "### `sql_functions`",
-            "instructions.join_specs": "### `join_specs`",
-            "instructions.sql_snippets.filters": "#### `filters`",
-            "instructions.sql_snippets.expressions": "#### `expressions`",
-            "instructions.sql_snippets.measures": "#### `measures`",
-            "benchmarks.questions": "## `benchmarks`",
-        }
-
-        header = section_headers.get(section_name, "")
-        if not header:
-            return self.best_practices
-
-        # Find the section in the best practices doc
-        lines = self.best_practices.split("\n")
-        in_section = False
-        section_lines = []
-
-        for line in lines:
-            if line.startswith(header):
-                in_section = True
-                section_lines.append(line)
-            elif in_section:
-                # Stop at the next section of same or higher level
-                if line.startswith("## ") or (
-                    line.startswith("### ") and header.startswith("### ")
-                ):
-                    break
-                section_lines.append(line)
-
-        return "\n".join(section_lines) if section_lines else self.best_practices
 
     def _create_missing_section_analysis(
         self, section_name: str, full_space: dict | None = None
@@ -181,7 +123,6 @@ class GenieSpaceAnalyzer:
         """
         # Human-readable descriptions for each section
         section_descriptions = {
-            "config.sample_questions": "Sample questions help users understand what questions the space can answer",
             "data_sources.tables": "Tables are required for the space to query data",
             "data_sources.metric_views": "Metric views provide pre-computed aggregations for better accuracy",
             "instructions.text_instructions": "Text instructions help Genie understand business context and terminology",
@@ -198,27 +139,17 @@ class GenieSpaceAnalyzer:
             section_name, f"The {section_name} section is not configured"
         )
 
-        # Create checklist items for missing section
-        checklist = []
-
-        # Run programmatic checks (they'll return failed items for missing data)
-        programmatic_checks = get_programmatic_checks_for_section(
-            section_name, None, full_space
-        )
-        checklist.extend(programmatic_checks)
-
-        # Add LLM checklist items as failed
-        llm_items = get_llm_checklist_items_for_section(section_name)
-        for item in llm_items:
-            checklist.append(
-                ChecklistItem(
-                    id=item["id"],
-                    description=item["description"],
-                    check_type="llm",
-                    passed=False,
-                    details="Section not configured",
-                )
+        # Create checklist items for missing section (all fail)
+        checklist_items = get_llm_checklist_items_for_section(section_name)
+        checklist = [
+            ChecklistItem(
+                id=item["id"],
+                description=item["description"],
+                passed=False,
+                details="Section not configured",
             )
+            for item in checklist_items
+        ]
 
         # Calculate score based on checklist
         passed_count = sum(1 for item in checklist if item.passed)
@@ -273,21 +204,15 @@ class GenieSpaceAnalyzer:
             except Exception:
                 pass  # Ignore if trace update fails
 
-        # Step 1: Run programmatic checks
+        # Get all checklist items for this section
+        checklist_items = get_llm_checklist_items_for_section(section_name)
         checklist = []
-        programmatic_checks = get_programmatic_checks_for_section(
-            section_name, section_data, full_space
-        )
-        checklist.extend(programmatic_checks)
-
-        # Step 2: Get LLM checklist items and evaluate them
-        llm_items = get_llm_checklist_items_for_section(section_name)
         findings = []
 
-        if llm_items:
-            # Call LLM to evaluate qualitative items
+        if checklist_items:
+            # Call LLM to evaluate all items
             prompt = get_checklist_evaluation_prompt(
-                section_name, section_data, llm_items
+                section_name, section_data, checklist_items
             )
 
             content = self._call_serving_endpoint(
@@ -307,13 +232,12 @@ class GenieSpaceAnalyzer:
 
             # Process LLM evaluations into ChecklistItems
             evaluations = {e["id"]: e for e in result.get("evaluations", [])}
-            for item in llm_items:
+            for item in checklist_items:
                 eval_result = evaluations.get(item["id"], {})
                 checklist.append(
                     ChecklistItem(
                         id=item["id"],
                         description=item["description"],
-                        check_type="llm",
                         passed=eval_result.get("passed", False),
                         details=eval_result.get("details"),
                     )
@@ -323,22 +247,9 @@ class GenieSpaceAnalyzer:
             findings = [Finding(**f) for f in result.get("findings", [])]
             summary = result.get("summary", "")
         else:
-            summary = "Section analyzed with programmatic checks only."
+            summary = "No checklist items defined for this section."
 
-        # Step 3: Generate findings for failed programmatic checks
-        for check in programmatic_checks:
-            if not check.passed:
-                findings.append(
-                    Finding(
-                        category="best_practice",
-                        severity="medium",
-                        description=f"Check failed: {check.description}",
-                        recommendation=f"Address this issue: {check.details or check.description}",
-                        reference=check.id,
-                    )
-                )
-
-        # Step 4: Calculate score based on checklist items
+        # Calculate score based on checklist items
         passed_count = sum(1 for item in checklist if item.passed)
         total_count = len(checklist)
         score = round(passed_count / total_count * 10) if total_count > 0 else 0
@@ -626,9 +537,8 @@ def format_analysis_as_markdown(output: AgentOutput) -> str:
             lines.append("")
             for item in analysis.checklist:
                 status = "✓" if item.passed else "✗"
-                check_type = "[P]" if item.check_type == "programmatic" else "[L]"
                 details = f" - {item.details}" if item.details else ""
-                lines.append(f"- {status} **{check_type}** {item.description}{details}")
+                lines.append(f"- {status} {item.description}{details}")
             lines.append("")
 
         # Findings grouped by severity

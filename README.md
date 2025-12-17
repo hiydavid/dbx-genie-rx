@@ -21,7 +21,8 @@ This app was designed to be deployed on Databricks Apps. You can either:
   <img src="docs/genie_analyzer_app.png" alt="Genie Space Analyzer App" width="1000">
 </p>
 
-- **Comprehensive Analysis** — Evaluates 11 different sections of your Genie Space configuration
+- **Comprehensive Analysis** — Evaluates 10 different sections of your Genie Space configuration
+- **Customizable Checklist** — All checks defined in `docs/checklist-by-schema.md`; edit to add/remove checks without code changes
 - **Best Practice Validation** — Checks against documented Databricks Genie Space best practices
 - **Severity-based Findings** — Categorizes issues as high, medium, or low severity
 - **Compliance Scoring** — Provides per-section and overall compliance scores (0-10)
@@ -43,7 +44,7 @@ This app was designed to be deployed on Databricks Apps. You can either:
         ┌─────────────────────────┼─────────────────────────┐
         ▼                         ▼                         ▼
 ┌───────────────┐       ┌─────────────────┐       ┌─────────────────┐
-│ Databricks API│       │  Best Practices │       │   MLflow Traces │
+│ Databricks API│       │    Checklist    │       │   MLflow Traces │
 │ (Genie Space) │       │    (docs/*.md)  │       │   (Databricks)  │
 └───────────────┘       └─────────────────┘       └─────────────────┘
 ```
@@ -54,7 +55,6 @@ The analyzer evaluates the following Genie Space configuration sections:
 
 | Section | Description |
 |---------|-------------|
-| `config.sample_questions` | Sample questions shown to users |
 | `data_sources.tables` | Table configurations and metadata |
 | `data_sources.metric_views` | Metric view definitions |
 | `instructions.text_instructions` | Natural language instructions |
@@ -246,7 +246,8 @@ dbx-genie-rx/
 │   ├── agent.py           # GenieSpaceAnalyzer class & MLflow tracing
 │   ├── api.py             # REST API endpoints for React frontend
 │   ├── auth.py            # Authentication (PAT local, OBO for Apps)
-│   ├── checks.py          # Programmatic and LLM-based checks
+│   ├── checklist_parser.py # Parses checklist from docs/checklist-by-schema.md
+│   ├── checks.py          # Wrapper for checklist item retrieval
 │   ├── ingest.py          # Databricks SDK client for Genie Spaces
 │   ├── models.py          # Pydantic models (AgentInput, AgentOutput)
 │   ├── prompts.py         # LLM prompt templates
@@ -269,9 +270,9 @@ dbx-genie-rx/
 │   ├── quickstart.sh      # Local development setup
 │   ├── build.sh           # Build frontend and backend
 │   └── deploy.sh          # Databricks Apps deployment
-├── docs/                   # Best practices documentation
-│   ├── best-practices-by-schema.md
-│   └── genie-space-schema.md
+├── docs/                   # Checklist and schema documentation
+│   ├── checklist-by-schema.md  # Source of truth for all checks (editable)
+│   └── genie-space-schema.md   # Genie Space JSON schema reference
 ├── output/                 # Output files (saved analysis reports)
 ├── app.py                  # Legacy Streamlit UI (deprecated)
 ├── app.yaml                # Databricks Apps configuration

@@ -1,21 +1,8 @@
 # Genie Space Checklist (Organized by Schema)
 
-Based on the [official Databricks Genie Best Practice doc](https://docs.databricks.com/aws/en/genie/best-practices). Last updated 11/05/2025.
+Based on the [official Databricks Genie Best Practice doc](https://docs.databricks.com/aws/en/genie/best-practices). Last updated 12/16/2025.
 
-This checklist was reorganizes according to the serialized Genie Space JSON schema structure. Each item is tagged:
-- **[P]** = Programmatic check (verified automatically)
-- **[L]** = LLM evaluation (requires qualitative assessment)
-
----
-
-## `config`
-
-### `sample_questions`
-
-- [ ] **[P]** At least 1 sample question exists
-- [ ] **[L]** Questions demonstrate the space's core capabilities
-- [ ] **[L]** Questions reflect real business user needs
-- [ ] **[L]** Questions are focused on the space's defined purpose
+This checklist is organized according to the serialized Genie Space JSON schema structure. All items are evaluated by LLM analysis.
 
 ---
 
@@ -24,34 +11,39 @@ This checklist was reorganizes according to the serialized Genie Space JSON sche
 ### `tables`
 
 **Table Selection:**
-- [ ] **[P]** At least 1 table is configured
-- [ ] **[P]** Number of tables is 25 or fewer
-- [ ] **[L]** Tables are focused (only necessary tables for intended questions)
-- [ ] **[L]** Tables are well-annotated with descriptions
-- [ ] **[L]** Datasets are simplified (prejoined where appropriate, unnecessary columns removed)
+
+- [ ] At least 1 table is configured
+- [ ] Number of tables is 25 or fewer
+- [ ] Tables are focused (only necessary tables for intended questions)
+- [ ] Tables are well-annotated with descriptions
+- [ ] Datasets are simplified (prejoined where appropriate, unnecessary columns removed)
 
 **Column Descriptions:**
-- [ ] **[P]** Columns have descriptions defined
-- [ ] **[L]** Descriptions provide clear, precise contextual information
-- [ ] **[L]** Descriptions avoid duplicating information from column names
+
+- [ ] Columns have descriptions defined
+- [ ] Descriptions provide clear, precise contextual information
+- [ ] Descriptions avoid duplicating information from column names
 
 **Column Synonyms:**
-- [ ] **[P]** Key columns have synonyms defined
-- [ ] **[L]** Synonyms match how business users naturally refer to the data
-- [ ] **[L]** Common abbreviations and alternative phrasings are included
+
+- [ ] Key columns have synonyms defined
+- [ ] Synonyms match how business users naturally refer to the data
+- [ ] Common abbreviations and alternative phrasings are included
 
 **Example Values / Value Dictionary:**
-- [ ] **[P]** Filterable columns have `get_example_values` enabled
-- [ ] **[P]** Columns with discrete values have `build_value_dictionary` enabled
+
+- [ ] Filterable columns have `get_example_values` enabled
+- [ ] Columns with discrete values have `build_value_dictionary` enabled
 
 **Column Exclusions:**
-- [ ] **[P]** Technical/internal columns are excluded
-- [ ] **[L]** Columns not relevant to the space's purpose are hidden
+
+- [ ] Technical/internal columns are excluded
+- [ ] Columns not relevant to the space's purpose are hidden
 
 ### `metric_views`
 
-- [ ] **[P]** Metric views have descriptions (if any exist)
-- [ ] **[L]** Pre-computed metrics have comments explaining valid aggregations
+- [ ] Metric views have descriptions (if any exist)
+- [ ] Pre-computed metrics have comments explaining valid aggregations
 
 ---
 
@@ -59,58 +51,60 @@ This checklist was reorganizes according to the serialized Genie Space JSON sche
 
 ### `text_instructions`
 
-- [ ] **[P]** At least 1 text instruction exists
-- [ ] **[L]** Instructions are focused and minimal (not excessive)
-- [ ] **[L]** Instructions provide globally-applied context
-- [ ] **[L]** Business jargon is mapped to standard terminology where needed
-- [ ] **[L]** Time zone handling is specified if applicable
+- [ ] At least 1 text instruction exists
+- [ ] Instructions are focused and minimal (not excessive)
+- [ ] Instructions provide globally-applied context
+- [ ] Business jargon is mapped to standard terminology where needed
 
 ### `example_question_sqls`
 
 **Example Questions:**
-- [ ] **[P]** At least 1 example question-SQL pair exists
-- [ ] **[L]** Examples cover complex, multi-part, or hard-to-interpret questions
-- [ ] **[L]** SQL queries demonstrate intricate patterns
-- [ ] **[L]** Examples are diverse (not redundant)
-- [ ] **[L]** Queries are as short as possible while remaining complete
+
+- [ ] At least 1 example question-SQL pair exists
+- [ ] Examples cover complex, multi-part, or hard-to-interpret questions
+- [ ] SQL queries demonstrate intricate patterns
+- [ ] Examples are diverse (not redundant)
+- [ ] Queries are as short as possible while remaining complete
 
 **Parameters:**
-- [ ] **[P]** Parameters have descriptions defined (if parameters exist)
-- [ ] **[L]** Parameters are used for commonly varied values (dates, names, limits)
+
+- [ ] Parameters have descriptions defined (if parameters exist)
+- [ ] Parameters are used for commonly varied values (dates, names, limits)
 
 **Usage Guidance:**
-- [ ] **[P]** Usage guidance is provided for complex examples
-- [ ] **[L]** Guidance describes specific scenarios where the query applies
-- [ ] **[L]** Guidance includes keywords that should trigger the example
+
+- [ ] Usage guidance is provided for complex examples
+- [ ] Guidance describes specific scenarios where the query applies
+- [ ] Guidance includes keywords that should trigger the example
 
 ### `sql_functions`
 
-- [ ] **[P]** Registered functions exist in Unity Catalog (if any defined)
-- [ ] **[L]** Custom UDFs are documented in Unity Catalog
+- [ ] Registered functions exist in Unity Catalog (if any defined)
+- [ ] Custom UDFs are documented in Unity Catalog
 
 ### `join_specs`
 
-- [ ] **[P]** Join specs are defined for multi-table relationships (if >1 table)
-- [ ] **[L]** Foreign key references are defined in Unity Catalog when possible
-- [ ] **[L]** Complex scenarios (self-joins) have explicit join specs
-- [ ] **[L]** Example queries demonstrate standard joins
+- [ ] Join specs are defined for multi-table relationships (if >1 table)
+- [ ] Foreign key references are defined in Unity Catalog when possible
+- [ ] Complex scenarios (self-joins) have explicit join specs
+- [ ] Example queries demonstrate standard joins
 
 ### `sql_snippets`
 
 #### `filters`
 
-- [ ] **[P]** Common time period filters exist ("last quarter", "YTD")
-- [ ] **[L]** Business-specific filters are defined ("active customers", "pre-covid")
+- [ ] Common time period filters exist ("last quarter", "YTD")
+- [ ] Business-specific filters are defined ("active customers", "pre-covid")
 
 #### `expressions`
 
-- [ ] **[P]** Reusable expressions are defined for common categorizations
-- [ ] **[L]** Expressions include synonyms for user terminology
+- [ ] Reusable expressions are defined for common categorizations
+- [ ] Expressions include synonyms for user terminology
 
 #### `measures`
 
-- [ ] **[P]** Frequently used metrics are defined (gross margin, conversion rate)
-- [ ] **[L]** Measures cover standard business concepts used across queries
+- [ ] Frequently used metrics are defined (gross margin, conversion rate)
+- [ ] Measures cover standard business concepts used across queries
 
 ---
 
@@ -118,29 +112,28 @@ This checklist was reorganizes according to the serialized Genie Space JSON sche
 
 ### `questions`
 
-- [ ] **[P]** At least 1 benchmark question exists
-- [ ] **[L]** Questions have been tested and SQL reviewed
-- [ ] **[L]** Questions include different phrasings of the same intent
-- [ ] **[L]** User testing feedback has been incorporated
+- [ ] At least 1 benchmark question exists
+- [ ] Questions have been tested and SQL reviewed
+- [ ] Questions include different phrasings of the same intent
+- [ ] User testing feedback has been incorporated
 
 ---
 
 ## Summary
 
-| Section | Programmatic | LLM-Evaluated | Total |
-|---------|--------------|---------------|-------|
-| `config.sample_questions` | 1 | 3 | 4 |
-| `data_sources.tables` | 7 | 8 | 15 |
-| `data_sources.metric_views` | 1 | 1 | 2 |
-| `instructions.text_instructions` | 1 | 4 | 5 |
-| `instructions.example_question_sqls` | 3 | 7 | 10 |
-| `instructions.sql_functions` | 1 | 1 | 2 |
-| `instructions.join_specs` | 1 | 3 | 4 |
-| `instructions.sql_snippets.filters` | 1 | 1 | 2 |
-| `instructions.sql_snippets.expressions` | 1 | 1 | 2 |
-| `instructions.sql_snippets.measures` | 1 | 1 | 2 |
-| `benchmarks.questions` | 1 | 3 | 4 |
-| **Total** | **19** | **33** | **52** |
+| Section | Items |
+|---------|-------|
+| `data_sources.tables` | 15 |
+| `data_sources.metric_views` | 2 |
+| `instructions.text_instructions` | 4 |
+| `instructions.example_question_sqls` | 10 |
+| `instructions.sql_functions` | 2 |
+| `instructions.join_specs` | 4 |
+| `instructions.sql_snippets.filters` | 2 |
+| `instructions.sql_snippets.expressions` | 2 |
+| `instructions.sql_snippets.measures` | 2 |
+| `benchmarks.questions` | 4 |
+| **Total** | **47** |
 
 ---
 
@@ -148,4 +141,16 @@ This checklist was reorganizes according to the serialized Genie Space JSON sche
 
 **Score Calculation:** `(passed_items / total_items) * 100`
 
-Each checked item contributes equally to the final score. A perfect score requires all 52 items to pass.
+Each checked item contributes equally to the final score. A perfect score requires all 47 items to pass.
+
+---
+
+## Customization
+
+You can customize this checklist by:
+
+- **Adding items**: Add new `- [ ] Description` lines under any section
+- **Removing items**: Delete any checklist item line
+- **Modifying items**: Edit the description text of any item
+
+**Note**: The section structure must match the Genie Space schema. Do not add new sections - only modify items within existing sections.

@@ -5,7 +5,6 @@
 export interface ChecklistItem {
   id: string
   description: string
-  check_type: "programmatic" | "llm"
   passed: boolean
   details: string | null
 }

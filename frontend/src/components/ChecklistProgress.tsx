@@ -16,9 +16,6 @@ export function ChecklistProgress({ checklist }: ChecklistProgressProps) {
   const total = checklist.length
   const percentage = total > 0 ? (passed / total) * 100 : 0
 
-  const programmaticItems = checklist.filter((item) => item.check_type === "programmatic")
-  const llmItems = checklist.filter((item) => item.check_type === "llm")
-
   const getProgressVariant = () => {
     if (percentage >= 80) return "success"
     if (percentage >= 60) return "warning"
@@ -40,31 +37,12 @@ export function ChecklistProgress({ checklist }: ChecklistProgressProps) {
         <Progress value={percentage} variant={getProgressVariant()} />
       </div>
 
-      {/* Programmatic checks */}
-      {programmaticItems.length > 0 && (
-        <div>
-          <h4 className="text-sm font-semibold text-slate-600 mb-2 pb-1 border-b border-slate-200">
-            Programmatic Checks [P]
-          </h4>
-          <div className="space-y-2">
-            {programmaticItems.map((item) => (
-              <ChecklistItemCard key={item.id} item={item} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* LLM-evaluated checks */}
-      {llmItems.length > 0 && (
-        <div>
-          <h4 className="text-sm font-semibold text-slate-600 mb-2 pb-1 border-b border-slate-200">
-            LLM-Evaluated Checks [L]
-          </h4>
-          <div className="space-y-2">
-            {llmItems.map((item) => (
-              <ChecklistItemCard key={item.id} item={item} />
-            ))}
-          </div>
+      {/* Checklist items */}
+      {checklist.length > 0 && (
+        <div className="space-y-2">
+          {checklist.map((item) => (
+            <ChecklistItemCard key={item.id} item={item} />
+          ))}
         </div>
       )}
     </div>
@@ -113,4 +91,3 @@ function ChecklistItemCard({ item }: ChecklistItemCardProps) {
     </div>
   )
 }
-
