@@ -20,14 +20,12 @@ This checklist is organized according to the serialized Genie Space JSON schema 
 **Column Descriptions:**
 
 - [ ] Columns have descriptions defined
-- [ ] Descriptions provide clear, precise contextual information
-- [ ] Descriptions avoid duplicating information from column names
+- [ ] Descriptions provide clear, contextual information beyond what column names convey
 
 **Column Synonyms:**
 
 - [ ] Key columns have synonyms defined
-- [ ] Synonyms match how business users naturally refer to the data
-- [ ] Common abbreviations and alternative phrasings are included
+- [ ] Synonyms include business terminology, abbreviations, and alternative phrasings users would naturally use
 
 **Example Values / Value Dictionary:**
 
@@ -61,8 +59,7 @@ This checklist is organized according to the serialized Genie Space JSON schema 
 **Example Questions:**
 
 - [ ] At least 1 example question-SQL pair exists
-- [ ] Examples cover complex, multi-part, or hard-to-interpret questions
-- [ ] SQL queries demonstrate intricate patterns
+- [ ] Examples cover complex, multi-part questions with intricate SQL patterns
 - [ ] Examples are diverse (not redundant)
 - [ ] Queries are as short as possible while remaining complete
 
@@ -73,20 +70,16 @@ This checklist is organized according to the serialized Genie Space JSON schema 
 
 **Usage Guidance:**
 
-- [ ] Usage guidance is provided for complex examples
-- [ ] Guidance describes specific scenarios where the query applies
-- [ ] Guidance includes keywords that should trigger the example
+- [ ] Complex examples have usage guidance describing applicable scenarios and trigger keywords
 
 ### `sql_functions`
 
-- [ ] Registered functions exist in Unity Catalog (if any defined)
-- [ ] Custom UDFs are documented in Unity Catalog
+- [ ] SQL functions are registered and documented in Unity Catalog (if any defined)
 
 ### `join_specs`
 
-- [ ] Join specs are defined for multi-table relationships (if >1 table)
+- [ ] Join specs are defined for multi-table relationships and complex scenarios like self-joins (if applicable)
 - [ ] Foreign key references are defined in Unity Catalog when possible
-- [ ] Complex scenarios (self-joins) have explicit join specs
 - [ ] Join specs have comments explaining the relationship
 
 ### `sql_snippets`
@@ -112,8 +105,7 @@ This checklist is organized according to the serialized Genie Space JSON schema 
 
 ### `questions`
 
-- [ ] At least 10 benchmark question-answer pairs exist
-- [ ] Questions are diverse and cover different use cases and topics
+- [ ] At least 10 diverse benchmark Q&A pairs exist, covering different use cases and topics
 
 ---
 
@@ -121,25 +113,17 @@ This checklist is organized according to the serialized Genie Space JSON schema 
 
 | Section | Items |
 |---------|-------|
-| `data_sources.tables` | 14 |
+| `data_sources.tables` | 12 |
 | `data_sources.metric_views` | 2 |
 | `instructions.text_instructions` | 5 |
-| `instructions.example_question_sqls` | 10 |
-| `instructions.sql_functions` | 2 |
-| `instructions.join_specs` | 4 |
+| `instructions.example_question_sqls` | 7 |
+| `instructions.sql_functions` | 1 |
+| `instructions.join_specs` | 3 |
 | `instructions.sql_snippets.filters` | 2 |
 | `instructions.sql_snippets.expressions` | 2 |
 | `instructions.sql_snippets.measures` | 2 |
-| `benchmarks.questions` | 2 |
-| **Total** | **45** |
-
----
-
-## Scoring
-
-**Score Calculation:** `(passed_items / total_items) * 100`
-
-Each checked item contributes equally to the final score. A perfect score requires all 45 items to pass.
+| `benchmarks.questions` | 1 |
+| **Total** | **37** |
 
 ---
 
