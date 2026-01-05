@@ -69,6 +69,9 @@ Note: `app.py` at the root is a deprecated Streamlit UI; use `agent_server/` for
 | `agent_server/prompts.py` | LLM prompt templates for checklist evaluation |
 | `frontend/src/App.tsx` | Main React app orchestrating the 4-phase wizard |
 | `frontend/src/components/*Phase.tsx` | Phase-specific UI: `InputPhase`, `IngestPhase`, `AnalysisPhase`, `SummaryPhase` |
+| `frontend/src/hooks/useTheme.ts` | Theme hook: system preference detection, localStorage persistence, dark class toggle |
+| `frontend/src/components/ThemeToggle.tsx` | Sun/Moon icon toggle for light/dark mode |
+| `frontend/src/components/ScoreGauge.tsx` | Animated radial SVG progress gauge for compliance scores |
 
 ### Analysis Approach
 
@@ -98,6 +101,21 @@ Note: MLflow tracing is optional. Leave `MLFLOW_EXPERIMENT_ID` empty to disable 
 ## Technology Stack
 
 - **Backend**: Python 3.11+, FastAPI, Databricks SDK 0.38+, MLflow 3.6+
-- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS
+- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS v4
+- **Design System**: Self-hosted fonts (Cabinet Grotesk, General Sans, JetBrains Mono), CSS custom properties for theming, dark mode support
 - **Package managers**: `uv` (Python), `npm` (frontend)
 - **LLM**: Databricks-hosted Claude Sonnet via serving endpoints
+
+## Frontend Design System
+
+The frontend uses a custom design system with:
+
+- **Theming**: CSS custom properties in `index.css` with `:root` (light) and `.dark` (dark) selectors
+- **Fonts**: Self-hosted in `public/fonts/` - Cabinet Grotesk (display), General Sans (body), JetBrains Mono (code)
+- **Dark Mode**: Auto-detects `prefers-color-scheme`, persists user override in localStorage (`genierx-theme` key)
+- **Animations**: CSS-only animations defined in `index.css` (`@keyframes fadeSlideUp`, `scan`, etc.)
+
+To add/download fonts, get them from:
+- Cabinet Grotesk: https://www.fontshare.com/fonts/cabinet-grotesk
+- General Sans: https://www.fontshare.com/fonts/general-sans
+- JetBrains Mono: https://www.jetbrains.com/lp/mono/

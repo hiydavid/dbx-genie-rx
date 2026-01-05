@@ -2,17 +2,26 @@
  * Main application component for the Genie Space Analyzer.
  */
 
-import { Search } from "lucide-react"
+import { useEffect } from "react"
+import { Sparkles } from "lucide-react"
 import { useAnalysis } from "@/hooks/useAnalysis"
+import { useTheme } from "@/hooks/useTheme"
 import { SidebarNav } from "@/components/SidebarNav"
 import { InputPhase } from "@/components/InputPhase"
 import { IngestPhase } from "@/components/IngestPhase"
 import { AnalysisPhase } from "@/components/AnalysisPhase"
 import { SummaryPhase } from "@/components/SummaryPhase"
 import { ChecklistPage } from "@/components/ChecklistPage"
+import { ThemeToggle } from "@/components/ThemeToggle"
 
 function App() {
   const { state, actions } = useAnalysis()
+  const { resolvedTheme } = useTheme()
+
+  // Initialize theme on mount (ensures dark class is applied)
+  useEffect(() => {
+    // Theme hook handles this automatically
+  }, [resolvedTheme])
 
   const renderPhase = () => {
     if (state.showChecklist) {
@@ -75,7 +84,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    <div className="min-h-screen bg-pattern flex">
       {/* Sidebar */}
       {state.phase !== "input" && (
         <SidebarNav
@@ -96,19 +105,33 @@ function App() {
       {/* Main content */}
       <main className="flex-1 flex flex-col">
         {/* Header */}
-        <header className="bg-white border-b border-slate-200 px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg gradient-primary flex items-center justify-center">
-              <Search className="w-5 h-5 text-white" />
+        <header className="relative overflow-hidden border-b border-default bg-surface">
+          {/* Gradient overlay */}
+          <div className="absolute inset-0 gradient-header" />
+
+          <div className="relative flex items-center justify-between px-6 py-4">
+            <div className="flex items-center gap-3">
+              {/* Logo icon */}
+              <div className="relative">
+                <div className="w-10 h-10 rounded-xl gradient-accent flex items-center justify-center shadow-lg shadow-accent/20 dark:shadow-accent/10 dark:glow-accent">
+                  <Sparkles className="w-5 h-5 text-white" />
+                </div>
+                {/* Subtle glow ring */}
+                <div className="absolute inset-0 rounded-xl opacity-0 dark:opacity-50 animate-pulse-glow pointer-events-none" />
+              </div>
+
+              <div>
+                <h1 className="text-xl font-display font-bold tracking-tight text-primary">
+                  Genie<span className="text-accent">Rx</span>
+                </h1>
+                <p className="text-sm text-muted">
+                  Configuration Analyzer
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-slate-900">
-                Genie Space Analyzer
-              </h1>
-              <p className="text-sm text-slate-500">
-                Analyze your Databricks Genie Space configuration against checklist
-              </p>
-            </div>
+
+            {/* Right side: Theme toggle */}
+            <ThemeToggle />
           </div>
         </header>
 

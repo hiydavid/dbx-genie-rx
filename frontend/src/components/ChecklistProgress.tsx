@@ -27,14 +27,14 @@ export function ChecklistProgress({ checklist }: ChecklistProgressProps) {
       {/* Progress header */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <span className="font-semibold text-slate-900">
+          <span className="font-semibold text-primary">
             Checklist Progress
           </span>
-          <span className="text-sm text-slate-600">
-            {passed}/{total} items passed
+          <span className="text-sm text-muted font-mono">
+            {passed}/{total} passed
           </span>
         </div>
-        <Progress value={percentage} variant={getProgressVariant()} />
+        <Progress value={percentage} variant={getProgressVariant()} glow />
       </div>
 
       {/* Checklist items */}
@@ -57,10 +57,10 @@ function ChecklistItemCard({ item }: ChecklistItemCardProps) {
   return (
     <div
       className={cn(
-        "flex items-start gap-3 p-3 rounded-lg border-l-4",
+        "flex items-start gap-3 p-3 rounded-lg border-l-4 transition-colors",
         item.passed
-          ? "bg-success/5 border-l-success"
-          : "bg-danger/5 border-l-danger"
+          ? "bg-success/5 dark:bg-success/10 border-l-success"
+          : "bg-danger/5 dark:bg-danger/10 border-l-danger"
       )}
     >
       <div
@@ -85,7 +85,7 @@ function ChecklistItemCard({ item }: ChecklistItemCardProps) {
           {item.description}
         </p>
         {item.details && (
-          <p className="text-xs text-slate-500 mt-1">{item.details}</p>
+          <p className="text-xs text-muted mt-1">{item.details}</p>
         )}
       </div>
     </div>

@@ -28,7 +28,8 @@ This app was designed to be deployed on Databricks Apps. You can either:
 - **Compliance Scoring** — Provides per-section and overall compliance scores (0-10)
 - **Actionable Recommendations** — Each finding includes specific remediation guidance
 - **Interactive Wizard UI** — Step-by-step analysis with progress navigation and JSON preview
-- **Modern React Frontend** — Beautiful, responsive UI built with React, TypeScript, and Tailwind CSS
+- **Modern React Frontend** — Beautiful, responsive UI built with React, TypeScript, and Tailwind CSS v4
+- **Dark Mode Support** — Auto-detects system preference with manual toggle, persists user choice
 - **MLflow Tracing** — (Optional) Enable by setting `MLFLOW_EXPERIMENT_ID` in `app.yaml`
 - **Configurable LLM** — Defaults to Claude Sonnet 4, configurable to any Databricks-hosted model
 - **Databricks Apps Deployment** — Deploy with user-based (OBO) authentication
@@ -253,6 +254,7 @@ dbx-genie-rx/
 │   ├── prompts.py         # LLM prompt templates
 │   └── start_server.py    # FastAPI server entry point
 ├── frontend/               # React frontend application
+│   ├── public/fonts/      # Self-hosted font files (woff2)
 │   ├── src/
 │   │   ├── components/    # React components
 │   │   │   ├── ui/       # Reusable UI components (Button, Card, etc.)
@@ -260,8 +262,10 @@ dbx-genie-rx/
 │   │   │   ├── IngestPhase.tsx
 │   │   │   ├── AnalysisPhase.tsx
 │   │   │   ├── SummaryPhase.tsx
-│   │   │   └── SidebarNav.tsx
-│   │   ├── hooks/        # Custom React hooks
+│   │   │   ├── SidebarNav.tsx
+│   │   │   ├── ThemeToggle.tsx    # Dark/light mode toggle
+│   │   │   └── ScoreGauge.tsx     # Animated radial score gauge
+│   │   ├── hooks/        # Custom React hooks (useTheme, etc.)
 │   │   ├── lib/          # Utilities and API client
 │   │   └── types/        # TypeScript type definitions
 │   ├── package.json
@@ -363,6 +367,18 @@ npm run build
 # Type checking
 npm run build  # TypeScript is checked during build
 ```
+
+### Font Setup (Optional)
+
+The frontend uses self-hosted fonts for the design system. Download and place the following `.woff2` files in `frontend/public/fonts/`:
+
+| Font | Files | Source |
+|------|-------|--------|
+| Cabinet Grotesk | `CabinetGrotesk-Bold.woff2`, `CabinetGrotesk-Extrabold.woff2` | [fontshare.com](https://www.fontshare.com/fonts/cabinet-grotesk) |
+| General Sans | `GeneralSans-Regular.woff2`, `GeneralSans-Medium.woff2`, `GeneralSans-Semibold.woff2` | [fontshare.com](https://www.fontshare.com/fonts/general-sans) |
+| JetBrains Mono | `JetBrainsMono-Regular.woff2`, `JetBrainsMono-Medium.woff2` | [jetbrains.com](https://www.jetbrains.com/lp/mono/) |
+
+> **Note:** The app works without these fonts (falls back to system fonts), but the custom fonts provide the intended design experience.
 
 ### Backend Development
 

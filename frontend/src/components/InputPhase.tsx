@@ -3,7 +3,7 @@
  */
 
 import { useState } from "react"
-import { Search, FileJson, Loader2, AlertCircle } from "lucide-react"
+import { Search, FileJson, Loader2, AlertCircle, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -39,25 +39,30 @@ export function InputPhase({
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh]">
+    <div className="flex flex-col items-center justify-center min-h-[60vh] animate-stagger">
       {/* Welcome intro */}
-      <div className="text-center mb-8 max-w-2xl">
-        <h1 className="text-3xl font-bold text-slate-900 mb-3">
-          Welcome to GenieRx
+      <div className="text-center mb-10 max-w-2xl">
+        {/* Decorative icon */}
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl gradient-accent shadow-xl shadow-accent/25 dark:glow-accent mb-6">
+          <Sparkles className="w-8 h-8 text-white" />
+        </div>
+
+        <h1 className="text-4xl font-display font-extrabold text-primary mb-4 tracking-tight">
+          Welcome to Genie<span className="text-accent">Rx</span>
         </h1>
-        <p className="text-base text-slate-600">
+        <p className="text-lg text-secondary leading-relaxed">
           Getting the most out of your Genie Space starts with a solid configuration.
-          GenieRx reviews your setup across 10 key areas, flags potential issues, and
-          gives you clear guidance on how to fix them. Whether you're fine-tuning an
-          existing space or validating a new one, we'll help you spot what's working
-          and what could be better.
+          GenieRx reviews your setup across{" "}
+          <span className="font-semibold text-primary">10 key areas</span>, flags potential
+          issues, and gives you clear guidance on how to fix them.
         </p>
       </div>
 
-      <Card className="w-full max-w-2xl shadow-lg">
+      <Card className="w-full max-w-2xl shadow-xl dark:card-glow">
         <CardHeader className="text-center pb-2">
           <CardDescription className="text-base">
-            <span className="font-bold">Get Started:</span> Enter your Genie Space ID or paste the JSON configuration
+            <span className="font-semibold text-primary">Get Started:</span>{" "}
+            Enter your Genie Space ID or paste the JSON configuration
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -78,7 +83,7 @@ export function InputPhase({
                 <div>
                   <label
                     htmlFor="space-id"
-                    className="block text-sm font-medium text-slate-700 mb-2"
+                    className="block text-sm font-medium text-secondary mb-2"
                   >
                     Genie Space ID
                   </label>
@@ -90,6 +95,7 @@ export function InputPhase({
                       onChange={(e) => setSpaceId(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && handleFetch()}
                       disabled={isLoading}
+                      className="font-mono"
                     />
                     <Button
                       onClick={handleFetch}
@@ -106,7 +112,7 @@ export function InputPhase({
                     </Button>
                   </div>
                 </div>
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-muted">
                   The unique identifier for your Databricks Genie Space. You can find
                   this in the Genie Space URL.
                 </p>
@@ -118,7 +124,7 @@ export function InputPhase({
                 <div>
                   <label
                     htmlFor="json-content"
-                    className="block text-sm font-medium text-slate-700 mb-2"
+                    className="block text-sm font-medium text-secondary mb-2"
                   >
                     Genie Space JSON
                   </label>
@@ -147,11 +153,11 @@ export function InputPhase({
                   </Button>
                 </div>
 
-                <details className="text-sm text-slate-600 cursor-pointer">
-                  <summary className="font-medium hover:text-slate-900 transition-colors">
+                <details className="text-sm text-muted cursor-pointer group">
+                  <summary className="font-medium hover:text-primary transition-colors">
                     How to get the serialized JSON
                   </summary>
-                  <pre className="mt-3 p-4 bg-slate-100 rounded-lg overflow-x-auto text-xs">
+                  <pre className="mt-3 p-4 bg-elevated rounded-lg overflow-x-auto text-xs border border-default">
 {`import requests
 
 your_workspace_url = "https://your-workspace.cloud.databricks.com"
@@ -176,7 +182,7 @@ response.json()`}
           </Tabs>
 
           {error && (
-            <div className="mt-4 flex items-start gap-2 p-4 bg-danger-light rounded-lg text-danger">
+            <div className="mt-4 flex items-start gap-2 p-4 bg-danger/10 dark:bg-danger/15 rounded-lg text-danger border border-danger/20">
               <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
               <p className="text-sm">{error}</p>
             </div>
@@ -186,4 +192,3 @@ response.json()`}
     </div>
   )
 }
-

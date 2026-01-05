@@ -3,7 +3,7 @@
  */
 
 import { useEffect } from "react"
-import { ChevronLeft, ChevronRight, Loader2, AlertTriangle, Info } from "lucide-react"
+import { ChevronLeft, ChevronRight, AlertTriangle, Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChecklistProgress } from "@/components/ChecklistProgress"
@@ -28,6 +28,7 @@ function formatSectionName(sectionName: string): string {
     .replace(/_/g, " ")
     .replace(/\./g, " → ")
     .replace(/\b\w/g, (l) => l.toUpperCase())
+    .replace(/Sql/g, "SQL")
 }
 
 export function AnalysisPhase({
@@ -58,14 +59,18 @@ export function AnalysisPhase({
   const isLastSection = currentSectionIndex === sections.length - 1
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-slide-up">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">{displayName}</h2>
-          <p className="text-sm text-slate-500">
+          <h2 className="text-lg font-display font-semibold text-primary">
+            {displayName}
+          </h2>
+          <p className="text-sm text-muted">
             Section {currentSectionIndex + 1} of {sections.length} •{" "}
-            <code className="px-1.5 py-0.5 bg-slate-100 rounded text-slate-700">{genieSpaceId}</code>
+            <code className="px-1.5 py-0.5 bg-elevated rounded text-secondary font-mono text-xs">
+              {genieSpaceId}
+            </code>
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -97,22 +102,33 @@ export function AnalysisPhase({
       {/* Loading state */}
       {isLoading && (
         <Card>
-          <CardContent className="py-12 flex flex-col items-center justify-center text-slate-500">
-            <Loader2 className="w-8 h-8 animate-spin mb-4" />
-            <p className="text-lg font-medium">Analyzing {displayName}...</p>
-            <p className="text-sm">This may take a moment</p>
+          <CardContent className="py-12 flex flex-col items-center justify-center">
+            {/* Scanning animation */}
+            <div className="relative w-16 h-16 mb-6">
+              <div className="absolute inset-0 rounded-full border-4 border-elevated" />
+              <div className="absolute inset-0 rounded-full border-4 border-accent border-t-transparent animate-spin" />
+              <div className="absolute inset-2 rounded-full bg-accent/10 dark:bg-accent/20 animate-pulse" />
+            </div>
+            <p className="text-lg font-display font-medium text-primary">
+              Analyzing {displayName}...
+            </p>
+            <p className="text-sm text-muted">This may take a moment</p>
+            {/* Scanning bar */}
+            <div className="w-48 h-1 mt-4 rounded-full bg-elevated overflow-hidden">
+              <div className="h-full animate-scan opacity-60" />
+            </div>
           </CardContent>
         </Card>
       )}
 
       {/* Error state */}
       {error && (
-        <Card className="border-danger/30 bg-danger/5">
+        <Card className="border-danger/30 bg-danger/5 dark:bg-danger/10">
           <CardContent className="py-6 flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-danger flex-shrink-0 mt-0.5" />
             <div>
               <p className="font-medium text-danger">Analysis Failed</p>
-              <p className="text-sm text-slate-600 mt-1">{error}</p>
+              <p className="text-sm text-secondary mt-1">{error}</p>
               <Button
                 variant="outline"
                 size="sm"
@@ -128,7 +144,7 @@ export function AnalysisPhase({
 
       {/* Analysis content */}
       {currentAnalysis && !isLoading && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch animate-fade-in">
           {/* Section Data */}
           <Card className="flex flex-col">
             <CardHeader className="pb-3 flex-shrink-0">
@@ -136,14 +152,14 @@ export function AnalysisPhase({
             </CardHeader>
             <CardContent className="flex-1 flex flex-col min-h-0">
               {!currentSection.has_data ? (
-                <div className="flex items-start gap-3 p-4 bg-warning/10 rounded-lg text-warning">
+                <div className="flex items-start gap-3 p-4 bg-warning/10 dark:bg-warning/15 rounded-lg text-warning">
                   <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
                   <p className="text-sm">
                     This section is not configured in your Genie Space.
                   </p>
                 </div>
               ) : (
-                <pre className="text-xs overflow-auto flex-1 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                <pre className="text-xs font-mono overflow-auto flex-1 p-4 bg-elevated rounded-lg border border-default">
                   {JSON.stringify(currentSection.data, null, 2)}
                 </pre>
               )}
@@ -157,16 +173,16 @@ export function AnalysisPhase({
             </CardHeader>
             <CardContent className="flex-1 overflow-auto">
               {currentAnalysis.summary && (
-                <div className="flex items-start gap-3 p-4 bg-info/10 rounded-lg mb-4">
+                <div className="flex items-start gap-3 p-4 bg-info/10 dark:bg-info/15 rounded-lg mb-4">
                   <Info className="w-5 h-5 text-info flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-slate-700">{currentAnalysis.summary}</p>
+                  <p className="text-sm text-secondary">{currentAnalysis.summary}</p>
                 </div>
               )}
 
               {currentAnalysis.checklist.length > 0 ? (
                 <ChecklistProgress checklist={currentAnalysis.checklist} />
               ) : (
-                <p className="text-sm text-slate-500 text-center py-8">
+                <p className="text-sm text-muted text-center py-8">
                   No checklist items for this section.
                 </p>
               )}
@@ -177,4 +193,3 @@ export function AnalysisPhase({
     </div>
   )
 }
-

@@ -33,7 +33,8 @@ export function TabsList({ children, className }: TabsListProps) {
   return (
     <div
       className={cn(
-        "inline-flex h-11 items-center justify-center rounded-lg bg-slate-100 p-1",
+        "inline-flex h-11 items-center justify-center rounded-lg p-1",
+        "bg-elevated border border-default",
         className
       )}
     >
@@ -62,8 +63,8 @@ export function TabsTrigger({ value, children, className }: TabsTriggerProps) {
       className={cn(
         "inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium transition-all",
         isActive
-          ? "bg-white text-slate-900 shadow-sm"
-          : "text-slate-600 hover:text-slate-900",
+          ? "bg-surface text-primary shadow-sm dark:shadow-none dark:ring-1 dark:ring-border-strong"
+          : "text-muted hover:text-primary",
         className
       )}
     >
@@ -86,6 +87,9 @@ export function TabsContent({ value, children, className }: TabsContentProps) {
 
   if (activeTab !== value) return null
 
-  return <div className={cn("mt-4", className)}>{children}</div>
+  return (
+    <div className={cn("mt-4 animate-fade-in", className)}>
+      {children}
+    </div>
+  )
 }
-

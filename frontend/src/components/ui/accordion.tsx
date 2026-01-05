@@ -20,19 +20,29 @@ export function AccordionItem({
   const [isOpen, setIsOpen] = React.useState(defaultOpen)
 
   return (
-    <div className={cn("border border-slate-200 rounded-lg overflow-hidden", className)}>
+    <div
+      className={cn(
+        "border rounded-lg overflow-hidden transition-shadow",
+        "border-default",
+        "dark:card-glow",
+        className
+      )}
+    >
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex w-full items-center justify-between px-4 py-3 text-left bg-white hover:bg-slate-50 transition-colors"
+        className={cn(
+          "flex w-full items-center justify-between px-4 py-3 text-left transition-colors",
+          "bg-surface hover:bg-elevated"
+        )}
       >
-        <div className="flex items-center gap-2 font-medium text-slate-900">
+        <div className="flex items-center gap-2 font-medium text-primary">
           {icon}
           {title}
         </div>
         <ChevronDown
           className={cn(
-            "h-5 w-5 text-slate-500 transition-transform duration-200",
+            "h-5 w-5 text-muted transition-transform duration-200",
             isOpen && "rotate-180"
           )}
         />
@@ -44,7 +54,7 @@ export function AccordionItem({
         )}
       >
         <div className="overflow-hidden">
-          <div className="px-4 py-3 bg-slate-50 border-t border-slate-200">
+          <div className="px-4 py-3 bg-elevated border-t border-default">
             {children}
           </div>
         </div>
@@ -52,4 +62,3 @@ export function AccordionItem({
     </div>
   )
 }
-
