@@ -12,8 +12,7 @@ This checklist is organized according to the serialized Genie Space JSON schema 
 
 **Table Selection:**
 
-- [ ] At least 1 table is configured
-- [ ] Number of tables is 25 or fewer
+- [ ] Between 1 and 25 tables are configured
 - [ ] Tables are focused (only necessary tables for intended questions)
 - [ ] Tables are well-annotated with descriptions
 - [ ] Datasets are simplified (prejoined where appropriate, unnecessary columns removed)
@@ -37,7 +36,7 @@ This checklist is organized according to the serialized Genie Space JSON schema 
 
 **Column Exclusions:**
 
-- [ ] Technical/internal columns are excluded
+- [ ] No duplicative columns exist within the same table
 - [ ] Columns not relevant to the space's purpose are hidden
 
 ### `metric_views`
@@ -55,6 +54,7 @@ This checklist is organized according to the serialized Genie Space JSON schema 
 - [ ] Instructions are focused and minimal (not excessive)
 - [ ] Instructions provide globally-applied context
 - [ ] Business jargon is mapped to standard terminology where needed
+- [ ] SQL examples, metrics, join logic, and filters are moved to their respective sections (not embedded in text instructions)
 
 ### `example_question_sqls`
 
@@ -87,14 +87,14 @@ This checklist is organized according to the serialized Genie Space JSON schema 
 - [ ] Join specs are defined for multi-table relationships (if >1 table)
 - [ ] Foreign key references are defined in Unity Catalog when possible
 - [ ] Complex scenarios (self-joins) have explicit join specs
-- [ ] Example queries demonstrate standard joins
+- [ ] Join specs have comments explaining the relationship
 
 ### `sql_snippets`
 
 #### `filters`
 
-- [ ] Common time period filters exist ("last quarter", "YTD")
-- [ ] Business-specific filters are defined ("active customers", "pre-covid")
+- [ ] Common time period filters exist
+- [ ] Business-specific filters are defined
 
 #### `expressions`
 
@@ -103,7 +103,7 @@ This checklist is organized according to the serialized Genie Space JSON schema 
 
 #### `measures`
 
-- [ ] Frequently used metrics are defined (gross margin, conversion rate)
+- [ ] More than 1 measure is defined (consider adding more if only 1 exists)
 - [ ] Measures cover standard business concepts used across queries
 
 ---
@@ -112,10 +112,8 @@ This checklist is organized according to the serialized Genie Space JSON schema 
 
 ### `questions`
 
-- [ ] At least 1 benchmark question exists
-- [ ] Questions have been tested and SQL reviewed
-- [ ] Questions include different phrasings of the same intent
-- [ ] User testing feedback has been incorporated
+- [ ] At least 10 benchmark question-answer pairs exist
+- [ ] Questions are diverse and cover different use cases and topics
 
 ---
 
@@ -123,17 +121,17 @@ This checklist is organized according to the serialized Genie Space JSON schema 
 
 | Section | Items |
 |---------|-------|
-| `data_sources.tables` | 15 |
+| `data_sources.tables` | 14 |
 | `data_sources.metric_views` | 2 |
-| `instructions.text_instructions` | 4 |
+| `instructions.text_instructions` | 5 |
 | `instructions.example_question_sqls` | 10 |
 | `instructions.sql_functions` | 2 |
 | `instructions.join_specs` | 4 |
 | `instructions.sql_snippets.filters` | 2 |
 | `instructions.sql_snippets.expressions` | 2 |
 | `instructions.sql_snippets.measures` | 2 |
-| `benchmarks.questions` | 4 |
-| **Total** | **47** |
+| `benchmarks.questions` | 2 |
+| **Total** | **45** |
 
 ---
 
@@ -141,7 +139,7 @@ This checklist is organized according to the serialized Genie Space JSON schema 
 
 **Score Calculation:** `(passed_items / total_items) * 100`
 
-Each checked item contributes equally to the final score. A perfect score requires all 47 items to pass.
+Each checked item contributes equally to the final score. A perfect score requires all 45 items to pass.
 
 ---
 

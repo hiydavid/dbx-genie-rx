@@ -6,6 +6,7 @@ import { ChevronDown, ChevronUp, Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChecklistProgress } from "@/components/ChecklistProgress"
+import { ScoreGauge } from "@/components/ScoreGauge"
 import { cn } from "@/lib/utils"
 import type { SectionAnalysis } from "@/types"
 
@@ -23,6 +24,7 @@ function formatSectionName(sectionName: string): string {
     .replace(/_/g, " ")
     .replace(/\./g, " → ")
     .replace(/\b\w/g, (l) => l.toUpperCase())
+    .replace(/Sql/g, "SQL")
 }
 
 export function SummaryPhase({
@@ -42,37 +44,30 @@ export function SummaryPhase({
     (sum, a) => sum + a.checklist.filter((c) => c.passed).length,
     0
   )
-  const percentage = totalChecklist > 0 ? (passedChecklist / totalChecklist) * 100 : 0
-
-  const getScoreClass = () => {
-    if (percentage >= 80) return "gradient-success"
-    if (percentage >= 60) return "gradient-warning"
-    return "gradient-primary"
-  }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-stagger">
       {/* Header */}
       <div>
-        <h2 className="text-lg font-semibold text-slate-900">Analysis Summary</h2>
-        <p className="text-sm text-slate-500">
-          Space ID: <code className="px-1.5 py-0.5 bg-slate-100 rounded text-slate-700">{genieSpaceId}</code>
+        <h2 className="text-lg font-display font-semibold text-primary">
+          Analysis Summary
+        </h2>
+        <p className="text-sm text-muted">
+          Space ID:{" "}
+          <code className="px-1.5 py-0.5 bg-elevated rounded text-secondary font-mono text-xs">
+            {genieSpaceId}
+          </code>
         </p>
       </div>
 
-      {/* Score Card */}
-      <div className="flex justify-center">
-        <div
-          className={cn(
-            "px-12 py-8 rounded-2xl text-white text-center shadow-lg",
-            getScoreClass()
-          )}
-        >
-          <div className="text-5xl font-extrabold">
-            {passedChecklist}/{totalChecklist}
-          </div>
-          <div className="text-sm opacity-90 mt-2">Checklist Items Passed</div>
-        </div>
+      {/* Score Gauge - Hero element */}
+      <div className="flex justify-center py-4">
+        <ScoreGauge
+          passed={passedChecklist}
+          total={totalChecklist}
+          size={220}
+          animationDuration={1200}
+        />
       </div>
 
       {/* Section Results */}
@@ -90,43 +85,45 @@ export function SummaryPhase({
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {sectionAnalyses.map((analysis) => {
+            {sectionAnalyses.map((analysis, index) => {
               const displayName = formatSectionName(analysis.section_name)
               const passed = analysis.checklist.filter((c) => c.passed).length
               const total = analysis.checklist.length
               const isExpanded = expandedSections[analysis.section_name] ?? false
+              const percentage = total > 0 ? (passed / total) * 100 : 100
 
               return (
                 <div
                   key={analysis.section_name}
-                  className="border border-slate-200 rounded-lg overflow-hidden"
+                  className="border border-default rounded-lg overflow-hidden dark:card-glow"
+                  style={{ animationDelay: `${index * 50}ms` }}
                 >
                   <button
                     type="button"
                     onClick={() => onToggleSection(analysis.section_name)}
-                    className="flex w-full items-center justify-between px-4 py-3 text-left bg-white hover:bg-slate-50 transition-colors"
+                    className="flex w-full items-center justify-between px-4 py-3 text-left bg-surface hover:bg-elevated transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="font-medium text-slate-900">
+                      <span className="font-medium text-primary">
                         {displayName}
                       </span>
                       <span
                         className={cn(
-                          "text-sm px-2 py-0.5 rounded-full",
-                          passed === total
-                            ? "bg-success/10 text-success"
-                            : passed >= total * 0.6
-                            ? "bg-warning/10 text-warning"
-                            : "bg-danger/10 text-danger"
+                          "text-sm px-2.5 py-0.5 rounded-full font-medium",
+                          percentage === 100
+                            ? "bg-success/10 text-success dark:bg-success/20"
+                            : percentage >= 60
+                            ? "bg-warning/10 text-warning dark:bg-warning/20"
+                            : "bg-danger/10 text-danger dark:bg-danger/20"
                         )}
                       >
-                        {passed}/{total} passed
+                        {passed}/{total}
                       </span>
                     </div>
                     {isExpanded ? (
-                      <ChevronUp className="w-5 h-5 text-slate-500" />
+                      <ChevronUp className="w-5 h-5 text-muted" />
                     ) : (
-                      <ChevronDown className="w-5 h-5 text-slate-500" />
+                      <ChevronDown className="w-5 h-5 text-muted" />
                     )}
                   </button>
 
@@ -139,11 +136,11 @@ export function SummaryPhase({
                     )}
                   >
                     <div className="overflow-hidden">
-                      <div className="px-4 py-4 bg-slate-50 border-t border-slate-200 space-y-4">
+                      <div className="px-4 py-4 bg-elevated border-t border-default space-y-4">
                         {analysis.summary && (
-                          <div className="flex items-start gap-3 p-3 bg-info/10 rounded-lg">
+                          <div className="flex items-start gap-3 p-3 bg-info/10 dark:bg-info/15 rounded-lg">
                             <Info className="w-5 h-5 text-info flex-shrink-0 mt-0.5" />
-                            <p className="text-sm text-slate-700">
+                            <p className="text-sm text-secondary">
                               {analysis.summary}
                             </p>
                           </div>
@@ -152,7 +149,7 @@ export function SummaryPhase({
                         {analysis.checklist.length > 0 ? (
                           <ChecklistProgress checklist={analysis.checklist} />
                         ) : (
-                          <p className="text-sm text-slate-500 text-center py-4">
+                          <p className="text-sm text-muted text-center py-4">
                             No checklist items for this section.
                           </p>
                         )}
@@ -168,4 +165,3 @@ export function SummaryPhase({
     </div>
   )
 }
-

@@ -31,14 +31,21 @@ export function IngestPhase({
   sections,
   onStartAnalysis,
 }: IngestPhaseProps) {
+  const configuredCount = sections.filter((s) => s.has_data).length
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-slide-up">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Ingest Preview</h2>
-          <p className="text-sm text-slate-500">
-            Space ID: <code className="px-1.5 py-0.5 bg-slate-100 rounded text-slate-700">{genieSpaceId}</code>
+          <h2 className="text-lg font-display font-semibold text-primary">
+            Ingest Preview
+          </h2>
+          <p className="text-sm text-muted">
+            Space ID:{" "}
+            <code className="px-1.5 py-0.5 bg-elevated rounded text-secondary font-mono text-xs">
+              {genieSpaceId}
+            </code>
           </p>
         </div>
         <Button onClick={onStartAnalysis}>
@@ -47,10 +54,26 @@ export function IngestPhase({
         </Button>
       </div>
 
+      {/* Summary stats */}
+      <div className="flex items-center gap-4 text-sm">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-success/10 text-success dark:bg-success/15">
+          <Check className="w-4 h-4" />
+          <span className="font-medium">{configuredCount} configured</span>
+        </div>
+        {sections.length - configuredCount > 0 && (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-warning/10 text-warning dark:bg-warning/15">
+            <AlertTriangle className="w-4 h-4" />
+            <span className="font-medium">
+              {sections.length - configuredCount} missing
+            </span>
+          </div>
+        )}
+      </div>
+
       {/* Sections Preview */}
       <Card>
         <CardContent className="p-6">
-          <h3 className="text-lg font-semibold text-slate-900 mb-4">
+          <h3 className="text-lg font-display font-semibold text-primary mb-4">
             Serialized Space Data
           </h3>
           <div className="space-y-3">
@@ -65,13 +88,13 @@ export function IngestPhase({
                     title={
                       <span className="flex items-center gap-2">
                         <span className="text-warning">{displayName}</span>
-                        <span className="text-xs text-slate-400">(not configured)</span>
+                        <span className="text-xs text-muted">(not configured)</span>
                       </span>
                     }
                     icon={<AlertTriangle className="w-4 h-4 text-warning" />}
                     className="border-warning/30"
                   >
-                    <p className="text-sm text-slate-500">
+                    <p className="text-sm text-muted">
                       This section is not configured in your Genie Space.
                     </p>
                   </AccordionItem>
@@ -84,14 +107,14 @@ export function IngestPhase({
                   title={
                     <span className="flex items-center gap-2">
                       <span>{displayName}</span>
-                      <span className="px-2 py-0.5 text-xs font-medium bg-primary/10 text-primary rounded-full">
+                      <span className="px-2 py-0.5 text-xs font-medium bg-accent/10 text-accent rounded-full dark:bg-accent/20">
                         {itemCount}
                       </span>
                     </span>
                   }
                   icon={<Check className="w-4 h-4 text-success" />}
                 >
-                  <pre className="text-xs overflow-auto max-h-[32rem] p-3 bg-white rounded-lg border border-slate-200">
+                  <pre className="text-xs font-mono overflow-auto max-h-[32rem] p-3 bg-surface rounded-lg border border-default">
                     {JSON.stringify(section.data, null, 2)}
                   </pre>
                 </AccordionItem>
@@ -103,4 +126,3 @@ export function IngestPhase({
     </div>
   )
 }
-

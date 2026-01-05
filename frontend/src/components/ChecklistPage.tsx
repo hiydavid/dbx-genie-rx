@@ -34,7 +34,7 @@ export function ChecklistPage({ onBack }: ChecklistPageProps) {
   }, [])
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-slide-up">
       <div className="flex items-center gap-4">
         <Button variant="ghost" onClick={onBack}>
           <ArrowLeft className="w-4 h-4 mr-2" />
@@ -43,8 +43,10 @@ export function ChecklistPage({ onBack }: ChecklistPageProps) {
       </div>
 
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Checklist Reference</h1>
-        <p className="text-slate-500">
+        <h1 className="text-2xl font-display font-bold text-primary">
+          Checklist Reference
+        </h1>
+        <p className="text-muted">
           Genie Space configuration checklist organized by schema
         </p>
       </div>
@@ -53,7 +55,7 @@ export function ChecklistPage({ onBack }: ChecklistPageProps) {
         <CardContent className="p-6">
           {isLoading && (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+              <Loader2 className="w-6 h-6 animate-spin text-muted" />
             </div>
           )}
 
@@ -64,7 +66,7 @@ export function ChecklistPage({ onBack }: ChecklistPageProps) {
           )}
 
           {content && (
-            <div className="prose prose-slate max-w-none">
+            <div className="prose max-w-none">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                 {content}
               </ReactMarkdown>
@@ -75,4 +77,3 @@ export function ChecklistPage({ onBack }: ChecklistPageProps) {
     </div>
   )
 }
-
