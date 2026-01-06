@@ -34,27 +34,27 @@ This app was designed to be deployed on Databricks Apps. You can either:
 
 <p align="center">
   <img src="images/intro.png" alt="Enter Genie Space ID" width="800"><br>
-  <em>Enter your Genie Space ID or paste JSON</em>
+  <em>1) Enter your Genie Space ID or paste JSON</em>
 </p>
 
 <p align="center">
   <img src="images/ingest.png" alt="Preview ingested data" width="800"><br>
-  <em>Preview the ingested configuration data</em>
+  <em>2) Preview the ingested configuration data</em>
 </p>
 
 <p align="center">
   <img src="images/pending.png" alt="Sections ready for analysis" width="800"><br>
-  <em>Review sections pending analysis</em>
+  <em>3) Review sections pending analysis</em>
 </p>
 
 <p align="center">
   <img src="images/analysis.png" alt="Section analysis in progress" width="800"><br>
-  <em>Analyze each section against best practices</em>
+  <em>4) Analyze each section against best practices</em>
 </p>
 
 <p align="center">
   <img src="images/summary.png" alt="Final compliance summary" width="800"><br>
-  <em>View the final compliance summary and scores</em>
+  <em>5) View the final compliance summary and scores</em>
 </p>
 
 ## 🏗️ Architecture
