@@ -17,10 +17,6 @@ This app was designed to be deployed on Databricks Apps. You can either:
 
 ## ✨ Features
 
-<p align="center">
-  <img src="docs/genie_analyzer_app.png" alt="Genie Space Analyzer App" width="1000">
-</p>
-
 - **Comprehensive Analysis** — Evaluates 10 different sections of your Genie Space configuration
 - **Customizable Checklist** — All checks defined in `docs/checklist-by-schema.md`; edit to add/remove checks without code changes
 - **Best Practice Validation** — Checks against documented Databricks Genie Space best practices
@@ -33,6 +29,33 @@ This app was designed to be deployed on Databricks Apps. You can either:
 - **MLflow Tracing** — (Optional) Enable by setting `MLFLOW_EXPERIMENT_ID` in `app.yaml`
 - **Configurable LLM** — Defaults to Claude Sonnet 4, configurable to any Databricks-hosted model
 - **Databricks Apps Deployment** — Deploy with user-based (OBO) authentication
+
+## 📸 Walkthrough
+
+<p align="center">
+  <img src="images/intro.png" alt="Enter Genie Space ID" width="800"><br>
+  <em>Enter your Genie Space ID or paste JSON</em>
+</p>
+
+<p align="center">
+  <img src="images/ingest.png" alt="Preview ingested data" width="800"><br>
+  <em>Preview the ingested configuration data</em>
+</p>
+
+<p align="center">
+  <img src="images/pending.png" alt="Sections ready for analysis" width="800"><br>
+  <em>Review sections pending analysis</em>
+</p>
+
+<p align="center">
+  <img src="images/analysis.png" alt="Section analysis in progress" width="800"><br>
+  <em>Analyze each section against best practices</em>
+</p>
+
+<p align="center">
+  <img src="images/summary.png" alt="Final compliance summary" width="800"><br>
+  <em>View the final compliance summary and scores</em>
+</p>
 
 ## 🏗️ Architecture
 
