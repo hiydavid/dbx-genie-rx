@@ -6,17 +6,24 @@ import {
   Play,
   Check,
   AlertTriangle,
+  Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { AccordionItem } from "@/components/ui/accordion"
-import type { SectionInfo } from "@/types"
+import type { SectionInfo, SectionAnalysis } from "@/types"
 
 interface IngestPhaseProps {
   genieSpaceId: string
   spaceData: Record<string, unknown>
   sections: SectionInfo[]
-  onStartAnalysis: () => void
+  sectionAnalyses: SectionAnalysis[]
+  isLoading: boolean
+  analysisProgress: { completed: number; total: number } | null
+  analyzingSection: number | null
+  onAnalyzeAllSections: () => void
+  onAnalyzeSingleSection: (index: number) => void
+  onGoToSection: (index: number) => void
 }
 
 function formatSectionName(sectionName: string): string {
@@ -29,7 +36,13 @@ function formatSectionName(sectionName: string): string {
 export function IngestPhase({
   genieSpaceId,
   sections,
-  onStartAnalysis,
+  sectionAnalyses,
+  isLoading,
+  analysisProgress,
+  analyzingSection,
+  onAnalyzeAllSections,
+  onAnalyzeSingleSection,
+  onGoToSection,
 }: IngestPhaseProps) {
   const configuredCount = sections.filter((s) => s.has_data).length
 
@@ -48,9 +61,18 @@ export function IngestPhase({
             </code>
           </p>
         </div>
-        <Button onClick={onStartAnalysis}>
-          <Play className="w-4 h-4 mr-2" />
-          Start Analysis
+        <Button onClick={onAnalyzeAllSections} disabled={isLoading}>
+          {analysisProgress ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Analyzing {analysisProgress.completed}/{analysisProgress.total}...
+            </>
+          ) : (
+            <>
+              <Play className="w-4 h-4 mr-2" />
+              Start Analysis
+            </>
+          )}
         </Button>
       </div>
 
@@ -77,9 +99,12 @@ export function IngestPhase({
             Serialized Space Data
           </h3>
           <div className="space-y-3">
-            {sections.map((section) => {
+            {sections.map((section, index) => {
               const displayName = formatSectionName(section.name)
               const itemCount = Array.isArray(section.data) ? section.data.length : 1
+              const isAnalyzingThis = analyzingSection === index
+              const analysis = sectionAnalyses[index]
+              const isAnalyzed = analysis !== undefined
 
               if (!section.has_data) {
                 return (
@@ -101,6 +126,11 @@ export function IngestPhase({
                 )
               }
 
+              // Calculate score for analyzed sections
+              const passed = analysis?.checklist.filter((c) => c.passed).length ?? 0
+              const total = analysis?.checklist.length ?? 0
+              const percentage = total > 0 ? (passed / total) * 100 : 100
+
               return (
                 <AccordionItem
                   key={section.name}
@@ -110,9 +140,54 @@ export function IngestPhase({
                       <span className="px-2 py-0.5 text-xs font-medium bg-accent/10 text-accent rounded-full dark:bg-accent/20">
                         {itemCount}
                       </span>
+                      {isAnalyzed && (
+                        <span
+                          className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                            percentage === 100
+                              ? "bg-success/10 text-success dark:bg-success/20"
+                              : percentage >= 60
+                              ? "bg-warning/10 text-warning dark:bg-warning/20"
+                              : "bg-danger/10 text-danger dark:bg-danger/20"
+                          }`}
+                        >
+                          {passed}/{total}
+                        </span>
+                      )}
                     </span>
                   }
                   icon={<Check className="w-4 h-4 text-success" />}
+                  action={
+                    isAnalyzed ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onGoToSection(index)
+                        }}
+                        className="h-7 w-7 p-0 text-success hover:text-success"
+                      >
+                        <Check className="w-4 h-4" />
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={isLoading || analyzingSection !== null}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onAnalyzeSingleSection(index)
+                        }}
+                        className="h-7 w-7 p-0"
+                      >
+                        {isAnalyzingThis ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Play className="w-3.5 h-3.5" />
+                        )}
+                      </Button>
+                    )
+                  }
                 >
                   <pre className="text-xs font-mono overflow-auto max-h-[32rem] p-3 bg-surface rounded-lg border border-default">
                     {JSON.stringify(section.data, null, 2)}

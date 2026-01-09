@@ -9,7 +9,12 @@ import type {
   SectionAnalysis,
   FetchSpaceResponse,
 } from "@/types"
-import { fetchSpace, parseSpaceJson, analyzeSection } from "@/lib/api"
+import {
+  fetchSpace,
+  parseSpaceJson,
+  analyzeSection,
+  analyzeAllSections as analyzeAllSectionsApi,
+} from "@/lib/api"
 
 export interface AnalysisState {
   phase: Phase
@@ -23,6 +28,8 @@ export interface AnalysisState {
   isLoading: boolean
   error: string | null
   expandedSections: Record<string, boolean>
+  analysisProgress: { completed: number; total: number } | null
+  analyzingSection: number | null
 }
 
 const initialState: AnalysisState = {
@@ -37,6 +44,8 @@ const initialState: AnalysisState = {
   isLoading: false,
   error: null,
   expandedSections: {},
+  analysisProgress: null,
+  analyzingSection: null,
 }
 
 export function useAnalysis() {
@@ -107,6 +116,80 @@ export function useAnalysis() {
       allSectionsAnalyzed: false,
     }))
   }, [])
+
+  const analyzeAllSections = useCallback(async () => {
+    const { sections, spaceData } = state
+    if (!spaceData) return
+
+    setState((prev) => ({
+      ...prev,
+      isLoading: true,
+      error: null,
+      analysisProgress: { completed: 0, total: sections.length },
+    }))
+
+    try {
+      const results = await analyzeAllSectionsApi(
+        sections,
+        spaceData,
+        (completed, total) =>
+          setState((prev) => ({ ...prev, analysisProgress: { completed, total } }))
+      )
+
+      setState((prev) => ({
+        ...prev,
+        sectionAnalyses: results,
+        allSectionsAnalyzed: true,
+        phase: "summary",
+        isLoading: false,
+        analysisProgress: null,
+      }))
+    } catch (err) {
+      setState((prev) => ({
+        ...prev,
+        error: err instanceof Error ? err.message : "Analysis failed",
+        isLoading: false,
+        analysisProgress: null,
+      }))
+    }
+  }, [state.sections, state.spaceData])
+
+  const analyzeSingleSection = useCallback(
+    async (index: number) => {
+      const { sections, spaceData } = state
+      if (!spaceData || index >= sections.length) return
+
+      setState((prev) => ({ ...prev, analyzingSection: index, error: null }))
+
+      try {
+        const section = sections[index]
+        const analysis = await analyzeSection({
+          section_name: section.name,
+          section_data: section.data,
+          full_space: spaceData,
+        })
+
+        setState((prev) => {
+          const newAnalyses = [...prev.sectionAnalyses]
+          newAnalyses[index] = analysis
+          return {
+            ...prev,
+            sectionAnalyses: newAnalyses,
+            currentSectionIndex: index,
+            phase: "analysis",
+            analyzingSection: null,
+          }
+        })
+      } catch (err) {
+        setState((prev) => ({
+          ...prev,
+          error: err instanceof Error ? err.message : "Analysis failed",
+          analyzingSection: null,
+        }))
+      }
+    },
+    [state.sections, state.spaceData]
+  )
 
   const analyzeCurrentSection = useCallback(async () => {
     const { sections, currentSectionIndex, spaceData, sectionAnalyses } = state
@@ -224,6 +307,8 @@ export function useAnalysis() {
       handleFetchSpace,
       handleParseJson,
       startAnalysis,
+      analyzeAllSections,
+      analyzeSingleSection,
       analyzeCurrentSection,
       goToSection,
       nextSection,

@@ -45,7 +45,13 @@ function App() {
             genieSpaceId={state.genieSpaceId}
             spaceData={state.spaceData!}
             sections={state.sections}
-            onStartAnalysis={actions.startAnalysis}
+            sectionAnalyses={state.sectionAnalyses}
+            isLoading={state.isLoading}
+            analysisProgress={state.analysisProgress}
+            analyzingSection={state.analyzingSection}
+            onAnalyzeAllSections={actions.analyzeAllSections}
+            onAnalyzeSingleSection={actions.analyzeSingleSection}
+            onGoToSection={actions.goToSection}
           />
         )
 

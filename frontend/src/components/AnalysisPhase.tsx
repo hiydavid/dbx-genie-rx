@@ -2,7 +2,6 @@
  * Analysis phase component showing section-by-section analysis.
  */
 
-import { useEffect } from "react"
 import { ChevronLeft, ChevronRight, AlertTriangle, Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -48,12 +47,7 @@ export function AnalysisPhase({
   const currentAnalysis = sectionAnalyses[currentSectionIndex]
   const isReviewing = currentSectionIndex < sectionAnalyses.length
 
-  // Auto-analyze when reaching a new section
-  useEffect(() => {
-    if (!isReviewing && !isLoading && !error) {
-      onAnalyzeSection()
-    }
-  }, [currentSectionIndex, isReviewing, isLoading, error, onAnalyzeSection])
+  // Analysis is now triggered explicitly from IngestPhase, not automatically
 
   const displayName = formatSectionName(currentSection.name)
   const isLastSection = currentSectionIndex === sections.length - 1
