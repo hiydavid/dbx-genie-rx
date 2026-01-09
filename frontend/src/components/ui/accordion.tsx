@@ -8,6 +8,7 @@ interface AccordionItemProps {
   defaultOpen?: boolean
   className?: string
   icon?: React.ReactNode
+  action?: React.ReactNode
 }
 
 export function AccordionItem({
@@ -16,6 +17,7 @@ export function AccordionItem({
   defaultOpen = false,
   className,
   icon,
+  action,
 }: AccordionItemProps) {
   const [isOpen, setIsOpen] = React.useState(defaultOpen)
 
@@ -40,12 +42,15 @@ export function AccordionItem({
           {icon}
           {title}
         </div>
-        <ChevronDown
-          className={cn(
-            "h-5 w-5 text-muted transition-transform duration-200",
-            isOpen && "rotate-180"
-          )}
-        />
+        <div className="flex items-center gap-2">
+          {action}
+          <ChevronDown
+            className={cn(
+              "h-5 w-5 text-muted transition-transform duration-200",
+              isOpen && "rotate-180"
+            )}
+          />
+        </div>
       </button>
       <div
         className={cn(

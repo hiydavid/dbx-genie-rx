@@ -5,6 +5,7 @@
 import type {
   FetchSpaceResponse,
   SectionAnalysis,
+  SectionInfo,
   AnalyzeSectionRequest,
   StreamProgress,
 } from "@/types"
@@ -65,6 +66,32 @@ export async function analyzeSection(
     body: JSON.stringify(request),
   })
   return handleResponse<SectionAnalysis>(response)
+}
+
+/**
+ * Analyze all sections in parallel.
+ */
+export async function analyzeAllSections(
+  sections: SectionInfo[],
+  fullSpace: Record<string, unknown>,
+  onProgress?: (completed: number, total: number) => void
+): Promise<SectionAnalysis[]> {
+  const total = sections.length
+  let completed = 0
+
+  const results = await Promise.all(
+    sections.map(async (section) => {
+      const result = await analyzeSection({
+        section_name: section.name,
+        section_data: section.data,
+        full_space: fullSpace,
+      })
+      completed++
+      onProgress?.(completed, total)
+      return result
+    })
+  )
+  return results
 }
 
 /**
