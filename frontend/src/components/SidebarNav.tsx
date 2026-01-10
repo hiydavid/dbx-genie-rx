@@ -13,13 +13,15 @@ import {
   Circle,
   Search,
   ChevronDown,
+  MessageSquare,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import type { Phase, SectionInfo, SectionAnalysis } from "@/types"
+import type { Phase, OptimizeView, SectionInfo, SectionAnalysis } from "@/types"
 
 interface SidebarNavProps {
   phase: Phase
+  optimizeView: OptimizeView | null
   sections: SectionInfo[]
   currentSectionIndex: number
   sectionAnalyses: SectionAnalysis[]
@@ -28,6 +30,7 @@ interface SidebarNavProps {
   onGoToIngest: () => void
   onGoToSection: (index: number) => void
   onGoToSummary: () => void
+  onGoToBenchmarks: () => void
   onToggleChecklist: () => void
   onReset: () => void
 }
@@ -43,6 +46,7 @@ function getShortSectionName(sectionName: string): string {
 
 export function SidebarNav({
   phase,
+  optimizeView,
   sections,
   currentSectionIndex,
   sectionAnalyses,
@@ -51,10 +55,12 @@ export function SidebarNav({
   onGoToIngest,
   onGoToSection,
   onGoToSummary,
+  onGoToBenchmarks,
   onToggleChecklist,
   onReset,
 }: SidebarNavProps) {
   const [isAnalysisExpanded, setIsAnalysisExpanded] = useState(true)
+  const [isOptimizeExpanded, setIsOptimizeExpanded] = useState(true)
   const completedCount = sectionAnalyses.length
   const progressPercentage = sections.length > 0 ? (completedCount / sections.length) * 100 : 0
 
@@ -203,6 +209,55 @@ export function SidebarNav({
                 >
                   <BarChart3 className="w-4 h-4" />
                   Summary
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <hr className="border-default my-3" />
+
+        {/* Optimize group */}
+        <div>
+          <button
+            type="button"
+            onClick={() => setIsOptimizeExpanded(!isOptimizeExpanded)}
+            className="w-full flex items-center justify-between px-2 py-1.5 text-xs font-semibold text-muted uppercase tracking-wider hover:text-secondary transition-colors"
+          >
+            <span className="flex items-center gap-1.5">
+              Optimize
+              <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-warning/20 text-warning normal-case tracking-normal">
+                Soon
+              </span>
+            </span>
+            <ChevronDown
+              className={cn(
+                "w-4 h-4 transition-transform duration-200",
+                isOptimizeExpanded && "rotate-180"
+              )}
+            />
+          </button>
+
+          <div
+            className={cn(
+              "grid transition-all duration-200 ease-in-out",
+              isOptimizeExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+            )}
+          >
+            <div className="overflow-hidden">
+              <div className="space-y-1 pl-2 mt-1">
+                {/* Benchmarks button */}
+                <button
+                  onClick={onGoToBenchmarks}
+                  className={cn(
+                    "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left",
+                    optimizeView === "benchmarks" && !showChecklist
+                      ? "gradient-accent text-white shadow-lg shadow-accent/20 dark:glow-accent"
+                      : "bg-elevated text-secondary hover:bg-sunken cursor-pointer"
+                  )}
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  Benchmarks
                 </button>
               </div>
             </div>

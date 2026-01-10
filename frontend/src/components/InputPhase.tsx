@@ -3,14 +3,18 @@
  */
 
 import { useState } from "react"
-import { Search, FileJson, Loader2, AlertCircle, Sparkles } from "lucide-react"
+import { Search, FileJson, Loader2, AlertCircle, Sparkles, ClipboardCheck, Zap, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import type { AppMode } from "@/types"
+import { cn } from "@/lib/utils"
 
 interface InputPhaseProps {
+  mode: AppMode | null
+  onSelectMode: (mode: AppMode) => void
   onFetchSpace: (spaceId: string) => Promise<void>
   onParseJson: (jsonContent: string) => Promise<void>
   isLoading: boolean
@@ -18,6 +22,8 @@ interface InputPhaseProps {
 }
 
 export function InputPhase({
+  mode,
+  onSelectMode,
   onFetchSpace,
   onParseJson,
   isLoading,
@@ -38,23 +44,116 @@ export function InputPhase({
     }
   }
 
+  // Mode selection view
+  if (!mode) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] animate-stagger">
+        {/* Welcome intro */}
+        <div className="text-center mb-10 max-w-2xl">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl gradient-accent shadow-xl shadow-accent/25 dark:glow-accent mb-6">
+            <Sparkles className="w-8 h-8 text-white" />
+          </div>
+
+          <h1 className="text-4xl font-display font-extrabold text-primary mb-4 tracking-tight">
+            Welcome to Genie<span className="text-accent">Rx</span>
+          </h1>
+          <p className="text-lg text-secondary leading-relaxed">
+            Getting the most out of your Genie Space starts with a solid configuration.
+            Choose how you want to work with your space.
+          </p>
+        </div>
+
+        {/* Mode selection cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-3xl">
+          {/* Analyze option */}
+          <button
+            onClick={() => onSelectMode("analyze")}
+            className={cn(
+              "group relative p-6 rounded-2xl border-2 border-default bg-surface",
+              "hover:border-accent hover:shadow-xl hover:shadow-accent/10 dark:hover:glow-accent",
+              "transition-all duration-300 text-left"
+            )}
+          >
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-accent/10 dark:bg-accent/20 flex items-center justify-center group-hover:bg-accent group-hover:text-white transition-colors">
+                <ClipboardCheck className="w-6 h-6 text-accent group-hover:text-white" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-primary mb-1">
+                  Analyze Genie Space
+                </h3>
+                <p className="text-sm text-secondary leading-relaxed">
+                  Review your configuration across{" "}
+                  <span className="font-semibold text-primary">10 key areas</span>,
+                  identify issues, and get clear guidance on how to fix them.
+                </p>
+              </div>
+            </div>
+          </button>
+
+          {/* Optimize option - Coming Soon */}
+          <div
+            className={cn(
+              "relative p-6 rounded-2xl border-2 border-dashed border-default bg-surface/50",
+              "opacity-70 cursor-not-allowed"
+            )}
+          >
+            {/* Coming Soon badge */}
+            <div className="absolute -top-2 -right-2 px-2 py-0.5 rounded-full bg-warning/20 border border-warning/30">
+              <span className="text-xs font-semibold text-warning">Coming Soon</span>
+            </div>
+
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-muted/20 flex items-center justify-center">
+                <Zap className="w-6 h-6 text-muted" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-muted mb-1">
+                  Optimize Genie Space
+                </h3>
+                <p className="text-sm text-muted leading-relaxed">
+                  Run benchmark questions, measure accuracy, and optimize your space
+                  for better query performance.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Input form view (after mode is selected)
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] animate-stagger">
+      {/* Back button and mode indicator */}
+      <div className="w-full max-w-2xl mb-6">
+        <button
+          onClick={() => onSelectMode(null as unknown as AppMode)}
+          className="inline-flex items-center gap-2 text-sm text-muted hover:text-primary transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to options
+        </button>
+      </div>
+
       {/* Welcome intro */}
       <div className="text-center mb-10 max-w-2xl">
-        {/* Decorative icon */}
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl gradient-accent shadow-xl shadow-accent/25 dark:glow-accent mb-6">
-          <Sparkles className="w-8 h-8 text-white" />
+          {mode === "analyze" ? (
+            <ClipboardCheck className="w-8 h-8 text-white" />
+          ) : (
+            <Zap className="w-8 h-8 text-white" />
+          )}
         </div>
 
         <h1 className="text-4xl font-display font-extrabold text-primary mb-4 tracking-tight">
-          Welcome to Genie<span className="text-accent">Rx</span>
+          {mode === "analyze" ? "Analyze" : "Optimize"} Genie Space
         </h1>
         <p className="text-lg text-secondary leading-relaxed">
-          Getting the most out of your Genie Space starts with a solid configuration.
-          GenieRx reviews your setup across{" "}
-          <span className="font-semibold text-primary">10 key areas</span>, flags potential
-          issues, and gives you clear guidance on how to fix them.
+          {mode === "analyze"
+            ? "Review your configuration across 10 key areas, identify issues, and get clear guidance."
+            : "Run benchmark questions and optimize your space for better performance."}
         </p>
       </div>
 
