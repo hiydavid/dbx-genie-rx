@@ -12,6 +12,7 @@ import { IngestPhase } from "@/components/IngestPhase"
 import { AnalysisPhase } from "@/components/AnalysisPhase"
 import { SummaryPhase } from "@/components/SummaryPhase"
 import { ChecklistPage } from "@/components/ChecklistPage"
+import { BenchmarksPage } from "@/components/BenchmarksPage"
 import { ThemeToggle } from "@/components/ThemeToggle"
 
 function App() {
@@ -28,10 +29,22 @@ function App() {
       return <ChecklistPage onBack={actions.toggleChecklist} />
     }
 
+    // Handle optimize views
+    if (state.optimizeView === "benchmarks" && state.spaceData) {
+      return (
+        <BenchmarksPage
+          genieSpaceId={state.genieSpaceId}
+          spaceData={state.spaceData}
+        />
+      )
+    }
+
     switch (state.phase) {
       case "input":
         return (
           <InputPhase
+            mode={state.mode}
+            onSelectMode={actions.setMode}
             onFetchSpace={actions.handleFetchSpace}
             onParseJson={actions.handleParseJson}
             isLoading={state.isLoading}
@@ -95,6 +108,7 @@ function App() {
       {state.phase !== "input" && (
         <SidebarNav
           phase={state.phase}
+          optimizeView={state.optimizeView}
           sections={state.sections}
           currentSectionIndex={state.currentSectionIndex}
           sectionAnalyses={state.sectionAnalyses}
@@ -103,6 +117,7 @@ function App() {
           onGoToIngest={actions.goToIngest}
           onGoToSection={actions.goToSection}
           onGoToSummary={actions.goToSummary}
+          onGoToBenchmarks={actions.goToBenchmarks}
           onToggleChecklist={actions.toggleChecklist}
           onReset={actions.reset}
         />
