@@ -17,12 +17,14 @@ This app was designed to be deployed on Databricks Apps. You can either:
 
 ## ✨ Features
 
+- **Mode Selection** — Choose between Analyze mode (full compliance analysis) or Optimize mode (benchmark testing)
 - **Comprehensive Analysis** — Evaluates 10 different sections of your Genie Space configuration
 - **Customizable Checklist** — All checks defined in `docs/checklist-by-schema.md`; edit to add/remove checks without code changes
 - **Best Practice Validation** — Checks against documented Databricks Genie Space best practices
 - **Severity-based Findings** — Categorizes issues as high, medium, or low severity
 - **Compliance Scoring** — Provides per-section and overall compliance scores (0-10)
 - **Actionable Recommendations** — Each finding includes specific remediation guidance
+- **Benchmarks View** — Review and validate benchmark questions from your Genie Space configuration
 - **Interactive Wizard UI** — Step-by-step analysis with progress navigation and JSON preview
 - **Modern React Frontend** — Beautiful, responsive UI built with React, TypeScript, and Tailwind CSS v4
 - **Dark Mode Support** — Auto-detects system preference with manual toggle, persists user choice
@@ -34,7 +36,7 @@ This app was designed to be deployed on Databricks Apps. You can either:
 
 <p align="center">
   <img src="images/intro.png" alt="Enter Genie Space ID" width="800"><br>
-  <em>1) Enter your Genie Space ID or paste JSON</em>
+  <em>1) Select mode (Analyze/Optimize), enter your Genie Space ID or paste JSON</em>
 </p>
 
 <p align="center">
@@ -227,10 +229,12 @@ LLM_MODEL=databricks-claude-sonnet-4
 
 The interactive wizard guides you through 4 phases:
 
-1. **Input** — Enter your Genie Space ID or paste JSON, then click "Fetch" or "Load JSON"
+1. **Input** — Select mode (Analyze or Optimize), enter your Genie Space ID or paste JSON, then click "Fetch" or "Load JSON"
 2. **Ingest Preview** — Review the serialized JSON data and metrics before analysis
 3. **Section Analysis** — Step through each section, view checklist progress and findings
 4. **Summary** — See overall compliance score with expandable section results
+
+> **Note:** Optimize mode provides a benchmarks view for reviewing and validating benchmark questions from your Genie Space configuration.
 
 **UI Features:**
 
@@ -238,7 +242,7 @@ The interactive wizard guides you through 4 phases:
 - 📄 **JSON Preview** — Inspect raw data alongside analysis results
 - ✅ **Checklist Progress** — Visual pass/fail indicators for each check
 - 📊 **Score Cards** — Color-coded compliance scores
-- 📚 **Checklist Reference** — Built-in documentation
+- 📚 **Checklist Reference** — Dedicated page for viewing checklist documentation
 
 ### REST API
 
@@ -252,6 +256,7 @@ The backend exposes the following API endpoints:
 | `/api/analyze/stream` | POST | Stream analysis progress (SSE) |
 | `/api/checklist` | GET | Get checklist documentation |
 | `/api/sections` | GET | List all section names |
+| `/api/debug/auth` | GET | Debug authentication status and environment |
 | `/invocations` | POST | Legacy MLflow agent endpoint |
 
 Example API call:
@@ -285,6 +290,9 @@ dbx-genie-rx/
 │   │   │   ├── IngestPhase.tsx
 │   │   │   ├── AnalysisPhase.tsx
 │   │   │   ├── SummaryPhase.tsx
+│   │   │   ├── BenchmarksPage.tsx # Benchmarks view for Optimize mode
+│   │   │   ├── ChecklistPage.tsx  # Checklist reference documentation
+│   │   │   ├── ChecklistProgress.tsx # Progress indicator for checks
 │   │   │   ├── SidebarNav.tsx
 │   │   │   ├── ThemeToggle.tsx    # Dark/light mode toggle
 │   │   │   └── ScoreGauge.tsx     # Animated radial score gauge
@@ -387,8 +395,14 @@ npm run dev
 # Build for production
 npm run build
 
-# Type checking
-npm run build  # TypeScript is checked during build
+# Lint code
+npm run lint
+
+# Preview production build
+npm run preview
+
+# Type checking (TypeScript is checked during build)
+npm run build
 ```
 
 ### Font Setup (Optional)
