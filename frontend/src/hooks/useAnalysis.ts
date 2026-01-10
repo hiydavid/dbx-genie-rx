@@ -5,6 +5,8 @@
 import { useState, useCallback } from "react"
 import type {
   Phase,
+  AppMode,
+  OptimizeView,
   SectionInfo,
   SectionAnalysis,
   FetchSpaceResponse,
@@ -17,7 +19,9 @@ import {
 } from "@/lib/api"
 
 export interface AnalysisState {
+  mode: AppMode | null
   phase: Phase
+  optimizeView: OptimizeView | null
   genieSpaceId: string
   spaceData: Record<string, unknown> | null
   sections: SectionInfo[]
@@ -33,7 +37,9 @@ export interface AnalysisState {
 }
 
 const initialState: AnalysisState = {
+  mode: null,
   phase: "input",
+  optimizeView: null,
   genieSpaceId: "",
   spaceData: null,
   sections: [],
@@ -51,8 +57,12 @@ const initialState: AnalysisState = {
 export function useAnalysis() {
   const [state, setState] = useState<AnalysisState>(initialState)
 
+  const setMode = useCallback((mode: AppMode) => {
+    setState((prev) => ({ ...prev, mode }))
+  }, [])
+
   const setPhase = useCallback((phase: Phase) => {
-    setState((prev) => ({ ...prev, phase, showChecklist: false }))
+    setState((prev) => ({ ...prev, phase, showChecklist: false, optimizeView: null }))
   }, [])
 
   const setError = useCallback((error: string | null) => {
@@ -74,6 +84,7 @@ export function useAnalysis() {
         spaceData: response.space_data,
         sections: response.sections,
         phase: "ingest",
+        optimizeView: prev.mode === "optimize" ? "benchmarks" : null,
         isLoading: false,
       }))
     } catch (err) {
@@ -96,6 +107,7 @@ export function useAnalysis() {
         spaceData: response.space_data,
         sections: response.sections,
         phase: "ingest",
+        optimizeView: prev.mode === "optimize" ? "benchmarks" : null,
         isLoading: false,
       }))
     } catch (err) {
@@ -294,6 +306,10 @@ export function useAnalysis() {
     }))
   }, [])
 
+  const goToBenchmarks = useCallback(() => {
+    setState((prev) => ({ ...prev, optimizeView: "benchmarks", showChecklist: false }))
+  }, [])
+
   const reset = useCallback(() => {
     setState(initialState)
   }, [])
@@ -301,6 +317,7 @@ export function useAnalysis() {
   return {
     state,
     actions: {
+      setMode,
       setPhase,
       setError,
       setLoading,
@@ -315,6 +332,7 @@ export function useAnalysis() {
       prevSection,
       goToSummary,
       goToIngest,
+      goToBenchmarks,
       toggleChecklist,
       toggleSectionExpanded,
       expandAllSections,
