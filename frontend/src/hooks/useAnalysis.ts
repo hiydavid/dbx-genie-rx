@@ -273,7 +273,7 @@ export function useAnalysis() {
   }, [])
 
   const goToIngest = useCallback(() => {
-    setState((prev) => ({ ...prev, phase: "ingest", showChecklist: false }))
+    setState((prev) => ({ ...prev, phase: "ingest", showChecklist: false, optimizeView: null }))
   }, [])
 
   const toggleChecklist = useCallback(() => {

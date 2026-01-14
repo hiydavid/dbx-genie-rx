@@ -69,14 +69,14 @@ export function InputPhase({
           <button
             onClick={() => onSelectMode("analyze")}
             className={cn(
-              "group relative p-6 rounded-2xl border-2 border-default bg-surface",
+              "group relative p-6 rounded-2xl border-2 border-default bg-surface cursor-pointer",
               "hover:border-accent hover:shadow-xl hover:shadow-accent/10 dark:hover:glow-accent",
               "transition-all duration-300 text-left"
             )}
           >
             <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-accent/10 dark:bg-accent/20 flex items-center justify-center group-hover:bg-accent group-hover:text-white transition-colors">
-                <ClipboardCheck className="w-6 h-6 text-accent group-hover:text-white" />
+              <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-accent/10 dark:bg-accent/20 flex items-center justify-center">
+                <ClipboardCheck className="w-6 h-6 text-accent" />
               </div>
               <div className="flex-1">
                 <h3 className="text-lg font-semibold text-primary mb-1">
