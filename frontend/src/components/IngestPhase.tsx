@@ -178,7 +178,8 @@ export function IngestPhase({
                           e.stopPropagation()
                           onAnalyzeSingleSection(index)
                         }}
-                        className="h-7 w-7 p-0"
+                        className="h-7 w-7 p-0 text-accent hover:text-accent hover:bg-accent/10"
+                        title="Analyze this section"
                       >
                         {isAnalyzingThis ? (
                           <Loader2 className="w-3.5 h-3.5 animate-spin" />
