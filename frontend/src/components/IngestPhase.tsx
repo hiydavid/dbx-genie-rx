@@ -52,7 +52,7 @@ export function IngestPhase({
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-display font-semibold text-primary">
-            Ingest Preview
+            Ingested Serialized Space
           </h2>
           <p className="text-sm text-muted">
             Space ID:{" "}

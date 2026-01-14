@@ -59,8 +59,9 @@ function App() {
       case "input":
         return (
           <InputPhase
-            mode={state.mode}
+            spaceData={state.spaceData}
             onSelectMode={actions.setMode}
+            onClearSpaceData={actions.clearSpaceData}
             onFetchSpace={actions.handleFetchSpace}
             onParseJson={actions.handleParseJson}
             isLoading={state.isLoading}
@@ -164,7 +165,7 @@ function App() {
                   Genie<span className="text-accent">Rx</span>
                 </h1>
                 <p className="text-sm text-muted">
-                  Configuration Analyzer
+                  Analyze and Optimize Genie Configuration
                 </p>
               </div>
             </div>
