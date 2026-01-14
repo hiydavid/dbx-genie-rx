@@ -165,7 +165,7 @@ function App() {
                   Genie<span className="text-accent">Rx</span>
                 </h1>
                 <p className="text-sm text-muted">
-                  Configuration Analyzer
+                  Analyze and Optimize Genie Configuration
                 </p>
               </div>
             </div>

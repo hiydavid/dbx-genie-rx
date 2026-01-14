@@ -67,7 +67,6 @@ export function SidebarNav({
   const [isAnalysisExpanded, setIsAnalysisExpanded] = useState(true)
   const [isOptimizeExpanded, setIsOptimizeExpanded] = useState(true)
   const completedCount = sectionAnalyses.length
-  const progressPercentage = sections.length > 0 ? (completedCount / sections.length) * 100 : 0
 
   if (phase === "input") {
     return (
@@ -87,22 +86,6 @@ export function SidebarNav({
       {/* Subtle inner shadow for depth */}
       <div className="absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-border-strong to-transparent opacity-50" />
 
-      {/* Progress header */}
-      <div className="mb-6">
-        <h2 className="text-sm font-semibold text-primary mb-2">Progress</h2>
-        <div className="flex items-center justify-between text-xs text-muted mb-2">
-          <span>{completedCount}/{sections.length} sections</span>
-          <span className="font-mono">{Math.round(progressPercentage)}%</span>
-        </div>
-        {/* Progress bar */}
-        <div className="h-1.5 w-full rounded-full bg-elevated overflow-hidden">
-          <div
-            className="h-full rounded-full bg-accent transition-all duration-500 ease-out dark:shadow-[0_0_8px_rgba(79,70,229,0.5)]"
-            style={{ width: `${progressPercentage}%` }}
-          />
-        </div>
-      </div>
-
       <nav className="space-y-2 flex-1">
         {/* Ingest step */}
         <button
@@ -119,7 +102,7 @@ export function SidebarNav({
           ) : (
             <Check className="w-4 h-4" />
           )}
-          Ingest Preview
+          Ingested Serialized Space
         </button>
 
         <hr className="border-default my-3" />
@@ -131,7 +114,7 @@ export function SidebarNav({
             onClick={() => setIsAnalysisExpanded(!isAnalysisExpanded)}
             className="w-full flex items-center justify-between px-2 py-1.5 text-xs font-semibold text-muted uppercase tracking-wider hover:text-secondary transition-colors"
           >
-            <span>Analysis</span>
+            <span>Analyze</span>
             <ChevronDown
               className={cn(
                 "w-4 h-4 transition-transform duration-200",
