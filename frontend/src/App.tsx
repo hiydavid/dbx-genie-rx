@@ -13,6 +13,7 @@ import { AnalysisPhase } from "@/components/AnalysisPhase"
 import { SummaryPhase } from "@/components/SummaryPhase"
 import { ChecklistPage } from "@/components/ChecklistPage"
 import { BenchmarksPage } from "@/components/BenchmarksPage"
+import { LabelingPage } from "@/components/LabelingPage"
 import { ThemeToggle } from "@/components/ThemeToggle"
 
 function App() {
@@ -30,11 +31,26 @@ function App() {
     }
 
     // Handle optimize views
+    if (state.optimizeView === "labeling" && state.spaceData) {
+      return (
+        <LabelingPage
+          genieSpaceId={state.genieSpaceId}
+          selectedQuestions={state.selectedQuestions}
+          onBack={actions.goToBenchmarks}
+        />
+      )
+    }
+
     if (state.optimizeView === "benchmarks" && state.spaceData) {
       return (
         <BenchmarksPage
           genieSpaceId={state.genieSpaceId}
           spaceData={state.spaceData}
+          selectedQuestions={state.selectedQuestions}
+          onToggleSelection={actions.toggleQuestionSelection}
+          onSelectAll={actions.selectAllQuestions}
+          onDeselectAll={actions.deselectAllQuestions}
+          onBeginLabeling={actions.goToLabeling}
         />
       )
     }
@@ -114,10 +130,12 @@ function App() {
           sectionAnalyses={state.sectionAnalyses}
           allSectionsAnalyzed={state.allSectionsAnalyzed}
           showChecklist={state.showChecklist}
+          hasLabelingSession={state.hasLabelingSession}
           onGoToIngest={actions.goToIngest}
           onGoToSection={actions.goToSection}
           onGoToSummary={actions.goToSummary}
           onGoToBenchmarks={actions.goToBenchmarks}
+          onGoToLabeling={actions.goToLabeling}
           onToggleChecklist={actions.toggleChecklist}
           onReset={actions.reset}
         />
