@@ -127,12 +127,12 @@ export function BenchmarksPage({ genieSpaceId, spaceData }: BenchmarksPageProps)
                     isExpanded && "ring-1 ring-accent/30"
                   )}
                 >
-                  <CardHeader className="p-4 pb-0">
+                  <CardHeader className="p-4">
                     <button
                       onClick={() => toggleQuestion(question.id)}
-                      className="w-full flex items-start gap-3 text-left group"
+                      className="w-full flex items-start gap-3 text-left group cursor-pointer"
                     >
-                      <span className="flex-shrink-0 w-7 h-7 rounded-lg bg-accent/10 flex items-center justify-center text-xs font-semibold text-accent">
+                      <span className="flex-shrink-0 w-7 h-7 mt-0.5 rounded-lg bg-accent/10 flex items-center justify-center text-xs font-semibold text-accent">
                         {index + 1}
                       </span>
                       <div className="flex-1 min-w-0">
@@ -165,8 +165,12 @@ export function BenchmarksPage({ genieSpaceId, spaceData }: BenchmarksPageProps)
                                   <Code className="w-3.5 h-3.5" />
                                   Expected {answer.format}
                                 </div>
-                                <pre className="p-4 bg-elevated rounded-lg overflow-x-auto text-sm font-mono text-secondary border border-default">
-                                  {answer.content.join("\n")}
+                                <pre className="p-3 bg-elevated rounded-lg overflow-x-auto text-sm leading-snug font-mono text-secondary border border-default whitespace-pre-wrap">
+                                  {answer.content
+                                    .join("\n")
+                                    .split("\n")
+                                    .filter((line) => line.trim() !== "")
+                                    .join("\n")}
                                 </pre>
                               </div>
                             ))}
