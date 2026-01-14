@@ -34,6 +34,8 @@ export interface AnalysisState {
   expandedSections: Record<string, boolean>
   analysisProgress: { completed: number; total: number } | null
   analyzingSection: number | null
+  selectedQuestions: string[]
+  hasLabelingSession: boolean
 }
 
 const initialState: AnalysisState = {
@@ -52,6 +54,8 @@ const initialState: AnalysisState = {
   expandedSections: {},
   analysisProgress: null,
   analyzingSection: null,
+  selectedQuestions: [],
+  hasLabelingSession: false,
 }
 
 export function useAnalysis() {
@@ -310,6 +314,35 @@ export function useAnalysis() {
     setState((prev) => ({ ...prev, optimizeView: "benchmarks", showChecklist: false }))
   }, [])
 
+  const toggleQuestionSelection = useCallback((questionId: string) => {
+    setState((prev) => {
+      const isSelected = prev.selectedQuestions.includes(questionId)
+      return {
+        ...prev,
+        selectedQuestions: isSelected
+          ? prev.selectedQuestions.filter((id) => id !== questionId)
+          : [...prev.selectedQuestions, questionId],
+      }
+    })
+  }, [])
+
+  const selectAllQuestions = useCallback((questionIds: string[]) => {
+    setState((prev) => ({ ...prev, selectedQuestions: questionIds }))
+  }, [])
+
+  const deselectAllQuestions = useCallback(() => {
+    setState((prev) => ({ ...prev, selectedQuestions: [] }))
+  }, [])
+
+  const goToLabeling = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      optimizeView: "labeling",
+      showChecklist: false,
+      hasLabelingSession: true,
+    }))
+  }, [])
+
   const reset = useCallback(() => {
     setState(initialState)
   }, [])
@@ -333,10 +366,14 @@ export function useAnalysis() {
       goToSummary,
       goToIngest,
       goToBenchmarks,
+      goToLabeling,
       toggleChecklist,
       toggleSectionExpanded,
       expandAllSections,
       collapseAllSections,
+      toggleQuestionSelection,
+      selectAllQuestions,
+      deselectAllQuestions,
       reset,
     },
   }

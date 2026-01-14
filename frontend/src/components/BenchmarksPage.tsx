@@ -9,18 +9,36 @@ import {
   ChevronDown,
   AlertCircle,
   Search,
+  CheckSquare,
+  Square,
+  Tag,
+  ArrowRight,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import type { BenchmarkQuestion } from "@/types"
 
 interface BenchmarksPageProps {
   genieSpaceId: string
   spaceData: Record<string, unknown>
+  selectedQuestions: string[]
+  onToggleSelection: (questionId: string) => void
+  onSelectAll: (questionIds: string[]) => void
+  onDeselectAll: () => void
+  onBeginLabeling: () => void
 }
 
-export function BenchmarksPage({ genieSpaceId, spaceData }: BenchmarksPageProps) {
+export function BenchmarksPage({
+  genieSpaceId,
+  spaceData,
+  selectedQuestions,
+  onToggleSelection,
+  onSelectAll,
+  onDeselectAll,
+  onBeginLabeling,
+}: BenchmarksPageProps) {
   const [expandedQuestions, setExpandedQuestions] = useState<Record<string, boolean>>({})
   const [searchQuery, setSearchQuery] = useState("")
 
@@ -49,27 +67,52 @@ export function BenchmarksPage({ genieSpaceId, spaceData }: BenchmarksPageProps)
   }
 
   const hasBenchmarks = benchmarkQuestions.length > 0
+  const allQuestionIds = benchmarkQuestions.map((q) => q.id)
+  const allSelected = hasBenchmarks && selectedQuestions.length === benchmarkQuestions.length
+  const someSelected = selectedQuestions.length > 0
+
+  const handleSelectAll = () => {
+    onSelectAll(allQuestionIds)
+  }
 
   return (
     <div className="space-y-6 animate-slide-up">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-display font-bold text-primary">
-            Benchmark Questions
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-display font-bold text-primary">
+              Benchmark Questions
+            </h1>
+            {hasBenchmarks && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent/10 text-accent">
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span className="text-sm font-medium">
+                  {benchmarkQuestions.length}
+                </span>
+              </div>
+            )}
+          </div>
           <p className="text-muted">
             Space ID: <span className="font-mono text-secondary">{genieSpaceId}</span>
           </p>
         </div>
 
         {hasBenchmarks && (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 text-accent">
-            <MessageSquare className="w-4 h-4" />
-            <span className="text-sm font-medium">
-              {benchmarkQuestions.length} question{benchmarkQuestions.length !== 1 ? "s" : ""}
-            </span>
-          </div>
+          <Button
+            onClick={onBeginLabeling}
+            disabled={!someSelected}
+            className="gap-2"
+          >
+            <Tag className="w-4 h-4" />
+            Begin Labeling
+            {someSelected && (
+              <span className="ml-1 px-1.5 py-0.5 text-xs rounded bg-white/20">
+                {selectedQuestions.length}
+              </span>
+            )}
+            <ArrowRight className="w-4 h-4" />
+          </Button>
         )}
       </div>
 
@@ -113,40 +156,82 @@ export function BenchmarksPage({ genieSpaceId, spaceData }: BenchmarksPageProps)
             </p>
           )}
 
+          {/* Selection controls */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={allSelected ? onDeselectAll : handleSelectAll}
+                className="flex items-center gap-2 text-sm font-medium text-secondary hover:text-primary transition-colors"
+              >
+                {allSelected ? (
+                  <CheckSquare className="w-4 h-4 text-accent" />
+                ) : (
+                  <Square className="w-4 h-4" />
+                )}
+                {allSelected ? "Deselect All" : `Select All (${benchmarkQuestions.length})`}
+              </button>
+              {someSelected && !allSelected && (
+                <span className="text-sm text-muted">
+                  {selectedQuestions.length} selected
+                </span>
+              )}
+            </div>
+          </div>
+
           {/* Questions */}
           <div className="space-y-3">
             {filteredQuestions.map((question, index) => {
               const isExpanded = expandedQuestions[question.id]
               const hasAnswer = question.answer && question.answer.length > 0
+              const isSelected = selectedQuestions.includes(question.id)
 
               return (
                 <Card
                   key={question.id}
                   className={cn(
                     "transition-all duration-200",
-                    isExpanded && "ring-1 ring-accent/30"
+                    isExpanded && "ring-1 ring-accent/30",
+                    isSelected && "ring-1 ring-accent/50 bg-accent/5"
                   )}
                 >
                   <CardHeader className="p-4">
-                    <button
-                      onClick={() => toggleQuestion(question.id)}
-                      className="w-full flex items-start gap-3 text-left group cursor-pointer"
-                    >
-                      <span className="flex-shrink-0 w-7 h-7 mt-0.5 rounded-lg bg-accent/10 flex items-center justify-center text-xs font-semibold text-accent">
-                        {index + 1}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <CardTitle className="text-base font-medium text-primary leading-relaxed group-hover:text-accent transition-colors">
-                          {question.question.join(" ")}
-                        </CardTitle>
-                      </div>
-                      <ChevronDown
-                        className={cn(
-                          "w-5 h-5 text-muted transition-transform duration-200 flex-shrink-0",
-                          isExpanded && "rotate-180"
+                    <div className="flex items-start gap-3">
+                      {/* Selection checkbox */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onToggleSelection(question.id)
+                        }}
+                        className="flex-shrink-0 mt-0.5 p-0.5 rounded hover:bg-elevated transition-colors"
+                      >
+                        {isSelected ? (
+                          <CheckSquare className="w-5 h-5 text-accent" />
+                        ) : (
+                          <Square className="w-5 h-5 text-muted hover:text-secondary" />
                         )}
-                      />
-                    </button>
+                      </button>
+
+                      {/* Question content */}
+                      <button
+                        onClick={() => toggleQuestion(question.id)}
+                        className="flex-1 flex items-start gap-3 text-left group cursor-pointer min-w-0"
+                      >
+                        <span className="flex-shrink-0 w-7 h-7 mt-0.5 rounded-lg bg-accent/10 flex items-center justify-center text-xs font-semibold text-accent">
+                          {index + 1}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-base font-medium text-primary leading-relaxed group-hover:text-accent transition-colors">
+                            {question.question.join(" ")}
+                          </CardTitle>
+                        </div>
+                        <ChevronDown
+                          className={cn(
+                            "w-5 h-5 text-muted transition-transform duration-200 flex-shrink-0",
+                            isExpanded && "rotate-180"
+                          )}
+                        />
+                      </button>
+                    </div>
                   </CardHeader>
 
                   <div

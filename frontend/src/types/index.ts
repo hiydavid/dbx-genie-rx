@@ -63,7 +63,7 @@ export interface StreamProgress {
 // App state types
 export type AppMode = "analyze" | "optimize"
 export type Phase = "input" | "ingest" | "analysis" | "summary"
-export type OptimizeView = "benchmarks"
+export type OptimizeView = "benchmarks" | "labeling"
 
 // Benchmark question from Genie Space JSON
 export interface BenchmarkQuestion {

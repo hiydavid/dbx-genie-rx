@@ -14,6 +14,7 @@ import {
   Search,
   ChevronDown,
   MessageSquare,
+  Tag,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -27,10 +28,12 @@ interface SidebarNavProps {
   sectionAnalyses: SectionAnalysis[]
   allSectionsAnalyzed: boolean
   showChecklist: boolean
+  hasLabelingSession: boolean
   onGoToIngest: () => void
   onGoToSection: (index: number) => void
   onGoToSummary: () => void
   onGoToBenchmarks: () => void
+  onGoToLabeling: () => void
   onToggleChecklist: () => void
   onReset: () => void
 }
@@ -52,10 +55,12 @@ export function SidebarNav({
   sectionAnalyses,
   allSectionsAnalyzed,
   showChecklist,
+  hasLabelingSession,
   onGoToIngest,
   onGoToSection,
   onGoToSummary,
   onGoToBenchmarks,
+  onGoToLabeling,
   onToggleChecklist,
   onReset,
 }: SidebarNavProps) {
@@ -258,6 +263,23 @@ export function SidebarNav({
                 >
                   <MessageSquare className="w-4 h-4" />
                   Benchmarks
+                </button>
+
+                {/* Labeling button */}
+                <button
+                  onClick={onGoToLabeling}
+                  disabled={!hasLabelingSession}
+                  className={cn(
+                    "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left",
+                    optimizeView === "labeling" && !showChecklist
+                      ? "gradient-accent text-white shadow-lg shadow-accent/20 dark:glow-accent"
+                      : hasLabelingSession
+                      ? "bg-elevated text-secondary hover:bg-sunken cursor-pointer"
+                      : "bg-elevated text-muted cursor-not-allowed opacity-60"
+                  )}
+                >
+                  <Tag className="w-4 h-4" />
+                  Labeling
                 </button>
               </div>
             </div>
