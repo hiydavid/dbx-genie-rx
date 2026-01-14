@@ -59,8 +59,9 @@ function App() {
       case "input":
         return (
           <InputPhase
-            mode={state.mode}
+            spaceData={state.spaceData}
             onSelectMode={actions.setMode}
+            onClearSpaceData={actions.clearSpaceData}
             onFetchSpace={actions.handleFetchSpace}
             onParseJson={actions.handleParseJson}
             isLoading={state.isLoading}

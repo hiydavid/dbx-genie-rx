@@ -61,8 +61,20 @@ const initialState: AnalysisState = {
 export function useAnalysis() {
   const [state, setState] = useState<AnalysisState>(initialState)
 
-  const setMode = useCallback((mode: AppMode) => {
-    setState((prev) => ({ ...prev, mode }))
+  const setMode = useCallback((mode: AppMode | null) => {
+    setState((prev) => {
+      // If clearing mode or no space data, just update mode
+      if (!mode || !prev.spaceData) {
+        return { ...prev, mode }
+      }
+      // Space data loaded + mode selected → transition to ingest
+      return {
+        ...prev,
+        mode,
+        phase: "ingest",
+        optimizeView: mode === "optimize" ? "benchmarks" : null,
+      }
+    })
   }, [])
 
   const setPhase = useCallback((phase: Phase) => {
@@ -87,8 +99,6 @@ export function useAnalysis() {
         genieSpaceId: response.genie_space_id,
         spaceData: response.space_data,
         sections: response.sections,
-        phase: "ingest",
-        optimizeView: prev.mode === "optimize" ? "benchmarks" : null,
         isLoading: false,
       }))
     } catch (err) {
@@ -110,8 +120,6 @@ export function useAnalysis() {
         genieSpaceId: response.genie_space_id,
         spaceData: response.space_data,
         sections: response.sections,
-        phase: "ingest",
-        optimizeView: prev.mode === "optimize" ? "benchmarks" : null,
         isLoading: false,
       }))
     } catch (err) {
@@ -343,6 +351,15 @@ export function useAnalysis() {
     }))
   }, [])
 
+  const clearSpaceData = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      genieSpaceId: "",
+      spaceData: null,
+      sections: [],
+    }))
+  }, [])
+
   const reset = useCallback(() => {
     setState(initialState)
   }, [])
@@ -374,6 +391,7 @@ export function useAnalysis() {
       toggleQuestionSelection,
       selectAllQuestions,
       deselectAllQuestions,
+      clearSpaceData,
       reset,
     },
   }
