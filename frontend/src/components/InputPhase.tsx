@@ -257,33 +257,30 @@ response.json()`}
           </div>
         </button>
 
-        {/* Optimize option - Coming Soon */}
-        <div
+        {/* Optimize option */}
+        <button
+          onClick={() => onSelectMode("optimize")}
           className={cn(
-            "relative p-6 rounded-2xl border-2 border-dashed border-default bg-surface/50",
-            "opacity-70 cursor-not-allowed"
+            "group relative p-6 rounded-2xl border-2 border-default bg-surface cursor-pointer",
+            "hover:border-accent hover:shadow-xl hover:shadow-accent/10 dark:hover:glow-accent",
+            "transition-all duration-300 text-left"
           )}
         >
-          {/* Coming Soon badge */}
-          <div className="absolute -top-2 -right-2 px-2 py-0.5 rounded-full bg-warning/20 border border-warning/30">
-            <span className="text-xs font-semibold text-warning">Coming Soon</span>
-          </div>
-
           <div className="flex items-start gap-4">
-            <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-muted/20 flex items-center justify-center">
-              <Zap className="w-6 h-6 text-muted" />
+            <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-accent/10 dark:bg-accent/20 flex items-center justify-center">
+              <Zap className="w-6 h-6 text-accent" />
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-muted mb-1">
+              <h3 className="text-lg font-semibold text-primary mb-1">
                 Optimize Genie Space
               </h3>
-              <p className="text-sm text-muted leading-relaxed">
+              <p className="text-sm text-secondary leading-relaxed">
                 Run benchmark questions, measure accuracy, and optimize your space
                 for better query performance.
               </p>
             </div>
           </div>
-        </div>
+        </button>
       </div>
     </div>
   )

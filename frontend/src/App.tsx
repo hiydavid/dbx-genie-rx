@@ -35,6 +35,7 @@ function App() {
       return (
         <LabelingPage
           genieSpaceId={state.genieSpaceId}
+          spaceData={state.spaceData}
           selectedQuestions={state.selectedQuestions}
           onBack={actions.goToBenchmarks}
         />
