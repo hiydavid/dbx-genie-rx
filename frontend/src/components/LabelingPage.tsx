@@ -262,7 +262,7 @@ export function LabelingPage({
           ) : (
             <>
               <Sparkles className="w-4 h-4 mr-2" />
-              Generate SQL with Genie
+              Generate and Compare Output
             </>
           )}
         </Button>
@@ -272,18 +272,41 @@ export function LabelingPage({
         )}
       </div>
 
+      {/* Side-by-side Output Display */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+        {/* Genie's Output (left) */}
+        <div className="space-y-3">
+          <h3 className="text-sm font-medium text-muted">Genie's Output</h3>
+          <Card>
+            <CardContent className="py-8 text-center">
+              <p className="text-muted text-sm">Output will appear here</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Expected Output (right) */}
+        <div className="space-y-3">
+          <h3 className="text-sm font-medium text-muted">Expected Output</h3>
+          <Card>
+            <CardContent className="py-8 text-center">
+              <p className="text-muted text-sm">Output will appear here</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
       {/* Side-by-side SQL Display */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Generated SQL (left) */}
         <div className="space-y-3">
-          <h3 className="text-sm font-medium text-muted">Generated SQL</h3>
+          <h3 className="text-sm font-medium text-muted">Genie's Generated SQL</h3>
           {formattedGeneratedSql ? (
             <SqlCodeBlock code={formattedGeneratedSql} maxLines={15} />
           ) : (
             <Card>
               <CardContent className="py-8 text-center">
                 <p className="text-muted text-sm">
-                  {isGenerating ? "Generating..." : "Click \"Generate SQL with Genie\" to generate"}
+                  {isGenerating ? "Generating..." : "Click \"Generate and Compare Output\" to proceed"}
                 </p>
               </CardContent>
             </Card>
