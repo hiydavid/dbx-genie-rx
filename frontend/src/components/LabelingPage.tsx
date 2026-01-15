@@ -3,7 +3,7 @@
  */
 
 import { useState, useMemo } from "react"
-import { ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, Loader2, Sparkles, GitCompare } from "lucide-react"
+import { ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, Loader2, Sparkles, GitCompare, Check } from "lucide-react"
 import { format as formatSqlLib } from "sql-formatter"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -27,8 +27,6 @@ export function LabelingPage({
   onBack,
 }: LabelingPageProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
-  // Track processed questions (empty for now, will be populated when processing feature is added)
-  const [processedQuestions] = useState<Set<string>>(new Set())
 
   // Genie SQL generation state
   const [generatedSql, setGeneratedSql] = useState<Record<string, string>>({})
@@ -36,11 +34,15 @@ export function LabelingPage({
   const [generateError, setGenerateError] = useState<string | null>(null)
   const [showDiff, setShowDiff] = useState(false)
 
-  // SQL execution state
-  const [genieResult, setGenieResult] = useState<SqlExecutionResult | null>(null)
-  const [expectedResult, setExpectedResult] = useState<SqlExecutionResult | null>(null)
+  // SQL execution state (keyed by question ID for session persistence)
+  const [genieResults, setGenieResults] = useState<Record<string, SqlExecutionResult | null>>({})
+  const [expectedResults, setExpectedResults] = useState<Record<string, SqlExecutionResult | null>>({})
   const [isExecutingGenie, setIsExecutingGenie] = useState(false)
   const [isExecutingExpected, setIsExecutingExpected] = useState(false)
+
+  // Labeling feedback state (keyed by question ID for session persistence)
+  const [correctAnswers, setCorrectAnswers] = useState<Record<string, boolean | null>>({})
+  const [feedbackTexts, setFeedbackTexts] = useState<Record<string, string>>({})
 
   // Get the selected questions in order
   const questions = useMemo(() => {
@@ -54,7 +56,9 @@ export function LabelingPage({
 
   const totalQuestions = questions.length
   const currentQuestion = questions[currentIndex]
-  const processedCount = questions.filter(q => processedQuestions.has(q.id)).length
+  // Count questions that have been labeled (have Yes/No feedback)
+  const labeledCount = questions.filter(q => correctAnswers[q.id] !== undefined && correctAnswers[q.id] !== null).length
+  const allLabeled = labeledCount === totalQuestions && totalQuestions > 0
 
   const handlePrev = () => {
     setCurrentIndex(i => Math.max(0, i - 1))
@@ -87,6 +91,12 @@ export function LabelingPage({
   const currentGeneratedSql = currentQuestion ? generatedSql[currentQuestion.id] : null
   const isGenerating = generatingFor === currentQuestion?.id
 
+  // Get current question's execution results and feedback
+  const genieResult = currentQuestion ? genieResults[currentQuestion.id] ?? null : null
+  const expectedResult = currentQuestion ? expectedResults[currentQuestion.id] ?? null : null
+  const isCorrect = currentQuestion ? correctAnswers[currentQuestion.id] ?? null : null
+  const feedbackText = currentQuestion ? feedbackTexts[currentQuestion.id] ?? '' : ''
+
   // Format SQL using sql-formatter library for consistent display
   const formatSql = (sql: string): string => {
     try {
@@ -109,10 +119,9 @@ export function LabelingPage({
   const handleGenerateSql = async () => {
     if (!currentQuestion) return
 
-    setGeneratingFor(currentQuestion.id)
+    const questionId = currentQuestion.id
+    setGeneratingFor(questionId)
     setGenerateError(null)
-    setGenieResult(null)
-    setExpectedResult(null)
 
     try {
       const questionText = currentQuestion.question.join(" ")
@@ -121,7 +130,7 @@ export function LabelingPage({
       if (response.status === "COMPLETED" && response.sql) {
         setGeneratedSql(prev => ({
           ...prev,
-          [currentQuestion.id]: response.sql!
+          [questionId]: response.sql!
         }))
 
         // Execute both SQLs in parallel
@@ -135,28 +144,34 @@ export function LabelingPage({
 
         // Handle Genie result
         if (genieExec.status === "fulfilled" && genieExec.value) {
-          setGenieResult(genieExec.value)
+          setGenieResults(prev => ({ ...prev, [questionId]: genieExec.value }))
         } else if (genieExec.status === "rejected") {
-          setGenieResult({
-            columns: [],
-            data: [],
-            row_count: 0,
-            truncated: false,
-            error: genieExec.reason?.message || "Failed to execute Genie SQL",
-          })
+          setGenieResults(prev => ({
+            ...prev,
+            [questionId]: {
+              columns: [],
+              data: [],
+              row_count: 0,
+              truncated: false,
+              error: genieExec.reason?.message || "Failed to execute Genie SQL",
+            }
+          }))
         }
 
         // Handle Expected result
         if (expectedExec.status === "fulfilled" && expectedExec.value) {
-          setExpectedResult(expectedExec.value)
+          setExpectedResults(prev => ({ ...prev, [questionId]: expectedExec.value }))
         } else if (expectedExec.status === "rejected") {
-          setExpectedResult({
-            columns: [],
-            data: [],
-            row_count: 0,
-            truncated: false,
-            error: expectedExec.reason?.message || "Failed to execute Expected SQL",
-          })
+          setExpectedResults(prev => ({
+            ...prev,
+            [questionId]: {
+              columns: [],
+              data: [],
+              row_count: 0,
+              truncated: false,
+              error: expectedExec.reason?.message || "Failed to execute Expected SQL",
+            }
+          }))
         }
 
         setIsExecutingGenie(false)
@@ -205,11 +220,33 @@ export function LabelingPage({
             Space ID: <span className="font-mono text-secondary">{genieSpaceId}</span>
           </p>
         </div>
-        <Button variant="outline" onClick={onBack}>
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Benchmarks
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button variant="outline" onClick={onBack}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Benchmarks
+          </Button>
+          <Button
+            onClick={handleGenerateSql}
+            disabled={isGenerating}
+          >
+            {isGenerating ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4 mr-2" />
+                Generate and Compare Outputs
+              </>
+            )}
+          </Button>
+        </div>
       </div>
+
+      {generateError && (
+        <div className="text-sm text-danger">{generateError}</div>
+      )}
 
       {/* Segmented Progress Bar with Navigation */}
       <div className="space-y-2">
@@ -227,7 +264,8 @@ export function LabelingPage({
           {/* Segmented Bar */}
           <div className="flex-1 flex gap-1">
             {questions.map((q, idx) => {
-              const isProcessed = processedQuestions.has(q.id)
+              const labelValue = correctAnswers[q.id]
+              const isLabeled = labelValue !== undefined && labelValue !== null
               const isCurrent = idx === currentIndex
               return (
                 <button
@@ -235,15 +273,17 @@ export function LabelingPage({
                   onClick={() => handleSegmentClick(idx)}
                   className={`
                     flex-1 h-2.5 rounded-full transition-all cursor-pointer
-                    ${isProcessed
-                      ? "bg-accent dark:shadow-[0_0_8px_rgba(79,70,229,0.5)]"
+                    ${isLabeled
+                      ? labelValue === true
+                        ? "bg-green-500 dark:shadow-[0_0_8px_rgba(34,197,94,0.5)]"
+                        : "bg-red-500 dark:shadow-[0_0_8px_rgba(239,68,68,0.5)]"
                       : isCurrent
                         ? "bg-secondary/40"
                         : "bg-elevated hover:bg-secondary/30"
                     }
                     ${isCurrent ? "ring-2 ring-accent ring-offset-2 ring-offset-surface" : ""}
                   `}
-                  title={`Question ${idx + 1}${isProcessed ? " (labeled)" : ""}`}
+                  title={`Question ${idx + 1}${isLabeled ? (labelValue ? " (correct)" : " (incorrect)") : ""}`}
                 />
               )
             })}
@@ -258,11 +298,19 @@ export function LabelingPage({
             Next
             <ChevronRight className="w-4 h-4 ml-1" />
           </Button>
+
+          <Button
+            size="sm"
+            disabled={!allLabeled}
+          >
+            <Check className="w-4 h-4 mr-1" />
+            Finish
+          </Button>
         </div>
 
         {/* Status text */}
         <p className="text-center text-sm text-muted">
-          {processedCount} of {totalQuestions} labeled
+          {labeledCount} of {totalQuestions} labeled
         </p>
       </div>
 
@@ -296,30 +344,60 @@ export function LabelingPage({
         </CardContent>
       </Card>
 
-      {/* Generate SQL Button */}
-      <div className="flex items-center gap-3">
-        <Button
-          variant="secondary"
-          onClick={handleGenerateSql}
-          disabled={isGenerating}
-        >
-          {isGenerating ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Generating...
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-4 h-4 mr-2" />
-              Generate and Compare Output
-            </>
-          )}
-        </Button>
+      {/* Labeling Feedback Box */}
+      <Card className={!genieResult ? 'opacity-50' : ''}>
+        <CardContent className="py-4 px-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-primary">Label This Question</h3>
+            {!genieResult && (
+              <span className="text-xs text-muted">Run "Generate and Compare Outputs" first</span>
+            )}
+          </div>
+          <div className="flex flex-col md:flex-row gap-4">
+            {/* Question 1: Was Genie's output correct? */}
+            <div>
+              <label className="text-sm text-secondary mb-2 block">Was Genie's output correct?</label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => currentQuestion && setCorrectAnswers(prev => ({ ...prev, [currentQuestion.id]: true }))}
+                  disabled={!genieResult}
+                  className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
+                    isCorrect === true
+                      ? 'border-accent bg-accent/10 text-accent'
+                      : 'border-default text-secondary hover:border-strong'
+                  } disabled:cursor-not-allowed disabled:hover:border-default`}
+                >
+                  Yes
+                </button>
+                <button
+                  onClick={() => currentQuestion && setCorrectAnswers(prev => ({ ...prev, [currentQuestion.id]: false }))}
+                  disabled={!genieResult}
+                  className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
+                    isCorrect === false
+                      ? 'border-accent bg-accent/10 text-accent'
+                      : 'border-default text-secondary hover:border-strong'
+                  } disabled:cursor-not-allowed disabled:hover:border-default`}
+                >
+                  No
+                </button>
+              </div>
+            </div>
 
-        {generateError && (
-          <span className="text-sm text-danger">{generateError}</span>
-        )}
-      </div>
+            {/* Question 2: What did Genie get wrong? */}
+            <div className="flex-1">
+              <label className="text-sm text-secondary mb-2 block">If not, what did Genie get wrong?</label>
+              <textarea
+                value={feedbackText}
+                onChange={(e) => currentQuestion && setFeedbackTexts(prev => ({ ...prev, [currentQuestion.id]: e.target.value }))}
+                placeholder="Describe what was incorrect..."
+                disabled={!genieResult}
+                className="w-full p-2 text-sm rounded-lg border border-default bg-surface text-primary placeholder:text-muted resize-none focus:outline-none focus:ring-2 focus:ring-accent/50 transition-colors disabled:cursor-not-allowed disabled:bg-elevated"
+                rows={2}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Side-by-side Output Display */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
@@ -345,7 +423,7 @@ export function LabelingPage({
                 )
               ) : (
                 <p className="text-muted text-sm text-center py-8">
-                  Output will appear here
+                  Click "Generate and Compare Outputs" to proceed
                 </p>
               )}
             </CardContent>
@@ -374,7 +452,7 @@ export function LabelingPage({
                 )
               ) : expectedSql ? (
                 <p className="text-muted text-sm text-center py-8">
-                  Output will appear here
+                  Click "Generate and Compare Outputs" to proceed
                 </p>
               ) : (
                 <p className="text-muted text-sm text-center py-8">
@@ -397,7 +475,7 @@ export function LabelingPage({
             <Card>
               <CardContent className="py-8 text-center">
                 <p className="text-muted text-sm">
-                  {isGenerating ? "Generating..." : "Click \"Generate and Compare Output\" to proceed"}
+                  {isGenerating ? "Generating..." : "Click \"Generate and Compare Outputs\" to proceed"}
                 </p>
               </CardContent>
             </Card>
@@ -439,6 +517,7 @@ export function LabelingPage({
           )}
         </div>
       )}
+
     </div>
   )
 }
