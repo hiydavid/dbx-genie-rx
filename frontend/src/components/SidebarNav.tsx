@@ -15,6 +15,7 @@ import {
   ChevronDown,
   MessageSquare,
   Tag,
+  Settings,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -28,6 +29,7 @@ interface SidebarNavProps {
   sectionAnalyses: SectionAnalysis[]
   allSectionsAnalyzed: boolean
   showChecklist: boolean
+  showSettings: boolean
   hasLabelingSession: boolean
   onGoToIngest: () => void
   onGoToSection: (index: number) => void
@@ -35,6 +37,7 @@ interface SidebarNavProps {
   onGoToBenchmarks: () => void
   onGoToLabeling: () => void
   onToggleChecklist: () => void
+  onToggleSettings: () => void
   onReset: () => void
 }
 
@@ -55,6 +58,7 @@ export function SidebarNav({
   sectionAnalyses,
   allSectionsAnalyzed,
   showChecklist,
+  showSettings,
   hasLabelingSession,
   onGoToIngest,
   onGoToSection,
@@ -62,6 +66,7 @@ export function SidebarNav({
   onGoToBenchmarks,
   onGoToLabeling,
   onToggleChecklist,
+  onToggleSettings,
   onReset,
 }: SidebarNavProps) {
   const [isAnalysisExpanded, setIsAnalysisExpanded] = useState(true)
@@ -276,11 +281,26 @@ export function SidebarNav({
 
         <Button
           variant="ghost"
-          className="w-full justify-start text-secondary"
+          className={cn(
+            "w-full justify-start",
+            showChecklist ? "text-accent bg-accent/10" : "text-secondary"
+          )}
           onClick={onToggleChecklist}
         >
           <ClipboardCheck className="w-4 h-4 mr-2" />
           Checklist
+        </Button>
+
+        <Button
+          variant="ghost"
+          className={cn(
+            "w-full justify-start",
+            showSettings ? "text-accent bg-accent/10" : "text-secondary"
+          )}
+          onClick={onToggleSettings}
+        >
+          <Settings className="w-4 h-4 mr-2" />
+          Settings
         </Button>
 
         <Button

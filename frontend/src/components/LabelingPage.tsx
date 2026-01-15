@@ -9,8 +9,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { SqlCodeBlock } from "@/components/SqlCodeBlock"
 import { SqlDiffView } from "@/components/SqlDiffView"
-import { queryGenie } from "@/lib/api"
-import type { BenchmarkQuestion } from "@/types"
+import { DataTable } from "@/components/DataTable"
+import { queryGenie, executeSql } from "@/lib/api"
+import type { BenchmarkQuestion, SqlExecutionResult } from "@/types"
 
 interface LabelingPageProps {
   genieSpaceId: string
@@ -34,6 +35,12 @@ export function LabelingPage({
   const [generatingFor, setGeneratingFor] = useState<string | null>(null)
   const [generateError, setGenerateError] = useState<string | null>(null)
   const [showDiff, setShowDiff] = useState(false)
+
+  // SQL execution state
+  const [genieResult, setGenieResult] = useState<SqlExecutionResult | null>(null)
+  const [expectedResult, setExpectedResult] = useState<SqlExecutionResult | null>(null)
+  const [isExecutingGenie, setIsExecutingGenie] = useState(false)
+  const [isExecutingExpected, setIsExecutingExpected] = useState(false)
 
   // Get the selected questions in order
   const questions = useMemo(() => {
@@ -98,12 +105,14 @@ export function LabelingPage({
   // Format the generated SQL for display
   const formattedGeneratedSql = currentGeneratedSql ? formatSql(currentGeneratedSql) : null
 
-  // Handler for generating SQL with Genie
+  // Handler for generating SQL with Genie and executing both queries
   const handleGenerateSql = async () => {
     if (!currentQuestion) return
 
     setGeneratingFor(currentQuestion.id)
     setGenerateError(null)
+    setGenieResult(null)
+    setExpectedResult(null)
 
     try {
       const questionText = currentQuestion.question.join(" ")
@@ -114,6 +123,44 @@ export function LabelingPage({
           ...prev,
           [currentQuestion.id]: response.sql!
         }))
+
+        // Execute both SQLs in parallel
+        setIsExecutingGenie(true)
+        setIsExecutingExpected(true)
+
+        const [genieExec, expectedExec] = await Promise.allSettled([
+          executeSql(response.sql),
+          expectedSql ? executeSql(expectedSql) : Promise.resolve(null),
+        ])
+
+        // Handle Genie result
+        if (genieExec.status === "fulfilled" && genieExec.value) {
+          setGenieResult(genieExec.value)
+        } else if (genieExec.status === "rejected") {
+          setGenieResult({
+            columns: [],
+            data: [],
+            row_count: 0,
+            truncated: false,
+            error: genieExec.reason?.message || "Failed to execute Genie SQL",
+          })
+        }
+
+        // Handle Expected result
+        if (expectedExec.status === "fulfilled" && expectedExec.value) {
+          setExpectedResult(expectedExec.value)
+        } else if (expectedExec.status === "rejected") {
+          setExpectedResult({
+            columns: [],
+            data: [],
+            row_count: 0,
+            truncated: false,
+            error: expectedExec.reason?.message || "Failed to execute Expected SQL",
+          })
+        }
+
+        setIsExecutingGenie(false)
+        setIsExecutingExpected(false)
       } else if (response.error) {
         setGenerateError(response.error)
       } else {
@@ -123,6 +170,8 @@ export function LabelingPage({
       setGenerateError(err instanceof Error ? err.message : "Failed to generate SQL")
     } finally {
       setGeneratingFor(null)
+      setIsExecutingGenie(false)
+      setIsExecutingExpected(false)
     }
   }
 
@@ -278,8 +327,27 @@ export function LabelingPage({
         <div className="space-y-3">
           <h3 className="text-sm font-medium text-muted">Genie's Output</h3>
           <Card>
-            <CardContent className="py-8 text-center">
-              <p className="text-muted text-sm">Output will appear here</p>
+            <CardContent className="py-4">
+              {isExecutingGenie ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-5 h-5 animate-spin text-muted mr-2" />
+                  <span className="text-muted text-sm">Executing SQL...</span>
+                </div>
+              ) : genieResult ? (
+                genieResult.error ? (
+                  <div className="text-danger text-sm py-4 text-center">{genieResult.error}</div>
+                ) : (
+                  <DataTable
+                    columns={genieResult.columns}
+                    data={genieResult.data}
+                    truncated={genieResult.truncated}
+                  />
+                )
+              ) : (
+                <p className="text-muted text-sm text-center py-8">
+                  Output will appear here
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -288,8 +356,31 @@ export function LabelingPage({
         <div className="space-y-3">
           <h3 className="text-sm font-medium text-muted">Expected Output</h3>
           <Card>
-            <CardContent className="py-8 text-center">
-              <p className="text-muted text-sm">Output will appear here</p>
+            <CardContent className="py-4">
+              {isExecutingExpected ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-5 h-5 animate-spin text-muted mr-2" />
+                  <span className="text-muted text-sm">Executing SQL...</span>
+                </div>
+              ) : expectedResult ? (
+                expectedResult.error ? (
+                  <div className="text-danger text-sm py-4 text-center">{expectedResult.error}</div>
+                ) : (
+                  <DataTable
+                    columns={expectedResult.columns}
+                    data={expectedResult.data}
+                    truncated={expectedResult.truncated}
+                  />
+                )
+              ) : expectedSql ? (
+                <p className="text-muted text-sm text-center py-8">
+                  Output will appear here
+                </p>
+              ) : (
+                <p className="text-muted text-sm text-center py-8">
+                  No expected SQL available
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>

@@ -14,6 +14,7 @@ import { SummaryPhase } from "@/components/SummaryPhase"
 import { ChecklistPage } from "@/components/ChecklistPage"
 import { BenchmarksPage } from "@/components/BenchmarksPage"
 import { LabelingPage } from "@/components/LabelingPage"
+import { SettingsPage } from "@/components/SettingsPage"
 import { ThemeToggle } from "@/components/ThemeToggle"
 
 function App() {
@@ -26,6 +27,15 @@ function App() {
   }, [resolvedTheme])
 
   const renderPhase = () => {
+    if (state.showSettings) {
+      return (
+        <SettingsPage
+          onBack={actions.toggleSettings}
+          currentGenieSpaceId={state.genieSpaceId}
+        />
+      )
+    }
+
     if (state.showChecklist) {
       return <ChecklistPage onBack={actions.toggleChecklist} />
     }
@@ -132,6 +142,7 @@ function App() {
           sectionAnalyses={state.sectionAnalyses}
           allSectionsAnalyzed={state.allSectionsAnalyzed}
           showChecklist={state.showChecklist}
+          showSettings={state.showSettings}
           hasLabelingSession={state.hasLabelingSession}
           onGoToIngest={actions.goToIngest}
           onGoToSection={actions.goToSection}
@@ -139,6 +150,7 @@ function App() {
           onGoToBenchmarks={actions.goToBenchmarks}
           onGoToLabeling={actions.goToLabeling}
           onToggleChecklist={actions.toggleChecklist}
+          onToggleSettings={actions.toggleSettings}
           onReset={actions.reset}
         />
       )}

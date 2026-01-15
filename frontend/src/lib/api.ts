@@ -9,6 +9,8 @@ import type {
   AnalyzeSectionRequest,
   StreamProgress,
   GenieQueryResponse,
+  SqlExecutionResult,
+  AppSettings,
 } from "@/types"
 
 const API_BASE = "/api"
@@ -192,6 +194,32 @@ export async function queryGenie(
     }),
   })
   return handleResponse<GenieQueryResponse>(response)
+}
+
+/**
+ * Execute SQL on a Databricks SQL Warehouse.
+ */
+export async function executeSql(
+  sql: string,
+  warehouseId?: string
+): Promise<SqlExecutionResult> {
+  const response = await fetch(`${API_BASE}/sql/execute`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      sql: sql,
+      warehouse_id: warehouseId,
+    }),
+  })
+  return handleResponse<SqlExecutionResult>(response)
+}
+
+/**
+ * Get application settings.
+ */
+export async function getSettings(): Promise<AppSettings> {
+  const response = await fetch(`${API_BASE}/settings`)
+  return handleResponse<AppSettings>(response)
 }
 
 export { ApiError }
