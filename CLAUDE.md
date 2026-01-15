@@ -72,6 +72,10 @@ Note: `app.py` at the root is a deprecated Streamlit UI; use `agent_server/` for
 | `frontend/src/hooks/useTheme.ts` | Theme hook: system preference detection, localStorage persistence, dark class toggle |
 | `frontend/src/components/ThemeToggle.tsx` | Sun/Moon icon toggle for light/dark mode |
 | `frontend/src/components/ScoreGauge.tsx` | Animated radial SVG progress gauge for compliance scores |
+| `frontend/src/components/LabelingPage.tsx` | Labeling session UI with SQL generation, execution, and diff view |
+| `frontend/src/components/SettingsPage.tsx` | Settings page showing read-only app configuration |
+| `frontend/src/components/DataTable.tsx` | Reusable table for displaying SQL query results |
+| `agent_server/sql_executor.py` | SQL execution via Databricks Statement Execution API |
 
 ### Analysis Approach
 
@@ -94,9 +98,10 @@ DATABRICKS_HOST=https://your-workspace.cloud.databricks.com
 DATABRICKS_CONFIG_PROFILE=DEFAULT   # or DATABRICKS_TOKEN for PAT
 MLFLOW_EXPERIMENT_ID=<id>           # Optional: set to enable tracing
 LLM_MODEL=databricks-claude-sonnet-4
+SQL_WAREHOUSE_ID=<id>               # Optional: for SQL execution in labeling sessions
 ```
 
-Note: MLflow tracing is optional. Leave `MLFLOW_EXPERIMENT_ID` empty to disable it.
+Note: MLflow tracing is optional. Leave `MLFLOW_EXPERIMENT_ID` empty to disable it. SQL_WAREHOUSE_ID enables executing benchmark SQL queries on the labeling page.
 
 ## Technology Stack
 

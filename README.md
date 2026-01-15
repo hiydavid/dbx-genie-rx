@@ -25,6 +25,8 @@ This app was designed to be deployed on Databricks Apps. You can either:
 - **Compliance Scoring** — Provides per-section and overall compliance scores (0-10)
 - **Actionable Recommendations** — Each finding includes specific remediation guidance
 - **Benchmarks View** — Review and validate benchmark questions from your Genie Space configuration
+- **Labeling Sessions** — Generate SQL with Genie, execute queries on SQL Warehouse, and compare outputs side-by-side
+- **Settings Page** — View read-only app configuration (Genie Space ID, LLM model, SQL Warehouse, Databricks host)
 - **Interactive Wizard UI** — Step-by-step analysis with progress navigation and JSON preview
 - **Modern React Frontend** — Beautiful, responsive UI built with React, TypeScript, and Tailwind CSS v4
 - **Dark Mode Support** — Auto-detects system preference with manual toggle, persists user choice
@@ -220,6 +222,7 @@ LLM_MODEL=databricks-claude-sonnet-4
 | `MLFLOW_TRACKING_URI` | No | Set to `databricks` to log traces to workspace |
 | `MLFLOW_EXPERIMENT_ID` | No | MLflow experiment ID - set to enable tracing |
 | `LLM_MODEL` | Yes | LLM model name (default: `databricks-claude-sonnet-4`) |
+| `SQL_WAREHOUSE_ID` | No | SQL Warehouse ID for executing benchmark queries in labeling sessions |
 
 > **Note:** When deployed to Databricks Apps, configure these in `app.yaml`. MLflow tracing is optional—leave `MLFLOW_EXPERIMENT_ID` empty to disable it. Authentication is handled automatically via OAuth (OBO).
 
@@ -254,6 +257,9 @@ The backend exposes the following API endpoints:
 | `/api/space/parse` | POST | Parse pasted Genie Space JSON |
 | `/api/analyze/section` | POST | Analyze a single section |
 | `/api/analyze/stream` | POST | Stream analysis progress (SSE) |
+| `/api/genie/query` | POST | Query Genie to generate SQL for a question |
+| `/api/sql/execute` | POST | Execute SQL on a Databricks SQL Warehouse |
+| `/api/settings` | GET | Get app configuration (LLM, warehouse, host) |
 | `/api/checklist` | GET | Get checklist documentation |
 | `/api/sections` | GET | List all section names |
 | `/api/debug/auth` | GET | Debug authentication status and environment |
@@ -280,6 +286,7 @@ dbx-genie-rx/
 │   ├── ingest.py          # Databricks SDK client for Genie Spaces
 │   ├── models.py          # Pydantic models (AgentInput, AgentOutput)
 │   ├── prompts.py         # LLM prompt templates
+│   ├── sql_executor.py    # SQL execution via Databricks Statement Execution API
 │   └── start_server.py    # FastAPI server entry point
 ├── frontend/               # React frontend application
 │   ├── public/fonts/      # Self-hosted font files (woff2)
@@ -291,6 +298,9 @@ dbx-genie-rx/
 │   │   │   ├── AnalysisPhase.tsx
 │   │   │   ├── SummaryPhase.tsx
 │   │   │   ├── BenchmarksPage.tsx # Benchmarks view for Optimize mode
+│   │   │   ├── LabelingPage.tsx   # Labeling session with SQL execution
+│   │   │   ├── SettingsPage.tsx   # Read-only app configuration
+│   │   │   ├── DataTable.tsx      # Table for SQL query results
 │   │   │   ├── ChecklistPage.tsx  # Checklist reference documentation
 │   │   │   ├── ChecklistProgress.tsx # Progress indicator for checks
 │   │   │   ├── SidebarNav.tsx
@@ -333,6 +343,10 @@ After deploying, you must grant the app's service principal (SP) access to requi
 3. **Grant LLM endpoint access**:
    - Go to **Serving > [your LLM endpoint] > Permissions**
    - Add the SP with **Can Query** permission
+
+4. **Grant SQL Warehouse access** (optional, for labeling sessions):
+   - Go to **SQL > SQL Warehouses > [your warehouse] > Permissions**
+   - Add the SP with **Can Use** permission
 
 ### Authentication
 
