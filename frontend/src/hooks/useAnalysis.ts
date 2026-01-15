@@ -29,6 +29,7 @@ export interface AnalysisState {
   sectionAnalyses: SectionAnalysis[]
   allSectionsAnalyzed: boolean
   showChecklist: boolean
+  showSettings: boolean
   isLoading: boolean
   error: string | null
   expandedSections: Record<string, boolean>
@@ -49,6 +50,7 @@ const initialState: AnalysisState = {
   sectionAnalyses: [],
   allSectionsAnalyzed: false,
   showChecklist: false,
+  showSettings: false,
   isLoading: false,
   error: null,
   expandedSections: {},
@@ -289,7 +291,11 @@ export function useAnalysis() {
   }, [])
 
   const toggleChecklist = useCallback(() => {
-    setState((prev) => ({ ...prev, showChecklist: !prev.showChecklist }))
+    setState((prev) => ({ ...prev, showChecklist: !prev.showChecklist, showSettings: false }))
+  }, [])
+
+  const toggleSettings = useCallback(() => {
+    setState((prev) => ({ ...prev, showSettings: !prev.showSettings, showChecklist: false }))
   }, [])
 
   const toggleSectionExpanded = useCallback((sectionName: string) => {
@@ -385,6 +391,7 @@ export function useAnalysis() {
       goToBenchmarks,
       goToLabeling,
       toggleChecklist,
+      toggleSettings,
       toggleSectionExpanded,
       expandAllSections,
       collapseAllSections,

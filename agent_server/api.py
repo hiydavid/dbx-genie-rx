@@ -64,6 +64,29 @@ class GenieQueryResponse(BaseModel):
     message_id: str
 
 
+class ExecuteSqlRequest(BaseModel):
+    """Request to execute SQL on a warehouse."""
+    sql: str
+    warehouse_id: str | None = None
+
+
+class ExecuteSqlResponse(BaseModel):
+    """Response from SQL execution."""
+    columns: list[dict]
+    data: list[list]
+    row_count: int
+    truncated: bool
+    error: str | None
+
+
+class SettingsResponse(BaseModel):
+    """Application settings response."""
+    genie_space_id: str | None
+    llm_model: str
+    sql_warehouse_id: str | None
+    databricks_host: str | None
+
+
 @router.post("/space/fetch", response_model=FetchSpaceResponse)
 async def fetch_space(request: FetchSpaceRequest):
     """Fetch and parse a Genie Space by ID.
@@ -268,4 +291,41 @@ async def debug_auth():
             "error": str(e),
             "running_on_databricks_apps": is_running_on_databricks_apps(),
         }
+
+
+@router.post("/sql/execute", response_model=ExecuteSqlResponse)
+async def execute_sql_endpoint(request: ExecuteSqlRequest):
+    """Execute SQL on a Databricks SQL Warehouse.
+
+    Returns tabular results for display in the UI.
+    Limited to 1000 rows to prevent memory issues.
+    """
+    from agent_server.sql_executor import execute_sql
+
+    try:
+        result = execute_sql(
+            sql=request.sql,
+            warehouse_id=request.warehouse_id,
+        )
+        return ExecuteSqlResponse(**result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/settings", response_model=SettingsResponse)
+async def get_settings():
+    """Get application settings for the Settings page.
+
+    Returns read-only configuration values.
+    """
+    import os
+    from agent_server.auth import get_databricks_host
+    from agent_server.sql_executor import get_sql_warehouse_id
+
+    return SettingsResponse(
+        genie_space_id=None,  # This is session-specific, passed from frontend
+        llm_model=os.environ.get("LLM_MODEL", "databricks-claude-sonnet-4"),
+        sql_warehouse_id=get_sql_warehouse_id(),
+        databricks_host=get_databricks_host(),
+    )
 

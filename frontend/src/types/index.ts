@@ -68,6 +68,28 @@ export interface GenieQueryResponse {
   message_id: string
 }
 
+// SQL execution types
+export interface SqlExecutionColumn {
+  name: string
+  type_name: string
+}
+
+export interface SqlExecutionResult {
+  columns: SqlExecutionColumn[]
+  data: (string | number | boolean | null)[][]
+  row_count: number
+  truncated: boolean
+  error: string | null
+}
+
+// Settings types
+export interface AppSettings {
+  genie_space_id: string | null
+  llm_model: string
+  sql_warehouse_id: string | null
+  databricks_host: string | null
+}
+
 // App state types
 export type AppMode = "analyze" | "optimize"
 export type Phase = "input" | "ingest" | "analysis" | "summary"
@@ -94,6 +116,7 @@ export interface AppState {
   sectionAnalyses: SectionAnalysis[]
   allSectionsAnalyzed: boolean
   showChecklist: boolean
+  showSettings: boolean
   isLoading: boolean
   error: string | null
 }
