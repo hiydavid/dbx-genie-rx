@@ -3,10 +3,13 @@
  */
 
 import { useState, useMemo } from "react"
-import { ArrowLeft, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react"
+import { ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, Loader2, Sparkles, GitCompare } from "lucide-react"
+import { format as formatSqlLib } from "sql-formatter"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { SqlCodeBlock } from "@/components/SqlCodeBlock"
+import { SqlDiffView } from "@/components/SqlDiffView"
+import { queryGenie } from "@/lib/api"
 import type { BenchmarkQuestion } from "@/types"
 
 interface LabelingPageProps {
@@ -25,6 +28,12 @@ export function LabelingPage({
   const [currentIndex, setCurrentIndex] = useState(0)
   // Track processed questions (empty for now, will be populated when processing feature is added)
   const [processedQuestions] = useState<Set<string>>(new Set())
+
+  // Genie SQL generation state
+  const [generatedSql, setGeneratedSql] = useState<Record<string, string>>({})
+  const [generatingFor, setGeneratingFor] = useState<string | null>(null)
+  const [generateError, setGenerateError] = useState<string | null>(null)
+  const [showDiff, setShowDiff] = useState(false)
 
   // Get the selected questions in order
   const questions = useMemo(() => {
@@ -66,6 +75,56 @@ export function LabelingPage({
     // Content array elements already include \n, so join with empty string
     return answer?.content?.join("") || null
   }, [currentQuestion])
+
+  // Get current question's generated SQL
+  const currentGeneratedSql = currentQuestion ? generatedSql[currentQuestion.id] : null
+  const isGenerating = generatingFor === currentQuestion?.id
+
+  // Format SQL using sql-formatter library for consistent display
+  const formatSql = (sql: string): string => {
+    try {
+      return formatSqlLib(sql, {
+        language: "sql",
+        indentStyle: "standard",
+        keywordCase: "upper",
+        linesBetweenQueries: 1,
+      })
+    } catch {
+      // If formatting fails, return original
+      return sql
+    }
+  }
+
+  // Format the generated SQL for display
+  const formattedGeneratedSql = currentGeneratedSql ? formatSql(currentGeneratedSql) : null
+
+  // Handler for generating SQL with Genie
+  const handleGenerateSql = async () => {
+    if (!currentQuestion) return
+
+    setGeneratingFor(currentQuestion.id)
+    setGenerateError(null)
+
+    try {
+      const questionText = currentQuestion.question.join(" ")
+      const response = await queryGenie(genieSpaceId, questionText)
+
+      if (response.status === "COMPLETED" && response.sql) {
+        setGeneratedSql(prev => ({
+          ...prev,
+          [currentQuestion.id]: response.sql!
+        }))
+      } else if (response.error) {
+        setGenerateError(response.error)
+      } else {
+        setGenerateError("Genie did not generate SQL for this question")
+      }
+    } catch (err) {
+      setGenerateError(err instanceof Error ? err.message : "Failed to generate SQL")
+    } finally {
+      setGeneratingFor(null)
+    }
+  }
 
   if (!currentQuestion) {
     return (
@@ -188,21 +247,83 @@ export function LabelingPage({
         </CardContent>
       </Card>
 
-      {/* Expected SQL Display */}
-      {expectedSql && (
+      {/* Generate SQL Button */}
+      <div className="flex items-center gap-3">
+        <Button
+          variant="secondary"
+          onClick={handleGenerateSql}
+          disabled={isGenerating}
+        >
+          {isGenerating ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-4 h-4 mr-2" />
+              Generate SQL with Genie
+            </>
+          )}
+        </Button>
+
+        {generateError && (
+          <span className="text-sm text-danger">{generateError}</span>
+        )}
+      </div>
+
+      {/* Side-by-side SQL Display */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Generated SQL (left) */}
+        <div className="space-y-3">
+          <h3 className="text-sm font-medium text-muted">Generated SQL</h3>
+          {formattedGeneratedSql ? (
+            <SqlCodeBlock code={formattedGeneratedSql} maxLines={15} />
+          ) : (
+            <Card>
+              <CardContent className="py-8 text-center">
+                <p className="text-muted text-sm">
+                  {isGenerating ? "Generating..." : "Click \"Generate SQL with Genie\" to generate"}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Expected SQL (right) */}
         <div className="space-y-3">
           <h3 className="text-sm font-medium text-muted">Expected SQL</h3>
-          <SqlCodeBlock code={expectedSql} maxLines={10} />
+          {expectedSql ? (
+            <SqlCodeBlock code={expectedSql} maxLines={15} />
+          ) : (
+            <Card>
+              <CardContent className="py-8 text-center">
+                <p className="text-muted text-sm">No expected SQL available</p>
+              </CardContent>
+            </Card>
+          )}
         </div>
-      )}
+      </div>
 
-      {/* Show message if no expected answer */}
-      {!expectedSql && (
-        <Card>
-          <CardContent className="py-8 text-center">
-            <p className="text-muted">No expected SQL answer available for this question.</p>
-          </CardContent>
-        </Card>
+      {/* Collapsible Diff View - only shown when both SQLs exist */}
+      {formattedGeneratedSql && expectedSql && (
+        <div className="space-y-3">
+          <button
+            onClick={() => setShowDiff(!showDiff)}
+            className="flex items-center gap-2 text-sm font-medium text-secondary hover:text-primary transition-colors"
+          >
+            <GitCompare className="w-4 h-4" />
+            <span>Show Diff View</span>
+            <ChevronDown className={`w-4 h-4 transition-transform ${showDiff ? "rotate-180" : ""}`} />
+          </button>
+
+          {showDiff && (
+            <SqlDiffView
+              generatedSql={formattedGeneratedSql}
+              expectedSql={expectedSql}
+            />
+          )}
+        </div>
       )}
     </div>
   )

@@ -49,6 +49,21 @@ class StreamAnalysisRequest(BaseModel):
     genie_space_id: str
 
 
+class GenieQueryRequest(BaseModel):
+    """Request to query Genie for SQL."""
+    genie_space_id: str
+    question: str
+
+
+class GenieQueryResponse(BaseModel):
+    """Response containing generated SQL from Genie."""
+    sql: str | None
+    status: str
+    error: str | None
+    conversation_id: str
+    message_id: str
+
+
 @router.post("/space/fetch", response_model=FetchSpaceResponse)
 async def fetch_space(request: FetchSpaceRequest):
     """Fetch and parse a Genie Space by ID.
@@ -173,6 +188,28 @@ async def stream_analysis(request: StreamAnalysisRequest):
             yield f"data: {json.dumps({'status': 'result', 'data': result.model_dump()})}\n\n"
     
     return StreamingResponse(generate(), media_type="text/event-stream")
+
+
+@router.post("/genie/query", response_model=GenieQueryResponse)
+async def query_genie(request: GenieQueryRequest):
+    """Query a Genie Space with a natural language question.
+
+    Calls the Databricks Genie API to generate SQL for the given question.
+    Returns the generated SQL if successful.
+    """
+    try:
+        from agent_server.ingest import query_genie_for_sql
+
+        result = query_genie_for_sql(
+            genie_space_id=request.genie_space_id,
+            question=request.question,
+        )
+
+        return GenieQueryResponse(**result)
+    except TimeoutError as e:
+        raise HTTPException(status_code=504, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/checklist")
