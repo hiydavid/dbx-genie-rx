@@ -8,6 +8,7 @@ Supports both local development (PAT) and Databricks Apps (OBO) authentication.
 import json
 import logging
 import os
+import time
 
 from dotenv import load_dotenv
 
@@ -73,3 +74,112 @@ def get_serialized_space(genie_space_id: str | None = None) -> dict:
     """
     data = get_genie_space(genie_space_id=genie_space_id)
     return json.loads(data["serialized_space"])
+
+
+def query_genie_for_sql(
+    genie_space_id: str,
+    question: str,
+    timeout_seconds: int = 120,
+    poll_interval_seconds: float = 2.0,
+) -> dict:
+    """Query a Genie Space with a natural language question and retrieve generated SQL.
+
+    Uses the Databricks Genie conversation API to start a conversation, poll for
+    completion, and extract any generated SQL from the response.
+
+    Args:
+        genie_space_id: The Genie space ID
+        question: Natural language question to ask Genie
+        timeout_seconds: Maximum time to wait for response (default 120s)
+        poll_interval_seconds: Time between status polls (default 2s)
+
+    Returns:
+        dict with keys:
+            - sql: Generated SQL string (or None if no SQL generated)
+            - status: Final status ("COMPLETED", "FAILED", etc.)
+            - error: Error message if failed
+            - conversation_id: ID of the conversation
+            - message_id: ID of the message
+
+    Raises:
+        ValueError: If parameters are invalid
+        TimeoutError: If response not received within timeout
+    """
+    if not genie_space_id:
+        raise ValueError("genie_space_id is required")
+    if not question:
+        raise ValueError("question is required")
+
+    client = get_workspace_client()
+
+    # Step 1: Start conversation
+    logger.info(f"Starting Genie conversation for space {genie_space_id}")
+    logger.info(f"Question: {question[:100]}...")
+
+    start_response = client.api_client.do(
+        method="POST",
+        path=f"/api/2.0/genie/spaces/{genie_space_id}/start-conversation",
+        body={"content": question},
+    )
+
+    # Response contains nested conversation and message objects
+    conversation_id = start_response["conversation"]["id"]
+    message_id = start_response["message"]["id"]
+
+    logger.info(f"Started conversation {conversation_id}, message {message_id}")
+
+    # Step 2: Poll for completion
+    start_time = time.time()
+    while True:
+        elapsed = time.time() - start_time
+        if elapsed > timeout_seconds:
+            raise TimeoutError(f"Genie query timed out after {timeout_seconds}s")
+
+        message_response = client.api_client.do(
+            method="GET",
+            path=f"/api/2.0/genie/spaces/{genie_space_id}/conversations/{conversation_id}/messages/{message_id}",
+        )
+
+        status = message_response.get("status")
+        logger.debug(f"Poll status: {status} (elapsed: {elapsed:.1f}s)")
+
+        if status == "COMPLETED":
+            # Extract SQL from attachments
+            # Each attachment has: text, query (the SQL string), attachment_id
+            attachments = message_response.get("attachments", [])
+            sql = None
+            for attachment in attachments:
+                # The query field contains the SQL statement directly
+                if "query" in attachment:
+                    query_value = attachment["query"]
+                    # Handle both cases: query as string or as nested object
+                    if isinstance(query_value, str):
+                        sql = query_value
+                    elif isinstance(query_value, dict):
+                        sql = query_value.get("query")
+                    if sql:
+                        break
+
+            logger.info(f"Genie query completed, SQL found: {sql is not None}")
+
+            return {
+                "sql": sql,
+                "status": status,
+                "error": None,
+                "conversation_id": conversation_id,
+                "message_id": message_id,
+            }
+
+        elif status in ("FAILED", "CANCELLED"):
+            error_msg = message_response.get("error", "Unknown error")
+            logger.warning(f"Genie query failed: {error_msg}")
+            return {
+                "sql": None,
+                "status": status,
+                "error": error_msg,
+                "conversation_id": conversation_id,
+                "message_id": message_id,
+            }
+
+        # Still in progress (IN_PROGRESS, EXECUTING_QUERY, etc.), wait and poll again
+        time.sleep(poll_interval_seconds)

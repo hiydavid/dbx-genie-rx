@@ -8,6 +8,7 @@ import type {
   SectionInfo,
   AnalyzeSectionRequest,
   StreamProgress,
+  GenieQueryResponse,
 } from "@/types"
 
 const API_BASE = "/api"
@@ -173,6 +174,24 @@ export async function getSections(): Promise<string[]> {
   const response = await fetch(`${API_BASE}/sections`)
   const data = await handleResponse<{ sections: string[] }>(response)
   return data.sections
+}
+
+/**
+ * Query Genie to generate SQL for a natural language question.
+ */
+export async function queryGenie(
+  genieSpaceId: string,
+  question: string
+): Promise<GenieQueryResponse> {
+  const response = await fetch(`${API_BASE}/genie/query`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      genie_space_id: genieSpaceId,
+      question: question,
+    }),
+  })
+  return handleResponse<GenieQueryResponse>(response)
 }
 
 export { ApiError }

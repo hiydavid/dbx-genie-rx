@@ -60,6 +60,14 @@ export interface StreamProgress {
   data?: AgentOutput
 }
 
+export interface GenieQueryResponse {
+  sql: string | null
+  status: string
+  error: string | null
+  conversation_id: string
+  message_id: string
+}
+
 // App state types
 export type AppMode = "analyze" | "optimize"
 export type Phase = "input" | "ingest" | "analysis" | "summary"
