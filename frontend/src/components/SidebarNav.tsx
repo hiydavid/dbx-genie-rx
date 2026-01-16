@@ -15,6 +15,7 @@ import {
   ChevronDown,
   MessageSquare,
   Tag,
+  FileText,
   Settings,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -36,6 +37,7 @@ interface SidebarNavProps {
   onGoToSummary: () => void
   onGoToBenchmarks: () => void
   onGoToLabeling: () => void
+  onGoToFeedback: () => void
   onToggleChecklist: () => void
   onToggleSettings: () => void
   onReset: () => void
@@ -65,6 +67,7 @@ export function SidebarNav({
   onGoToSummary,
   onGoToBenchmarks,
   onGoToLabeling,
+  onGoToFeedback,
   onToggleChecklist,
   onToggleSettings,
   onReset,
@@ -268,6 +271,23 @@ export function SidebarNav({
                 >
                   <Tag className="w-4 h-4" />
                   Labeling
+                </button>
+
+                {/* Feedback button */}
+                <button
+                  onClick={onGoToFeedback}
+                  disabled={!hasLabelingSession}
+                  className={cn(
+                    "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left",
+                    optimizeView === "feedback" && !showChecklist
+                      ? "gradient-accent text-white shadow-lg shadow-accent/20 dark:glow-accent"
+                      : hasLabelingSession
+                      ? "bg-elevated text-secondary hover:bg-sunken cursor-pointer"
+                      : "bg-elevated text-muted cursor-not-allowed opacity-60"
+                  )}
+                >
+                  <FileText className="w-4 h-4" />
+                  Feedback
                 </button>
               </div>
             </div>
