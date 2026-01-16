@@ -15,6 +15,7 @@ import { ChecklistPage } from "@/components/ChecklistPage"
 import { BenchmarksPage } from "@/components/BenchmarksPage"
 import { LabelingPage } from "@/components/LabelingPage"
 import { FeedbackPage } from "@/components/FeedbackPage"
+import { OptimizationPage } from "@/components/OptimizationPage"
 import { SettingsPage } from "@/components/SettingsPage"
 import { ThemeToggle } from "@/components/ThemeToggle"
 
@@ -42,6 +43,18 @@ function App() {
     }
 
     // Handle optimize views
+    if (state.optimizeView === "optimization" && state.spaceData) {
+      return (
+        <OptimizationPage
+          suggestions={state.optimizationSuggestions}
+          summary={state.optimizationSummary}
+          isLoading={state.isOptimizing}
+          error={state.error}
+          onBack={actions.goToFeedback}
+        />
+      )
+    }
+
     if (state.optimizeView === "feedback" && state.spaceData) {
       return (
         <FeedbackPage
@@ -50,7 +63,7 @@ function App() {
           correctAnswers={state.labelingCorrectAnswers}
           feedbackTexts={state.labelingFeedbackTexts}
           onBack={actions.goToLabeling}
-          onBeginOptimization={() => {}}
+          onBeginOptimization={actions.startOptimization}
         />
       )
     }
@@ -173,12 +186,14 @@ function App() {
           showChecklist={state.showChecklist}
           showSettings={state.showSettings}
           hasLabelingSession={state.hasLabelingSession}
+          hasOptimizationResults={state.optimizationSuggestions !== null}
           onGoToIngest={actions.goToIngest}
           onGoToSection={actions.goToSection}
           onGoToSummary={actions.goToSummary}
           onGoToBenchmarks={actions.goToBenchmarks}
           onGoToLabeling={actions.goToLabeling}
           onGoToFeedback={actions.goToFeedback}
+          onGoToOptimization={actions.goToOptimization}
           onToggleChecklist={actions.toggleChecklist}
           onToggleSettings={actions.toggleSettings}
           onReset={actions.reset}
