@@ -14,7 +14,14 @@ from pydantic import BaseModel
 
 from agent_server.agent import GenieSpaceAnalyzer, SECTIONS, get_analyzer
 from agent_server.ingest import get_serialized_space
-from agent_server.models import AgentInput, SectionAnalysis
+from agent_server.models import (
+    AgentInput,
+    LabelingFeedbackItem,
+    OptimizationRequest,
+    OptimizationResponse,
+    SectionAnalysis,
+)
+from agent_server.optimizer import get_optimizer
 
 router = APIRouter(prefix="/api")
 
@@ -328,4 +335,30 @@ async def get_settings():
         sql_warehouse_id=get_sql_warehouse_id(),
         databricks_host=get_databricks_host(),
     )
+
+
+@router.post("/optimize", response_model=OptimizationResponse)
+async def generate_optimizations(request: OptimizationRequest):
+    """Generate optimization suggestions based on labeling feedback.
+
+    Analyzes the Genie Space configuration and labeling session results
+    to generate field-level improvement suggestions.
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    logger.info(f"Received optimization request for space: {request.genie_space_id}")
+    logger.info(f"Feedback items count: {len(request.labeling_feedback)}")
+
+    try:
+        optimizer = get_optimizer()
+        response = optimizer.generate_optimizations(
+            space_data=request.space_data,
+            labeling_feedback=request.labeling_feedback,
+        )
+        logger.info(f"Generated {len(response.suggestions)} suggestions")
+        return response
+    except Exception as e:
+        logger.exception(f"Optimization failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 

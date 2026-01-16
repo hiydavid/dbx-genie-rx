@@ -11,6 +11,8 @@ import type {
   GenieQueryResponse,
   SqlExecutionResult,
   AppSettings,
+  LabelingFeedbackItem,
+  OptimizationResponse,
 } from "@/types"
 
 const API_BASE = "/api"
@@ -220,6 +222,26 @@ export async function executeSql(
 export async function getSettings(): Promise<AppSettings> {
   const response = await fetch(`${API_BASE}/settings`)
   return handleResponse<AppSettings>(response)
+}
+
+/**
+ * Generate optimization suggestions based on labeling feedback.
+ */
+export async function generateOptimizations(
+  genieSpaceId: string,
+  spaceData: Record<string, unknown>,
+  labelingFeedback: LabelingFeedbackItem[]
+): Promise<OptimizationResponse> {
+  const response = await fetch(`${API_BASE}/optimize`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      genie_space_id: genieSpaceId,
+      space_data: spaceData,
+      labeling_feedback: labelingFeedback,
+    }),
+  })
+  return handleResponse<OptimizationResponse>(response)
 }
 
 export { ApiError }
