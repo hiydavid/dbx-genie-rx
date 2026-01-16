@@ -11,12 +11,15 @@ import type {
   SectionAnalysis,
   FetchSpaceResponse,
   SqlExecutionResult,
+  OptimizationSuggestion,
+  BenchmarkQuestion,
 } from "@/types"
 import {
   fetchSpace,
   parseSpaceJson,
   analyzeSection,
   analyzeAllSections as analyzeAllSectionsApi,
+  generateOptimizations as generateOptimizationsApi,
 } from "@/lib/api"
 
 export interface AnalysisState {
@@ -45,6 +48,10 @@ export interface AnalysisState {
   labelingExpectedResults: Record<string, SqlExecutionResult | null>
   labelingCorrectAnswers: Record<string, boolean | null>
   labelingFeedbackTexts: Record<string, string>
+  // Optimization state
+  optimizationSuggestions: OptimizationSuggestion[] | null
+  optimizationSummary: string | null
+  isOptimizing: boolean
 }
 
 const initialState: AnalysisState = {
@@ -73,6 +80,10 @@ const initialState: AnalysisState = {
   labelingExpectedResults: {},
   labelingCorrectAnswers: {},
   labelingFeedbackTexts: {},
+  // Optimization state
+  optimizationSuggestions: null,
+  optimizationSummary: null,
+  isOptimizing: false,
 }
 
 export function useAnalysis() {
@@ -380,6 +391,56 @@ export function useAnalysis() {
     }))
   }, [])
 
+  const goToOptimization = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      optimizeView: "optimization",
+      showChecklist: false,
+    }))
+  }, [])
+
+  const startOptimization = useCallback(async () => {
+    const { genieSpaceId, spaceData, selectedQuestions, labelingCorrectAnswers, labelingFeedbackTexts } = state
+    if (!spaceData) return
+
+    setState((prev) => ({ ...prev, isOptimizing: true, error: null, optimizeView: "optimization" }))
+
+    try {
+      // Get benchmark questions and build labeling feedback
+      const benchmarks = spaceData?.benchmarks as { questions?: BenchmarkQuestion[] }
+      const allQuestions = benchmarks?.questions || []
+
+      // Build feedback items from selected questions
+      const labelingFeedback = selectedQuestions.map(id => {
+        const question = allQuestions.find(q => q.id === id)
+        return {
+          question_text: question?.question.join(" ") || "",
+          is_correct: labelingCorrectAnswers[id] ?? null,
+          feedback_text: labelingFeedbackTexts[id] || null,
+        }
+      })
+
+      const response = await generateOptimizationsApi(
+        genieSpaceId,
+        spaceData,
+        labelingFeedback
+      )
+
+      setState((prev) => ({
+        ...prev,
+        optimizationSuggestions: response.suggestions,
+        optimizationSummary: response.summary,
+        isOptimizing: false,
+      }))
+    } catch (err) {
+      setState((prev) => ({
+        ...prev,
+        error: err instanceof Error ? err.message : "Optimization failed",
+        isOptimizing: false,
+      }))
+    }
+  }, [state.genieSpaceId, state.spaceData, state.selectedQuestions, state.labelingCorrectAnswers, state.labelingFeedbackTexts])
+
   const clearSpaceData = useCallback(() => {
     setState((prev) => ({
       ...prev,
@@ -476,6 +537,8 @@ export function useAnalysis() {
       goToBenchmarks,
       goToLabeling,
       goToFeedback,
+      goToOptimization,
+      startOptimization,
       toggleChecklist,
       toggleSettings,
       toggleSectionExpanded,

@@ -90,10 +90,33 @@ export interface AppSettings {
   databricks_host: string | null
 }
 
+// Optimization types
+export interface OptimizationSuggestion {
+  field_path: string
+  current_value: unknown
+  suggested_value: unknown
+  rationale: string
+  checklist_reference: string | null
+  priority: "high" | "medium" | "low"
+  category: string
+}
+
+export interface LabelingFeedbackItem {
+  question_text: string
+  is_correct: boolean | null
+  feedback_text: string | null
+}
+
+export interface OptimizationResponse {
+  suggestions: OptimizationSuggestion[]
+  summary: string
+  trace_id: string
+}
+
 // App state types
 export type AppMode = "analyze" | "optimize"
 export type Phase = "input" | "ingest" | "analysis" | "summary"
-export type OptimizeView = "benchmarks" | "labeling" | "feedback"
+export type OptimizeView = "benchmarks" | "labeling" | "feedback" | "optimization"
 
 // Benchmark question from Genie Space JSON
 export interface BenchmarkQuestion {

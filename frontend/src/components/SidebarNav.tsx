@@ -17,6 +17,7 @@ import {
   Tag,
   FileText,
   Settings,
+  Sparkles,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -32,12 +33,14 @@ interface SidebarNavProps {
   showChecklist: boolean
   showSettings: boolean
   hasLabelingSession: boolean
+  hasOptimizationResults: boolean
   onGoToIngest: () => void
   onGoToSection: (index: number) => void
   onGoToSummary: () => void
   onGoToBenchmarks: () => void
   onGoToLabeling: () => void
   onGoToFeedback: () => void
+  onGoToOptimization: () => void
   onToggleChecklist: () => void
   onToggleSettings: () => void
   onReset: () => void
@@ -62,12 +65,14 @@ export function SidebarNav({
   showChecklist,
   showSettings,
   hasLabelingSession,
+  hasOptimizationResults,
   onGoToIngest,
   onGoToSection,
   onGoToSummary,
   onGoToBenchmarks,
   onGoToLabeling,
   onGoToFeedback,
+  onGoToOptimization,
   onToggleChecklist,
   onToggleSettings,
   onReset,
@@ -288,6 +293,23 @@ export function SidebarNav({
                 >
                   <FileText className="w-4 h-4" />
                   Feedback
+                </button>
+
+                {/* Optimization button */}
+                <button
+                  onClick={onGoToOptimization}
+                  disabled={!hasOptimizationResults}
+                  className={cn(
+                    "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left",
+                    optimizeView === "optimization" && !showChecklist
+                      ? "gradient-accent text-white shadow-lg shadow-accent/20 dark:glow-accent"
+                      : hasOptimizationResults
+                      ? "bg-elevated text-secondary hover:bg-sunken cursor-pointer"
+                      : "bg-elevated text-muted cursor-not-allowed opacity-60"
+                  )}
+                >
+                  <Sparkles className="w-4 h-4" />
+                  Optimization
                 </button>
               </div>
             </div>
