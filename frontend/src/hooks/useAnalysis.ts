@@ -10,6 +10,7 @@ import type {
   SectionInfo,
   SectionAnalysis,
   FetchSpaceResponse,
+  SqlExecutionResult,
 } from "@/types"
 import {
   fetchSpace,
@@ -37,6 +38,13 @@ export interface AnalysisState {
   analyzingSection: number | null
   selectedQuestions: string[]
   hasLabelingSession: boolean
+  // Labeling session state (persists across navigation)
+  labelingCurrentIndex: number
+  labelingGeneratedSql: Record<string, string>
+  labelingGenieResults: Record<string, SqlExecutionResult | null>
+  labelingExpectedResults: Record<string, SqlExecutionResult | null>
+  labelingCorrectAnswers: Record<string, boolean | null>
+  labelingFeedbackTexts: Record<string, string>
 }
 
 const initialState: AnalysisState = {
@@ -58,6 +66,13 @@ const initialState: AnalysisState = {
   analyzingSection: null,
   selectedQuestions: [],
   hasLabelingSession: false,
+  // Labeling session state
+  labelingCurrentIndex: 0,
+  labelingGeneratedSql: {},
+  labelingGenieResults: {},
+  labelingExpectedResults: {},
+  labelingCorrectAnswers: {},
+  labelingFeedbackTexts: {},
 }
 
 export function useAnalysis() {
@@ -366,6 +381,68 @@ export function useAnalysis() {
     }))
   }, [])
 
+  // Labeling session actions
+  const setLabelingCurrentIndex = useCallback((index: number) => {
+    setState((prev) => ({ ...prev, labelingCurrentIndex: index }))
+  }, [])
+
+  const setLabelingGeneratedSql = useCallback((questionId: string, sql: string) => {
+    setState((prev) => ({
+      ...prev,
+      labelingGeneratedSql: { ...prev.labelingGeneratedSql, [questionId]: sql },
+    }))
+  }, [])
+
+  const setLabelingGenieResult = useCallback(
+    (questionId: string, result: SqlExecutionResult | null) => {
+      setState((prev) => ({
+        ...prev,
+        labelingGenieResults: { ...prev.labelingGenieResults, [questionId]: result },
+      }))
+    },
+    []
+  )
+
+  const setLabelingExpectedResult = useCallback(
+    (questionId: string, result: SqlExecutionResult | null) => {
+      setState((prev) => ({
+        ...prev,
+        labelingExpectedResults: { ...prev.labelingExpectedResults, [questionId]: result },
+      }))
+    },
+    []
+  )
+
+  const setLabelingCorrectAnswer = useCallback(
+    (questionId: string, answer: boolean | null) => {
+      setState((prev) => ({
+        ...prev,
+        labelingCorrectAnswers: { ...prev.labelingCorrectAnswers, [questionId]: answer },
+      }))
+    },
+    []
+  )
+
+  const setLabelingFeedbackText = useCallback((questionId: string, text: string) => {
+    setState((prev) => ({
+      ...prev,
+      labelingFeedbackTexts: { ...prev.labelingFeedbackTexts, [questionId]: text },
+    }))
+  }, [])
+
+  const clearLabelingSession = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      hasLabelingSession: false,
+      labelingCurrentIndex: 0,
+      labelingGeneratedSql: {},
+      labelingGenieResults: {},
+      labelingExpectedResults: {},
+      labelingCorrectAnswers: {},
+      labelingFeedbackTexts: {},
+    }))
+  }, [])
+
   const reset = useCallback(() => {
     setState(initialState)
   }, [])
@@ -399,6 +476,14 @@ export function useAnalysis() {
       selectAllQuestions,
       deselectAllQuestions,
       clearSpaceData,
+      // Labeling session actions
+      setLabelingCurrentIndex,
+      setLabelingGeneratedSql,
+      setLabelingGenieResult,
+      setLabelingExpectedResult,
+      setLabelingCorrectAnswer,
+      setLabelingFeedbackText,
+      clearLabelingSession,
       reset,
     },
   }
