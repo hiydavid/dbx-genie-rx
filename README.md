@@ -15,25 +15,6 @@ This app was designed to be deployed on Databricks Apps. You can either:
 ![React](https://img.shields.io/badge/React-18+-61DAFB.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5+-3178C6.svg)
 
-## ✨ Features
-
-- **Mode Selection** — Choose between Analyze mode (full compliance analysis) or Optimize mode (benchmark testing)
-- **Comprehensive Analysis** — Evaluates 10 different sections of your Genie Space configuration
-- **Customizable Checklist** — All checks defined in `docs/checklist-by-schema.md`; edit to add/remove checks without code changes
-- **Best Practice Validation** — Checks against documented Databricks Genie Space best practices
-- **Severity-based Findings** — Categorizes issues as high, medium, or low severity
-- **Compliance Scoring** — Provides per-section and overall compliance scores (0-10)
-- **Actionable Recommendations** — Each finding includes specific remediation guidance
-- **Benchmarks View** — Review and validate benchmark questions from your Genie Space configuration
-- **Labeling Sessions** — Generate SQL with Genie, execute queries on SQL Warehouse, and compare outputs side-by-side
-- **Settings Page** — View read-only app configuration (Genie Space ID, LLM model, SQL Warehouse, Databricks host)
-- **Interactive Wizard UI** — Step-by-step analysis with progress navigation and JSON preview
-- **Modern React Frontend** — Beautiful, responsive UI built with React, TypeScript, and Tailwind CSS v4
-- **Dark Mode Support** — Auto-detects system preference with manual toggle, persists user choice
-- **MLflow Tracing** — (Optional) Enable by setting `MLFLOW_EXPERIMENT_ID` in `app.yaml`
-- **Configurable LLM** — Defaults to Claude Sonnet 4, configurable to any Databricks-hosted model
-- **Databricks Apps Deployment** — Deploy with user-based (OBO) authentication
-
 ## 📸 Walkthrough
 
 <p align="center">
@@ -61,38 +42,14 @@ This app was designed to be deployed on Databricks Apps. You can either:
   <em>5) View the final compliance summary and scores</em>
 </p>
 
-## 🏗️ Architecture
+### Optimize Mode
 
-```text
-┌─────────────────┐     ┌──────────────────────┐     ┌─────────────────┐
-│   React Frontend│────▶│   FastAPI + Agent    │────▶│  Databricks LLM │
-│    (frontend/)  │     │   (agent_server/)    │     │  (Claude Sonnet)│
-└─────────────────┘     └──────────────────────┘     └─────────────────┘
-                                  │
-        ┌─────────────────────────┼─────────────────────────┐
-        ▼                         ▼                         ▼
-┌───────────────┐       ┌─────────────────┐       ┌─────────────────┐
-│ Databricks API│       │    Checklist    │       │   MLflow Traces │
-│ (Genie Space) │       │    (docs/*.md)  │       │   (Databricks)  │
-└───────────────┘       └─────────────────┘       └─────────────────┘
-```
+The app also supports an **Optimize** workflow for improving Genie accuracy:
 
-### Analyzed Sections
-
-The analyzer evaluates the following Genie Space configuration sections:
-
-| Section | Description |
-|---------|-------------|
-| `data_sources.tables` | Table configurations and metadata |
-| `data_sources.metric_views` | Metric view definitions |
-| `instructions.text_instructions` | Natural language instructions |
-| `instructions.example_question_sqls` | Example question-SQL pairs |
-| `instructions.sql_functions` | Custom SQL function definitions |
-| `instructions.join_specs` | Table join specifications |
-| `instructions.sql_snippets.filters` | Reusable filter snippets |
-| `instructions.sql_snippets.expressions` | Reusable expression snippets |
-| `instructions.sql_snippets.measures` | Reusable measure snippets |
-| `benchmarks.questions` | Benchmark question configurations |
+1. **Benchmarks** - Select benchmark questions from your Genie Space config
+2. **Labeling** - Query Genie for each question, execute the SQL, and mark responses as correct/incorrect
+3. **Feedback** - Review the labeling session summary
+4. **Optimization** - AI generates field-level suggestions based on your feedback (instruction changes, SQL examples, filters, etc.)
 
 ## 📋 Prerequisites
 
@@ -175,10 +132,10 @@ Open <http://localhost:8000> in your browser. The server serves both the API and
 **For frontend development with hot-reload**, run the backend and Vite dev server separately:
 
 ```bash
-# Terminal 1 - Backend
-uv run start-server
+# Terminal 1 - Backend (with hot-reload on port 5001)
+uv run uvicorn agent_server.start_server:app --reload --port 5001
 
-# Terminal 2 - Frontend (hot-reload)
+# Terminal 2 - Frontend (hot-reload, proxies to backend on 5001)
 cd frontend && npm run dev
 ```
 
@@ -211,67 +168,20 @@ MLFLOW_REGISTRY_URI=databricks-uc
 MLFLOW_EXPERIMENT_ID=123456789
 
 # LLM model for analysis
-LLM_MODEL=databricks-claude-sonnet-4
+LLM_MODEL=databricks-claude-sonnet-4-5
 ```
 
 | Variable | Required | Description |
-|----------|----------|-------------|
+| ---------- | ---------- | ------------- |
 | `DATABRICKS_HOST` | Yes (local) | Your Databricks workspace URL |
 | `DATABRICKS_CONFIG_PROFILE` | No | Databricks CLI profile (default: DEFAULT) |
 | `DATABRICKS_TOKEN` | Optional | PAT token (alternative to OAuth) |
 | `MLFLOW_TRACKING_URI` | No | Set to `databricks` to log traces to workspace |
 | `MLFLOW_EXPERIMENT_ID` | No | MLflow experiment ID - set to enable tracing |
-| `LLM_MODEL` | Yes | LLM model name (default: `databricks-claude-sonnet-4`) |
+| `LLM_MODEL` | Yes | LLM model name (default: `databricks-claude-sonnet-4-5`) |
 | `SQL_WAREHOUSE_ID` | No | SQL Warehouse ID for executing benchmark queries in labeling sessions |
 
 > **Note:** When deployed to Databricks Apps, configure these in `app.yaml`. MLflow tracing is optional—leave `MLFLOW_EXPERIMENT_ID` empty to disable it. Authentication is handled automatically via OAuth (OBO).
-
-## 📖 Usage
-
-### React UI
-
-The interactive wizard guides you through 4 phases:
-
-1. **Input** — Select mode (Analyze or Optimize), enter your Genie Space ID or paste JSON, then click "Fetch" or "Load JSON"
-2. **Ingest Preview** — Review the serialized JSON data and metrics before analysis
-3. **Section Analysis** — Step through each section, view checklist progress and findings
-4. **Summary** — See overall compliance score with expandable section results
-
-> **Note:** Optimize mode provides a benchmarks view for reviewing and validating benchmark questions from your Genie Space configuration.
-
-**UI Features:**
-
-- 📍 **Sidebar Navigation** — Track progress and jump to completed sections
-- 📄 **JSON Preview** — Inspect raw data alongside analysis results
-- ✅ **Checklist Progress** — Visual pass/fail indicators for each check
-- 📊 **Score Cards** — Color-coded compliance scores
-- 📚 **Checklist Reference** — Dedicated page for viewing checklist documentation
-
-### REST API
-
-The backend exposes the following API endpoints:
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/space/fetch` | POST | Fetch a Genie Space by ID |
-| `/api/space/parse` | POST | Parse pasted Genie Space JSON |
-| `/api/analyze/section` | POST | Analyze a single section |
-| `/api/analyze/stream` | POST | Stream analysis progress (SSE) |
-| `/api/genie/query` | POST | Query Genie to generate SQL for a question |
-| `/api/sql/execute` | POST | Execute SQL on a Databricks SQL Warehouse |
-| `/api/settings` | GET | Get app configuration (LLM, warehouse, host) |
-| `/api/checklist` | GET | Get checklist documentation |
-| `/api/sections` | GET | List all section names |
-| `/api/debug/auth` | GET | Debug authentication status and environment |
-| `/invocations` | POST | Legacy MLflow agent endpoint |
-
-Example API call:
-
-```bash
-curl -X POST http://localhost:5001/api/space/fetch \
-  -H "Content-Type: application/json" \
-  -d '{"genie_space_id": "your-genie-space-id"}'
-```
 
 ## 📁 Project Structure
 
@@ -279,12 +189,13 @@ curl -X POST http://localhost:5001/api/space/fetch \
 dbx-genie-rx/
 ├── agent_server/           # Core analyzer backend
 │   ├── agent.py           # GenieSpaceAnalyzer class & MLflow tracing
+│   ├── optimizer.py       # GenieSpaceOptimizer for optimization suggestions
 │   ├── api.py             # REST API endpoints for React frontend
 │   ├── auth.py            # Authentication (PAT local, OBO for Apps)
 │   ├── checklist_parser.py # Parses checklist from docs/checklist-by-schema.md
 │   ├── checks.py          # Wrapper for checklist item retrieval
 │   ├── ingest.py          # Databricks SDK client for Genie Spaces
-│   ├── models.py          # Pydantic models (AgentInput, AgentOutput)
+│   ├── models.py          # Pydantic models (AgentInput, AgentOutput, OptimizationSuggestion)
 │   ├── prompts.py         # LLM prompt templates
 │   ├── sql_executor.py    # SQL execution via Databricks Statement Execution API
 │   └── start_server.py    # FastAPI server entry point
@@ -293,20 +204,14 @@ dbx-genie-rx/
 │   ├── src/
 │   │   ├── components/    # React components
 │   │   │   ├── ui/       # Reusable UI components (Button, Card, etc.)
-│   │   │   ├── InputPhase.tsx
-│   │   │   ├── IngestPhase.tsx
-│   │   │   ├── AnalysisPhase.tsx
-│   │   │   ├── SummaryPhase.tsx
-│   │   │   ├── BenchmarksPage.tsx # Benchmarks view for Optimize mode
-│   │   │   ├── LabelingPage.tsx   # Labeling session with SQL execution
-│   │   │   ├── SettingsPage.tsx   # Read-only app configuration
-│   │   │   ├── DataTable.tsx      # Table for SQL query results
-│   │   │   ├── ChecklistPage.tsx  # Checklist reference documentation
-│   │   │   ├── ChecklistProgress.tsx # Progress indicator for checks
-│   │   │   ├── SidebarNav.tsx
-│   │   │   ├── ThemeToggle.tsx    # Dark/light mode toggle
-│   │   │   └── ScoreGauge.tsx     # Animated radial score gauge
-│   │   ├── hooks/        # Custom React hooks (useTheme, etc.)
+│   │   │   ├── *Phase.tsx # Analyze mode: InputPhase, IngestPhase, AnalysisPhase, SummaryPhase
+│   │   │   ├── BenchmarksPage.tsx   # Optimize mode: Select benchmark questions
+│   │   │   ├── LabelingPage.tsx     # Optimize mode: Label Genie responses
+│   │   │   ├── FeedbackPage.tsx     # Optimize mode: Review labeling summary
+│   │   │   ├── OptimizationPage.tsx # Optimize mode: View AI suggestions
+│   │   │   ├── SuggestionCard.tsx   # Card for displaying optimization suggestions
+│   │   │   └── ...
+│   │   ├── hooks/        # Custom React hooks (useAnalysis, useTheme)
 │   │   ├── lib/          # Utilities and API client
 │   │   └── types/        # TypeScript type definitions
 │   ├── package.json
@@ -318,8 +223,6 @@ dbx-genie-rx/
 ├── docs/                   # Checklist and schema documentation
 │   ├── checklist-by-schema.md  # Source of truth for all checks (editable)
 │   └── genie-space-schema.md   # Genie Space JSON schema reference
-├── output/                 # Output files (saved analysis reports)
-├── app.py                  # Legacy Streamlit UI (deprecated)
 ├── app.yaml                # Databricks Apps configuration
 ├── requirements.txt        # Python dependencies (for Databricks Apps)
 └── pyproject.toml          # Project configuration
@@ -351,16 +254,9 @@ After deploying, you must grant the app's service principal (SP) access to requi
 ### Authentication
 
 | Environment | Auth Method | Description |
-|-------------|-------------|-------------|
+| ------------- | ------------- | ------------- |
 | Local Development | PAT / OAuth | Uses `DATABRICKS_TOKEN` or CLI OAuth |
 | Databricks Apps | SP + OBO | SP accesses resources; OBO for user context |
-
-### Troubleshooting
-
-If you get "Unable to get space" errors:
-
-- **Verify SP permissions**: Ensure the app's SP has **Can Edit** on the Genie Space
-- **Use the "Paste JSON" option** as a workaround—manually fetch the space JSON and paste it into the app
 
 ### Updating the Deployed App
 
@@ -392,60 +288,3 @@ When enabled, all LLM calls and analysis steps are traced and logged to your Dat
 ```text
 metadata.`mlflow.trace.session` = '<session-id>'
 ```
-
-## 🛠️ Development
-
-### Frontend Development
-
-```bash
-cd frontend
-
-# Install dependencies
-npm install
-
-# Start development server (with hot reload)
-npm run dev
-
-# Build for production
-npm run build
-
-# Lint code
-npm run lint
-
-# Preview production build
-npm run preview
-
-# Type checking (TypeScript is checked during build)
-npm run build
-```
-
-### Font Setup (Optional)
-
-The frontend uses self-hosted fonts for the design system. Download and place the following `.woff2` files in `frontend/public/fonts/`:
-
-| Font | Files | Source |
-|------|-------|--------|
-| Cabinet Grotesk | `CabinetGrotesk-Bold.woff2`, `CabinetGrotesk-Extrabold.woff2` | [fontshare.com](https://www.fontshare.com/fonts/cabinet-grotesk) |
-| General Sans | `GeneralSans-Regular.woff2`, `GeneralSans-Medium.woff2`, `GeneralSans-Semibold.woff2` | [fontshare.com](https://www.fontshare.com/fonts/general-sans) |
-| JetBrains Mono | `JetBrainsMono-Regular.woff2`, `JetBrainsMono-Medium.woff2` | [jetbrains.com](https://www.jetbrains.com/lp/mono/) |
-
-> **Note:** The app works without these fonts (falls back to system fonts), but the custom fonts provide the intended design experience.
-
-### Backend Development
-
-```bash
-# Install dependencies
-uv sync
-
-# Start server with hot reload
-uv run uvicorn agent_server.start_server:app --reload --port 5001
-
-# Run tests
-uv run python test_agent.py
-```
-
-## 🛣️ Future Roadmap
-
-- 💾 **Save Summary Report** — Export analysis results to JSON/Markdown files
-- 📈 **Historical Comparison** — Track improvements over time
-- 🔧 **Auto-fix Suggestions** — Generate fix scripts for common issues
