@@ -58,28 +58,40 @@ Note: `app.py` at the root is a deprecated Streamlit UI; use `agent_server/` for
 ### Core Components
 
 | File | Purpose |
-|------|---------|
+| ------ | --------- |
 | `agent_server/agent.py` | `GenieSpaceAnalyzer` class with LLM integration, MLflow tracing, streaming |
-| `agent_server/api.py` | REST API endpoints for frontend (`/api/space/fetch`, `/api/analyze/section`, etc.) |
+| `agent_server/optimizer.py` | `GenieSpaceOptimizer` class for generating field-level optimization suggestions |
+| `agent_server/api.py` | REST API endpoints for frontend (`/api/space/fetch`, `/api/analyze/section`, `/api/optimize`, etc.) |
 | `agent_server/checklist_parser.py` | Parses `docs/checklist-by-schema.md` to extract checklist items by section |
 | `agent_server/checks.py` | Thin wrapper around checklist_parser for getting items per section |
 | `agent_server/auth.py` | OBO authentication for Databricks Apps, PAT/OAuth for local dev |
 | `agent_server/ingest.py` | Databricks SDK wrapper for fetching Genie Space configs |
-| `agent_server/models.py` | Pydantic models: `AgentInput`, `AgentOutput`, `Finding`, `SectionAnalysis`, `ChecklistItem` |
-| `agent_server/prompts.py` | LLM prompt templates for checklist evaluation |
-| `frontend/src/App.tsx` | Main React app orchestrating the 4-phase wizard |
-| `frontend/src/components/*Phase.tsx` | Phase-specific UI: `InputPhase`, `IngestPhase`, `AnalysisPhase`, `SummaryPhase` |
-| `frontend/src/hooks/useTheme.ts` | Theme hook: system preference detection, localStorage persistence, dark class toggle |
-| `frontend/src/components/ThemeToggle.tsx` | Sun/Moon icon toggle for light/dark mode |
-| `frontend/src/components/ScoreGauge.tsx` | Animated radial SVG progress gauge for compliance scores |
-| `frontend/src/components/LabelingPage.tsx` | Labeling session UI with SQL generation, execution, and diff view |
-| `frontend/src/components/SettingsPage.tsx` | Settings page showing read-only app configuration |
-| `frontend/src/components/DataTable.tsx` | Reusable table for displaying SQL query results |
+| `agent_server/models.py` | Pydantic models: `AgentInput`, `AgentOutput`, `Finding`, `SectionAnalysis`, `ChecklistItem`, `OptimizationSuggestion`, `OptimizationRequest/Response` |
+| `agent_server/prompts.py` | LLM prompt templates for checklist evaluation and optimization suggestions |
 | `agent_server/sql_executor.py` | SQL execution via Databricks Statement Execution API |
+| `frontend/src/App.tsx` | Main React app orchestrating both Analyze and Optimize modes |
+| `frontend/src/components/*Phase.tsx` | Analyze mode UI: `InputPhase`, `IngestPhase`, `AnalysisPhase`, `SummaryPhase` |
+| `frontend/src/components/BenchmarksPage.tsx` | Optimize mode: Select benchmark questions for labeling |
+| `frontend/src/components/LabelingPage.tsx` | Optimize mode: Label Genie responses as correct/incorrect with feedback |
+| `frontend/src/components/FeedbackPage.tsx` | Optimize mode: Review labeling session summary |
+| `frontend/src/components/OptimizationPage.tsx` | Optimize mode: Display AI-generated optimization suggestions |
+| `frontend/src/components/SuggestionCard.tsx` | Card component showing field path, rationale, and current vs. suggested values |
+| `frontend/src/hooks/useAnalysis.ts` | Main state hook managing both Analyze and Optimize workflows |
+| `frontend/src/hooks/useTheme.ts` | Theme hook: system preference detection, localStorage persistence |
+| `frontend/src/components/ScoreGauge.tsx` | Animated radial SVG progress gauge for compliance scores |
+| `frontend/src/components/DataTable.tsx` | Reusable table for displaying SQL query results |
 
 ### Analysis Approach
 
 All checklist items are defined in `docs/checklist-by-schema.md` and evaluated by the LLM. The markdown file is parsed at runtime, so users can add/remove/modify checks without changing code.
+
+### Optimization Approach
+
+The Optimize mode follows a 4-step workflow:
+1. **Benchmarks**: Select benchmark questions from the Genie Space config
+2. **Labeling**: For each question, query Genie for SQL, execute it, and mark as correct/incorrect with optional feedback
+3. **Feedback**: Review the labeling session summary
+4. **Optimization**: AI analyzes the config + labeling feedback to generate field-level suggestions (field path, current value, suggested value, rationale, priority)
 
 ## Key Patterns
 
@@ -121,6 +133,7 @@ The frontend uses a custom design system with:
 - **Animations**: CSS-only animations defined in `index.css` (`@keyframes fadeSlideUp`, `scan`, etc.)
 
 To add/download fonts, get them from:
-- Cabinet Grotesk: https://www.fontshare.com/fonts/cabinet-grotesk
-- General Sans: https://www.fontshare.com/fonts/general-sans
-- JetBrains Mono: https://www.jetbrains.com/lp/mono/
+
+- [Cabinet Grotesk](https://www.fontshare.com/fonts/cabinet-grotesk)
+- [General Sans](https://www.fontshare.com/fonts/general-sans)
+- [JetBrains Mono](https://www.jetbrains.com/lp/mono/)
