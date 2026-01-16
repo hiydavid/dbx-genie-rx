@@ -47,6 +47,20 @@ function App() {
           genieSpaceId={state.genieSpaceId}
           spaceData={state.spaceData}
           selectedQuestions={state.selectedQuestions}
+          // Lifted state
+          currentIndex={state.labelingCurrentIndex}
+          generatedSql={state.labelingGeneratedSql}
+          genieResults={state.labelingGenieResults}
+          expectedResults={state.labelingExpectedResults}
+          correctAnswers={state.labelingCorrectAnswers}
+          feedbackTexts={state.labelingFeedbackTexts}
+          // Actions
+          onSetCurrentIndex={actions.setLabelingCurrentIndex}
+          onSetGeneratedSql={actions.setLabelingGeneratedSql}
+          onSetGenieResult={actions.setLabelingGenieResult}
+          onSetExpectedResult={actions.setLabelingExpectedResult}
+          onSetCorrectAnswer={actions.setLabelingCorrectAnswer}
+          onSetFeedbackText={actions.setLabelingFeedbackText}
           onBack={actions.goToBenchmarks}
         />
       )

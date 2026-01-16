@@ -17,6 +17,20 @@ interface LabelingPageProps {
   genieSpaceId: string
   spaceData: Record<string, unknown>
   selectedQuestions: string[]
+  // Lifted state (persists across navigation)
+  currentIndex: number
+  generatedSql: Record<string, string>
+  genieResults: Record<string, SqlExecutionResult | null>
+  expectedResults: Record<string, SqlExecutionResult | null>
+  correctAnswers: Record<string, boolean | null>
+  feedbackTexts: Record<string, string>
+  // Actions
+  onSetCurrentIndex: (index: number) => void
+  onSetGeneratedSql: (questionId: string, sql: string) => void
+  onSetGenieResult: (questionId: string, result: SqlExecutionResult | null) => void
+  onSetExpectedResult: (questionId: string, result: SqlExecutionResult | null) => void
+  onSetCorrectAnswer: (questionId: string, answer: boolean | null) => void
+  onSetFeedbackText: (questionId: string, text: string) => void
   onBack: () => void
 }
 
@@ -24,25 +38,28 @@ export function LabelingPage({
   genieSpaceId,
   spaceData,
   selectedQuestions,
+  // Lifted state
+  currentIndex,
+  generatedSql,
+  genieResults,
+  expectedResults,
+  correctAnswers,
+  feedbackTexts,
+  // Actions
+  onSetCurrentIndex,
+  onSetGeneratedSql,
+  onSetGenieResult,
+  onSetExpectedResult,
+  onSetCorrectAnswer,
+  onSetFeedbackText,
   onBack,
 }: LabelingPageProps) {
-  const [currentIndex, setCurrentIndex] = useState(0)
-
-  // Genie SQL generation state
-  const [generatedSql, setGeneratedSql] = useState<Record<string, string>>({})
+  // Transient UI state (local only)
   const [generatingFor, setGeneratingFor] = useState<string | null>(null)
   const [generateError, setGenerateError] = useState<string | null>(null)
   const [showDiff, setShowDiff] = useState(false)
-
-  // SQL execution state (keyed by question ID for session persistence)
-  const [genieResults, setGenieResults] = useState<Record<string, SqlExecutionResult | null>>({})
-  const [expectedResults, setExpectedResults] = useState<Record<string, SqlExecutionResult | null>>({})
   const [isExecutingGenie, setIsExecutingGenie] = useState(false)
   const [isExecutingExpected, setIsExecutingExpected] = useState(false)
-
-  // Labeling feedback state (keyed by question ID for session persistence)
-  const [correctAnswers, setCorrectAnswers] = useState<Record<string, boolean | null>>({})
-  const [feedbackTexts, setFeedbackTexts] = useState<Record<string, string>>({})
 
   // Get the selected questions in order
   const questions = useMemo(() => {
@@ -61,19 +78,19 @@ export function LabelingPage({
   const allLabeled = labeledCount === totalQuestions && totalQuestions > 0
 
   const handlePrev = () => {
-    setCurrentIndex(i => Math.max(0, i - 1))
+    onSetCurrentIndex(Math.max(0, currentIndex - 1))
   }
 
   const handleNext = () => {
-    setCurrentIndex(i => Math.min(totalQuestions - 1, i + 1))
+    onSetCurrentIndex(Math.min(totalQuestions - 1, currentIndex + 1))
   }
 
   const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setCurrentIndex(Number(e.target.value))
+    onSetCurrentIndex(Number(e.target.value))
   }
 
   const handleSegmentClick = (idx: number) => {
-    setCurrentIndex(idx)
+    onSetCurrentIndex(idx)
   }
 
   // Get expected SQL from answer (look for SQL format first, then fall back to first answer)
@@ -128,10 +145,7 @@ export function LabelingPage({
       const response = await queryGenie(genieSpaceId, questionText)
 
       if (response.status === "COMPLETED" && response.sql) {
-        setGeneratedSql(prev => ({
-          ...prev,
-          [questionId]: response.sql!
-        }))
+        onSetGeneratedSql(questionId, response.sql)
 
         // Execute both SQLs in parallel
         setIsExecutingGenie(true)
@@ -144,34 +158,28 @@ export function LabelingPage({
 
         // Handle Genie result
         if (genieExec.status === "fulfilled" && genieExec.value) {
-          setGenieResults(prev => ({ ...prev, [questionId]: genieExec.value }))
+          onSetGenieResult(questionId, genieExec.value)
         } else if (genieExec.status === "rejected") {
-          setGenieResults(prev => ({
-            ...prev,
-            [questionId]: {
-              columns: [],
-              data: [],
-              row_count: 0,
-              truncated: false,
-              error: genieExec.reason?.message || "Failed to execute Genie SQL",
-            }
-          }))
+          onSetGenieResult(questionId, {
+            columns: [],
+            data: [],
+            row_count: 0,
+            truncated: false,
+            error: genieExec.reason?.message || "Failed to execute Genie SQL",
+          })
         }
 
         // Handle Expected result
         if (expectedExec.status === "fulfilled" && expectedExec.value) {
-          setExpectedResults(prev => ({ ...prev, [questionId]: expectedExec.value }))
+          onSetExpectedResult(questionId, expectedExec.value)
         } else if (expectedExec.status === "rejected") {
-          setExpectedResults(prev => ({
-            ...prev,
-            [questionId]: {
-              columns: [],
-              data: [],
-              row_count: 0,
-              truncated: false,
-              error: expectedExec.reason?.message || "Failed to execute Expected SQL",
-            }
-          }))
+          onSetExpectedResult(questionId, {
+            columns: [],
+            data: [],
+            row_count: 0,
+            truncated: false,
+            error: expectedExec.reason?.message || "Failed to execute Expected SQL",
+          })
         }
 
         setIsExecutingGenie(false)
@@ -359,7 +367,7 @@ export function LabelingPage({
               <label className="text-sm text-secondary mb-2 block">Was Genie's output correct?</label>
               <div className="flex gap-2">
                 <button
-                  onClick={() => currentQuestion && setCorrectAnswers(prev => ({ ...prev, [currentQuestion.id]: true }))}
+                  onClick={() => currentQuestion && onSetCorrectAnswer(currentQuestion.id, true)}
                   disabled={!genieResult}
                   className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
                     isCorrect === true
@@ -370,7 +378,7 @@ export function LabelingPage({
                   Yes
                 </button>
                 <button
-                  onClick={() => currentQuestion && setCorrectAnswers(prev => ({ ...prev, [currentQuestion.id]: false }))}
+                  onClick={() => currentQuestion && onSetCorrectAnswer(currentQuestion.id, false)}
                   disabled={!genieResult}
                   className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
                     isCorrect === false
@@ -388,7 +396,7 @@ export function LabelingPage({
               <label className="text-sm text-secondary mb-2 block">If not, what did Genie get wrong?</label>
               <textarea
                 value={feedbackText}
-                onChange={(e) => currentQuestion && setFeedbackTexts(prev => ({ ...prev, [currentQuestion.id]: e.target.value }))}
+                onChange={(e) => currentQuestion && onSetFeedbackText(currentQuestion.id, e.target.value)}
                 placeholder="Describe what was incorrect..."
                 disabled={!genieResult}
                 className="w-full p-2 text-sm rounded-lg border border-default bg-surface text-primary placeholder:text-muted resize-none focus:outline-none focus:ring-2 focus:ring-accent/50 transition-colors disabled:cursor-not-allowed disabled:bg-elevated"
