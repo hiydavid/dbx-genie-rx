@@ -32,6 +32,7 @@ interface LabelingPageProps {
   onSetCorrectAnswer: (questionId: string, answer: boolean | null) => void
   onSetFeedbackText: (questionId: string, text: string) => void
   onBack: () => void
+  onFinish: () => void
 }
 
 export function LabelingPage({
@@ -53,6 +54,7 @@ export function LabelingPage({
   onSetCorrectAnswer,
   onSetFeedbackText,
   onBack,
+  onFinish,
 }: LabelingPageProps) {
   // Transient UI state (local only)
   const [generatingFor, setGeneratingFor] = useState<string | null>(null)
@@ -310,6 +312,7 @@ export function LabelingPage({
           <Button
             size="sm"
             disabled={!allLabeled}
+            onClick={onFinish}
           >
             <Check className="w-4 h-4 mr-1" />
             Finish

@@ -372,6 +372,14 @@ export function useAnalysis() {
     }))
   }, [])
 
+  const goToFeedback = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      optimizeView: "feedback",
+      showChecklist: false,
+    }))
+  }, [])
+
   const clearSpaceData = useCallback(() => {
     setState((prev) => ({
       ...prev,
@@ -467,6 +475,7 @@ export function useAnalysis() {
       goToIngest,
       goToBenchmarks,
       goToLabeling,
+      goToFeedback,
       toggleChecklist,
       toggleSettings,
       toggleSectionExpanded,

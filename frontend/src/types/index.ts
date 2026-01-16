@@ -93,7 +93,7 @@ export interface AppSettings {
 // App state types
 export type AppMode = "analyze" | "optimize"
 export type Phase = "input" | "ingest" | "analysis" | "summary"
-export type OptimizeView = "benchmarks" | "labeling"
+export type OptimizeView = "benchmarks" | "labeling" | "feedback"
 
 // Benchmark question from Genie Space JSON
 export interface BenchmarkQuestion {

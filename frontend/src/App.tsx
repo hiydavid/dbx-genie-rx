@@ -14,6 +14,7 @@ import { SummaryPhase } from "@/components/SummaryPhase"
 import { ChecklistPage } from "@/components/ChecklistPage"
 import { BenchmarksPage } from "@/components/BenchmarksPage"
 import { LabelingPage } from "@/components/LabelingPage"
+import { FeedbackPage } from "@/components/FeedbackPage"
 import { SettingsPage } from "@/components/SettingsPage"
 import { ThemeToggle } from "@/components/ThemeToggle"
 
@@ -41,6 +42,19 @@ function App() {
     }
 
     // Handle optimize views
+    if (state.optimizeView === "feedback" && state.spaceData) {
+      return (
+        <FeedbackPage
+          spaceData={state.spaceData}
+          selectedQuestions={state.selectedQuestions}
+          correctAnswers={state.labelingCorrectAnswers}
+          feedbackTexts={state.labelingFeedbackTexts}
+          onBack={actions.goToLabeling}
+          onBeginOptimization={() => {}}
+        />
+      )
+    }
+
     if (state.optimizeView === "labeling" && state.spaceData) {
       return (
         <LabelingPage
@@ -62,6 +76,7 @@ function App() {
           onSetCorrectAnswer={actions.setLabelingCorrectAnswer}
           onSetFeedbackText={actions.setLabelingFeedbackText}
           onBack={actions.goToBenchmarks}
+          onFinish={actions.goToFeedback}
         />
       )
     }
@@ -163,6 +178,7 @@ function App() {
           onGoToSummary={actions.goToSummary}
           onGoToBenchmarks={actions.goToBenchmarks}
           onGoToLabeling={actions.goToLabeling}
+          onGoToFeedback={actions.goToFeedback}
           onToggleChecklist={actions.toggleChecklist}
           onToggleSettings={actions.toggleSettings}
           onReset={actions.reset}
