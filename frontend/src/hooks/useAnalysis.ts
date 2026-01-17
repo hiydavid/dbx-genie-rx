@@ -20,7 +20,12 @@ import {
   analyzeSection,
   analyzeAllSections as analyzeAllSectionsApi,
   generateOptimizations as generateOptimizationsApi,
+  queryGenie,
+  executeSql,
 } from "@/lib/api"
+
+// Ref to track cancellation for benchmark processing
+let benchmarkProcessingCancelledRef = false
 
 export interface AnalysisState {
   mode: AppMode | null
@@ -48,6 +53,10 @@ export interface AnalysisState {
   labelingExpectedResults: Record<string, SqlExecutionResult | null>
   labelingCorrectAnswers: Record<string, boolean | null>
   labelingFeedbackTexts: Record<string, string>
+  labelingProcessingErrors: Record<string, string>
+  // Benchmark processing state (upfront processing before labeling)
+  isProcessingBenchmarks: boolean
+  benchmarkProcessingProgress: { current: number; total: number } | null
   // Optimization state
   optimizationSuggestions: OptimizationSuggestion[] | null
   optimizationSummary: string | null
@@ -80,6 +89,10 @@ const initialState: AnalysisState = {
   labelingExpectedResults: {},
   labelingCorrectAnswers: {},
   labelingFeedbackTexts: {},
+  labelingProcessingErrors: {},
+  // Benchmark processing state
+  isProcessingBenchmarks: false,
+  benchmarkProcessingProgress: null,
   // Optimization state
   optimizationSuggestions: null,
   optimizationSummary: null,
@@ -509,6 +522,163 @@ export function useAnalysis() {
       labelingExpectedResults: {},
       labelingCorrectAnswers: {},
       labelingFeedbackTexts: {},
+      labelingProcessingErrors: {},
+    }))
+  }, [])
+
+  // Benchmark processing - process all questions upfront before labeling
+  const processBenchmarksAndGoToLabeling = useCallback(async () => {
+    const { genieSpaceId, spaceData, selectedQuestions } = state
+    if (!spaceData || selectedQuestions.length === 0) return
+
+    // Get all benchmark questions
+    const benchmarks = spaceData?.benchmarks as { questions?: BenchmarkQuestion[] }
+    const allQuestions = benchmarks?.questions || []
+
+    // Reset cancellation flag
+    benchmarkProcessingCancelledRef = false
+
+    setState((prev) => ({
+      ...prev,
+      isProcessingBenchmarks: true,
+      benchmarkProcessingProgress: { current: 0, total: selectedQuestions.length },
+      labelingProcessingErrors: {},
+    }))
+
+    // Helper to get expected SQL for a question
+    const getExpectedSql = (question: BenchmarkQuestion): string | null => {
+      if (!question?.answer?.length) return null
+      const sqlAnswer = question.answer.find(a => a.format.toLowerCase() === "sql")
+      const answer = sqlAnswer || question.answer[0]
+      return answer?.content?.join("") || null
+    }
+
+    // Process each question sequentially
+    for (let i = 0; i < selectedQuestions.length; i++) {
+      if (benchmarkProcessingCancelledRef) {
+        // User cancelled - stop processing but don't navigate
+        setState((prev) => ({
+          ...prev,
+          isProcessingBenchmarks: false,
+          benchmarkProcessingProgress: null,
+        }))
+        return
+      }
+
+      const questionId = selectedQuestions[i]
+      const question = allQuestions.find(q => q.id === questionId)
+
+      // Update progress
+      setState((prev) => ({
+        ...prev,
+        benchmarkProcessingProgress: { current: i + 1, total: selectedQuestions.length },
+      }))
+
+      if (!question) continue
+
+      // Skip if already processed
+      if (state.labelingGeneratedSql[questionId]) continue
+
+      try {
+        const questionText = question.question.join(" ")
+        const response = await queryGenie(genieSpaceId, questionText)
+
+        if (benchmarkProcessingCancelledRef) continue
+
+        if (response.status === "COMPLETED" && response.sql) {
+          // Store generated SQL
+          setState((prev) => ({
+            ...prev,
+            labelingGeneratedSql: { ...prev.labelingGeneratedSql, [questionId]: response.sql! },
+          }))
+
+          // Execute both SQLs in parallel
+          const expectedSql = getExpectedSql(question)
+          const [genieExec, expectedExec] = await Promise.allSettled([
+            executeSql(response.sql),
+            expectedSql ? executeSql(expectedSql) : Promise.resolve(null),
+          ])
+
+          if (benchmarkProcessingCancelledRef) continue
+
+          // Store Genie result
+          if (genieExec.status === "fulfilled" && genieExec.value) {
+            setState((prev) => ({
+              ...prev,
+              labelingGenieResults: { ...prev.labelingGenieResults, [questionId]: genieExec.value },
+            }))
+          } else if (genieExec.status === "rejected") {
+            setState((prev) => ({
+              ...prev,
+              labelingGenieResults: {
+                ...prev.labelingGenieResults,
+                [questionId]: {
+                  columns: [],
+                  data: [],
+                  row_count: 0,
+                  truncated: false,
+                  error: genieExec.reason?.message || "Failed to execute Genie SQL",
+                },
+              },
+            }))
+          }
+
+          // Store Expected result
+          if (expectedExec.status === "fulfilled" && expectedExec.value) {
+            setState((prev) => ({
+              ...prev,
+              labelingExpectedResults: { ...prev.labelingExpectedResults, [questionId]: expectedExec.value },
+            }))
+          } else if (expectedExec.status === "rejected") {
+            setState((prev) => ({
+              ...prev,
+              labelingExpectedResults: {
+                ...prev.labelingExpectedResults,
+                [questionId]: {
+                  columns: [],
+                  data: [],
+                  row_count: 0,
+                  truncated: false,
+                  error: expectedExec.reason?.message || "Failed to execute Expected SQL",
+                },
+              },
+            }))
+          }
+        } else {
+          // Genie failed to generate SQL
+          const errorMsg = response.error || "Genie did not generate SQL for this question"
+          setState((prev) => ({
+            ...prev,
+            labelingProcessingErrors: { ...prev.labelingProcessingErrors, [questionId]: errorMsg },
+          }))
+        }
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : "Failed to process question"
+        setState((prev) => ({
+          ...prev,
+          labelingProcessingErrors: { ...prev.labelingProcessingErrors, [questionId]: errorMsg },
+        }))
+      }
+    }
+
+    // Processing complete - navigate to labeling
+    if (!benchmarkProcessingCancelledRef) {
+      setState((prev) => ({
+        ...prev,
+        isProcessingBenchmarks: false,
+        benchmarkProcessingProgress: null,
+        optimizeView: "labeling",
+        hasLabelingSession: true,
+      }))
+    }
+  }, [state.genieSpaceId, state.spaceData, state.selectedQuestions, state.labelingGeneratedSql])
+
+  const cancelBenchmarkProcessing = useCallback(() => {
+    benchmarkProcessingCancelledRef = true
+    setState((prev) => ({
+      ...prev,
+      isProcessingBenchmarks: false,
+      benchmarkProcessingProgress: null,
     }))
   }, [])
 
@@ -556,6 +726,9 @@ export function useAnalysis() {
       setLabelingCorrectAnswer,
       setLabelingFeedbackText,
       clearLabelingSession,
+      // Benchmark processing actions
+      processBenchmarksAndGoToLabeling,
+      cancelBenchmarkProcessing,
       reset,
     },
   }

@@ -13,6 +13,8 @@ import {
   Square,
   Tag,
   ArrowRight,
+  Loader2,
+  X,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -27,7 +29,12 @@ interface BenchmarksPageProps {
   onToggleSelection: (questionId: string) => void
   onSelectAll: (questionIds: string[]) => void
   onDeselectAll: () => void
-  onBeginLabeling: () => void
+  // Processing state
+  isProcessingBenchmarks: boolean
+  benchmarkProcessingProgress: { current: number; total: number } | null
+  // Actions
+  onProcessBenchmarksAndGoToLabeling: () => void
+  onCancelBenchmarkProcessing: () => void
 }
 
 export function BenchmarksPage({
@@ -37,7 +44,10 @@ export function BenchmarksPage({
   onToggleSelection,
   onSelectAll,
   onDeselectAll,
-  onBeginLabeling,
+  isProcessingBenchmarks,
+  benchmarkProcessingProgress,
+  onProcessBenchmarksAndGoToLabeling,
+  onCancelBenchmarkProcessing,
 }: BenchmarksPageProps) {
   const [expandedQuestions, setExpandedQuestions] = useState<Record<string, boolean>>({})
   const [searchQuery, setSearchQuery] = useState("")
@@ -100,8 +110,8 @@ export function BenchmarksPage({
 
         {hasBenchmarks && (
           <Button
-            onClick={onBeginLabeling}
-            disabled={!someSelected}
+            onClick={onProcessBenchmarksAndGoToLabeling}
+            disabled={!someSelected || isProcessingBenchmarks}
             className="gap-2"
           >
             <Tag className="w-4 h-4" />
@@ -292,6 +302,68 @@ export function BenchmarksPage({
             </Card>
           )}
         </>
+      )}
+
+      {/* Processing Modal */}
+      {isProcessingBenchmarks && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+
+          {/* Modal */}
+          <Card className="relative z-10 w-full max-w-md mx-4 shadow-2xl">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg font-display">Processing Questions</CardTitle>
+                <button
+                  onClick={onCancelBenchmarkProcessing}
+                  className="p-1.5 rounded-lg hover:bg-elevated transition-colors text-muted hover:text-primary"
+                  title="Cancel processing"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="flex-shrink-0">
+                  <Loader2 className="w-8 h-8 text-accent animate-spin" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-primary font-medium">
+                    Processing question {benchmarkProcessingProgress?.current || 0} of {benchmarkProcessingProgress?.total || 0}
+                  </p>
+                  <p className="text-sm text-muted mt-1">
+                    Querying Genie and executing SQL for each question...
+                  </p>
+                </div>
+              </div>
+
+              {/* Progress bar */}
+              <div className="space-y-2">
+                <div className="h-2 bg-elevated rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-accent rounded-full transition-all duration-300 ease-out"
+                    style={{
+                      width: `${benchmarkProcessingProgress ? (benchmarkProcessingProgress.current / benchmarkProcessingProgress.total) * 100 : 0}%`,
+                    }}
+                  />
+                </div>
+                <p className="text-xs text-muted text-center">
+                  This may take a few minutes depending on the number of questions
+                </p>
+              </div>
+
+              <Button
+                variant="outline"
+                onClick={onCancelBenchmarkProcessing}
+                className="w-full"
+              >
+                Cancel
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   )

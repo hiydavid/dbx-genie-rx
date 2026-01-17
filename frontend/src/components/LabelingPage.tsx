@@ -1,16 +1,16 @@
 /**
  * Labeling page for reviewing benchmark questions one at a time.
+ * Questions are pre-processed before arriving at this page.
  */
 
 import { useState, useMemo } from "react"
-import { ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, Loader2, Sparkles, GitCompare, Check } from "lucide-react"
+import { ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, GitCompare, Check, AlertCircle } from "lucide-react"
 import { format as formatSqlLib } from "sql-formatter"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { SqlCodeBlock } from "@/components/SqlCodeBlock"
 import { SqlDiffView } from "@/components/SqlDiffView"
 import { DataTable } from "@/components/DataTable"
-import { queryGenie, executeSql } from "@/lib/api"
 import type { BenchmarkQuestion, SqlExecutionResult } from "@/types"
 
 interface LabelingPageProps {
@@ -24,11 +24,9 @@ interface LabelingPageProps {
   expectedResults: Record<string, SqlExecutionResult | null>
   correctAnswers: Record<string, boolean | null>
   feedbackTexts: Record<string, string>
+  processingErrors: Record<string, string>
   // Actions
   onSetCurrentIndex: (index: number) => void
-  onSetGeneratedSql: (questionId: string, sql: string) => void
-  onSetGenieResult: (questionId: string, result: SqlExecutionResult | null) => void
-  onSetExpectedResult: (questionId: string, result: SqlExecutionResult | null) => void
   onSetCorrectAnswer: (questionId: string, answer: boolean | null) => void
   onSetFeedbackText: (questionId: string, text: string) => void
   onBack: () => void
@@ -46,22 +44,16 @@ export function LabelingPage({
   expectedResults,
   correctAnswers,
   feedbackTexts,
+  processingErrors,
   // Actions
   onSetCurrentIndex,
-  onSetGeneratedSql,
-  onSetGenieResult,
-  onSetExpectedResult,
   onSetCorrectAnswer,
   onSetFeedbackText,
   onBack,
   onFinish,
 }: LabelingPageProps) {
   // Transient UI state (local only)
-  const [generatingFor, setGeneratingFor] = useState<string | null>(null)
-  const [generateError, setGenerateError] = useState<string | null>(null)
   const [showDiff, setShowDiff] = useState(false)
-  const [isExecutingGenie, setIsExecutingGenie] = useState(false)
-  const [isExecutingExpected, setIsExecutingExpected] = useState(false)
 
   // Get the selected questions in order
   const questions = useMemo(() => {
@@ -108,7 +100,9 @@ export function LabelingPage({
 
   // Get current question's generated SQL
   const currentGeneratedSql = currentQuestion ? generatedSql[currentQuestion.id] : null
-  const isGenerating = generatingFor === currentQuestion?.id
+
+  // Get current question's error (if any)
+  const currentError = currentQuestion ? processingErrors[currentQuestion.id] : null
 
   // Get current question's execution results and feedback
   const genieResult = currentQuestion ? genieResults[currentQuestion.id] ?? null : null
@@ -133,72 +127,6 @@ export function LabelingPage({
 
   // Format the generated SQL for display
   const formattedGeneratedSql = currentGeneratedSql ? formatSql(currentGeneratedSql) : null
-
-  // Handler for generating SQL with Genie and executing both queries
-  const handleGenerateSql = async () => {
-    if (!currentQuestion) return
-
-    const questionId = currentQuestion.id
-    setGeneratingFor(questionId)
-    setGenerateError(null)
-
-    try {
-      const questionText = currentQuestion.question.join(" ")
-      const response = await queryGenie(genieSpaceId, questionText)
-
-      if (response.status === "COMPLETED" && response.sql) {
-        onSetGeneratedSql(questionId, response.sql)
-
-        // Execute both SQLs in parallel
-        setIsExecutingGenie(true)
-        setIsExecutingExpected(true)
-
-        const [genieExec, expectedExec] = await Promise.allSettled([
-          executeSql(response.sql),
-          expectedSql ? executeSql(expectedSql) : Promise.resolve(null),
-        ])
-
-        // Handle Genie result
-        if (genieExec.status === "fulfilled" && genieExec.value) {
-          onSetGenieResult(questionId, genieExec.value)
-        } else if (genieExec.status === "rejected") {
-          onSetGenieResult(questionId, {
-            columns: [],
-            data: [],
-            row_count: 0,
-            truncated: false,
-            error: genieExec.reason?.message || "Failed to execute Genie SQL",
-          })
-        }
-
-        // Handle Expected result
-        if (expectedExec.status === "fulfilled" && expectedExec.value) {
-          onSetExpectedResult(questionId, expectedExec.value)
-        } else if (expectedExec.status === "rejected") {
-          onSetExpectedResult(questionId, {
-            columns: [],
-            data: [],
-            row_count: 0,
-            truncated: false,
-            error: expectedExec.reason?.message || "Failed to execute Expected SQL",
-          })
-        }
-
-        setIsExecutingGenie(false)
-        setIsExecutingExpected(false)
-      } else if (response.error) {
-        setGenerateError(response.error)
-      } else {
-        setGenerateError("Genie did not generate SQL for this question")
-      }
-    } catch (err) {
-      setGenerateError(err instanceof Error ? err.message : "Failed to generate SQL")
-    } finally {
-      setGeneratingFor(null)
-      setIsExecutingGenie(false)
-      setIsExecutingExpected(false)
-    }
-  }
 
   if (!currentQuestion) {
     return (
@@ -235,28 +163,8 @@ export function LabelingPage({
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Benchmarks
           </Button>
-          <Button
-            onClick={handleGenerateSql}
-            disabled={isGenerating}
-          >
-            {isGenerating ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4 mr-2" />
-                Generate and Compare Outputs
-              </>
-            )}
-          </Button>
         </div>
       </div>
-
-      {generateError && (
-        <div className="text-sm text-danger">{generateError}</div>
-      )}
 
       {/* Segmented Progress Bar with Navigation */}
       <div className="space-y-2">
@@ -277,23 +185,38 @@ export function LabelingPage({
               const labelValue = correctAnswers[q.id]
               const isLabeled = labelValue !== undefined && labelValue !== null
               const isCurrent = idx === currentIndex
+              const hasError = processingErrors[q.id]
+              const hasResult = generatedSql[q.id]
+
+              // Determine segment color
+              let bgClass = "bg-elevated hover:bg-secondary/30"
+              let title = `Question ${idx + 1}`
+
+              if (isLabeled) {
+                bgClass = labelValue === true
+                  ? "bg-green-500 dark:shadow-[0_0_8px_rgba(34,197,94,0.5)]"
+                  : "bg-red-500 dark:shadow-[0_0_8px_rgba(239,68,68,0.5)]"
+                title += labelValue ? " (correct)" : " (incorrect)"
+              } else if (hasError) {
+                bgClass = "bg-amber-500 dark:shadow-[0_0_8px_rgba(245,158,11,0.5)]"
+                title += " (error)"
+              } else if (hasResult) {
+                bgClass = "bg-secondary/50"
+                title += " (ready to label)"
+              } else if (isCurrent) {
+                bgClass = "bg-secondary/40"
+              }
+
               return (
                 <button
                   key={q.id}
                   onClick={() => handleSegmentClick(idx)}
                   className={`
                     flex-1 h-2.5 rounded-full transition-all cursor-pointer
-                    ${isLabeled
-                      ? labelValue === true
-                        ? "bg-green-500 dark:shadow-[0_0_8px_rgba(34,197,94,0.5)]"
-                        : "bg-red-500 dark:shadow-[0_0_8px_rgba(239,68,68,0.5)]"
-                      : isCurrent
-                        ? "bg-secondary/40"
-                        : "bg-elevated hover:bg-secondary/30"
-                    }
+                    ${bgClass}
                     ${isCurrent ? "ring-2 ring-accent ring-offset-2 ring-offset-surface" : ""}
                   `}
-                  title={`Question ${idx + 1}${isLabeled ? (labelValue ? " (correct)" : " (incorrect)") : ""}`}
+                  title={title}
                 />
               )
             })}
@@ -355,13 +278,30 @@ export function LabelingPage({
         </CardContent>
       </Card>
 
+      {/* Error display if processing failed for this question */}
+      {currentError && (
+        <Card className="border-amber-500/50 bg-amber-500/5">
+          <CardContent className="py-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-amber-600 dark:text-amber-400">
+                  Failed to process this question
+                </p>
+                <p className="text-sm text-muted mt-1">{currentError}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Labeling Feedback Box */}
-      <Card className={!genieResult ? 'opacity-50' : ''}>
+      <Card className={!genieResult && !currentError ? 'opacity-50' : ''}>
         <CardContent className="py-4 px-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-primary">Label This Question</h3>
-            {!genieResult && (
-              <span className="text-xs text-muted">Run "Generate and Compare Outputs" first</span>
+            {!genieResult && !currentError && (
+              <span className="text-xs text-muted">No results available</span>
             )}
           </div>
           <div className="flex flex-col md:flex-row gap-4">
@@ -371,7 +311,7 @@ export function LabelingPage({
               <div className="flex gap-2">
                 <button
                   onClick={() => currentQuestion && onSetCorrectAnswer(currentQuestion.id, true)}
-                  disabled={!genieResult}
+                  disabled={!genieResult && !currentError}
                   className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
                     isCorrect === true
                       ? 'border-accent bg-accent/10 text-accent'
@@ -382,7 +322,7 @@ export function LabelingPage({
                 </button>
                 <button
                   onClick={() => currentQuestion && onSetCorrectAnswer(currentQuestion.id, false)}
-                  disabled={!genieResult}
+                  disabled={!genieResult && !currentError}
                   className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
                     isCorrect === false
                       ? 'border-accent bg-accent/10 text-accent'
@@ -401,7 +341,7 @@ export function LabelingPage({
                 value={feedbackText}
                 onChange={(e) => currentQuestion && onSetFeedbackText(currentQuestion.id, e.target.value)}
                 placeholder="Describe what was incorrect..."
-                disabled={!genieResult}
+                disabled={!genieResult && !currentError}
                 className="w-full p-2 text-sm rounded-lg border border-default bg-surface text-primary placeholder:text-muted resize-none focus:outline-none focus:ring-2 focus:ring-accent/50 transition-colors disabled:cursor-not-allowed disabled:bg-elevated"
                 rows={2}
               />
@@ -417,12 +357,7 @@ export function LabelingPage({
           <h3 className="text-sm font-medium text-muted">Genie's Output</h3>
           <Card>
             <CardContent className="py-4">
-              {isExecutingGenie ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-5 h-5 animate-spin text-muted mr-2" />
-                  <span className="text-muted text-sm">Executing SQL...</span>
-                </div>
-              ) : genieResult ? (
+              {genieResult ? (
                 genieResult.error ? (
                   <div className="text-danger text-sm py-4 text-center">{genieResult.error}</div>
                 ) : (
@@ -432,9 +367,14 @@ export function LabelingPage({
                     truncated={genieResult.truncated}
                   />
                 )
+              ) : currentError ? (
+                <div className="text-center py-8">
+                  <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
+                  <p className="text-amber-500 text-sm">Processing failed</p>
+                </div>
               ) : (
                 <p className="text-muted text-sm text-center py-8">
-                  Click "Generate and Compare Outputs" to proceed
+                  No results available
                 </p>
               )}
             </CardContent>
@@ -446,12 +386,7 @@ export function LabelingPage({
           <h3 className="text-sm font-medium text-muted">Expected Output</h3>
           <Card>
             <CardContent className="py-4">
-              {isExecutingExpected ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-5 h-5 animate-spin text-muted mr-2" />
-                  <span className="text-muted text-sm">Executing SQL...</span>
-                </div>
-              ) : expectedResult ? (
+              {expectedResult ? (
                 expectedResult.error ? (
                   <div className="text-danger text-sm py-4 text-center">{expectedResult.error}</div>
                 ) : (
@@ -463,7 +398,7 @@ export function LabelingPage({
                 )
               ) : expectedSql ? (
                 <p className="text-muted text-sm text-center py-8">
-                  Click "Generate and Compare Outputs" to proceed
+                  No results available
                 </p>
               ) : (
                 <p className="text-muted text-sm text-center py-8">
@@ -482,12 +417,17 @@ export function LabelingPage({
           <h3 className="text-sm font-medium text-muted">Genie's Generated SQL</h3>
           {formattedGeneratedSql ? (
             <SqlCodeBlock code={formattedGeneratedSql} maxLines={15} />
+          ) : currentError ? (
+            <Card>
+              <CardContent className="py-8 text-center">
+                <AlertCircle className="w-6 h-6 text-amber-500 mx-auto mb-2" />
+                <p className="text-amber-500 text-sm">Processing failed</p>
+              </CardContent>
+            </Card>
           ) : (
             <Card>
               <CardContent className="py-8 text-center">
-                <p className="text-muted text-sm">
-                  {isGenerating ? "Generating..." : "Click \"Generate and Compare Outputs\" to proceed"}
-                </p>
+                <p className="text-muted text-sm">No SQL generated</p>
               </CardContent>
             </Card>
           )}
