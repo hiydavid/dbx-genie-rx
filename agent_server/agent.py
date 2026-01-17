@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 import uuid
 from collections.abc import Generator
 from pathlib import Path
@@ -450,6 +451,15 @@ class GenieSpaceAnalyzer:
 OUTPUT_DIR = Path(__file__).parent.parent / "output"
 
 
+def _sanitize_filename(name: str) -> str:
+    """Sanitize a string for use in filenames.
+
+    Allows only alphanumeric characters, hyphens, underscores, and dots.
+    Replaces any other characters with underscores.
+    """
+    return re.sub(r"[^a-zA-Z0-9\-_.]", "_", name)
+
+
 def _format_section_name(section_name: str) -> str:
     """Format section name for display in markdown."""
     return section_name.replace("_", " ").replace(".", " → ").title()
@@ -591,7 +601,15 @@ def save_analysis_output(output: AgentOutput) -> Path:
         Path to the saved markdown file
     """
     OUTPUT_DIR.mkdir(exist_ok=True)
-    filepath = OUTPUT_DIR / f"analysis_{output.genie_space_id}.md"
+
+    # Sanitize genie_space_id to prevent path traversal
+    safe_id = _sanitize_filename(output.genie_space_id)
+    filepath = OUTPUT_DIR / f"analysis_{safe_id}.md"
+
+    # Defense in depth: verify path is within OUTPUT_DIR
+    if not filepath.resolve().is_relative_to(OUTPUT_DIR.resolve()):
+        raise ValueError("Invalid genie_space_id: path traversal detected")
+
     markdown_content = format_analysis_as_markdown(output)
     filepath.write_text(markdown_content)
     return filepath

@@ -17,9 +17,13 @@ import type {
 
 const API_BASE = "/api"
 
+// Request timeout values (in milliseconds)
+const DEFAULT_TIMEOUT = 30_000 // 30 seconds for most requests
+const LONG_TIMEOUT = 300_000 // 5 minutes for LLM operations (optimization can be slow)
+
 class ApiError extends Error {
   status: number
-  
+
   constructor(message: string, status: number) {
     super(message)
     this.name = "ApiError"
@@ -27,9 +31,46 @@ class ApiError extends Error {
   }
 }
 
+/**
+ * Fetch with timeout support.
+ */
+async function fetchWithTimeout<T>(
+  url: string,
+  options: RequestInit = {},
+  timeout: number = DEFAULT_TIMEOUT
+): Promise<T> {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeout)
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    })
+
+    if (!response.ok) {
+      const error = await response
+        .json()
+        .catch(() => ({ detail: response.statusText }))
+      throw new ApiError(error.detail || "An error occurred", response.status)
+    }
+
+    return response.json()
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new ApiError("Request timed out. Please try again.", 408)
+    }
+    throw error
+  } finally {
+    clearTimeout(timeoutId)
+  }
+}
+
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: response.statusText }))
+    const error = await response
+      .json()
+      .catch(() => ({ detail: response.statusText }))
     throw new ApiError(error.detail || "An error occurred", response.status)
   }
   return response.json()
@@ -38,25 +79,35 @@ async function handleResponse<T>(response: Response): Promise<T> {
 /**
  * Fetch a Genie Space by ID.
  */
-export async function fetchSpace(genieSpaceId: string): Promise<FetchSpaceResponse> {
-  const response = await fetch(`${API_BASE}/space/fetch`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ genie_space_id: genieSpaceId }),
-  })
-  return handleResponse<FetchSpaceResponse>(response)
+export async function fetchSpace(
+  genieSpaceId: string
+): Promise<FetchSpaceResponse> {
+  return fetchWithTimeout<FetchSpaceResponse>(
+    `${API_BASE}/space/fetch`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ genie_space_id: genieSpaceId }),
+    },
+    DEFAULT_TIMEOUT
+  )
 }
 
 /**
  * Parse pasted Genie Space JSON.
  */
-export async function parseSpaceJson(jsonContent: string): Promise<FetchSpaceResponse> {
-  const response = await fetch(`${API_BASE}/space/parse`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ json_content: jsonContent }),
-  })
-  return handleResponse<FetchSpaceResponse>(response)
+export async function parseSpaceJson(
+  jsonContent: string
+): Promise<FetchSpaceResponse> {
+  return fetchWithTimeout<FetchSpaceResponse>(
+    `${API_BASE}/space/parse`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ json_content: jsonContent }),
+    },
+    DEFAULT_TIMEOUT
+  )
 }
 
 /**
@@ -65,12 +116,15 @@ export async function parseSpaceJson(jsonContent: string): Promise<FetchSpaceRes
 export async function analyzeSection(
   request: AnalyzeSectionRequest
 ): Promise<SectionAnalysis> {
-  const response = await fetch(`${API_BASE}/analyze/section`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(request),
-  })
-  return handleResponse<SectionAnalysis>(response)
+  return fetchWithTimeout<SectionAnalysis>(
+    `${API_BASE}/analyze/section`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request),
+    },
+    LONG_TIMEOUT // LLM operation
+  )
 }
 
 /**
@@ -187,15 +241,18 @@ export async function queryGenie(
   genieSpaceId: string,
   question: string
 ): Promise<GenieQueryResponse> {
-  const response = await fetch(`${API_BASE}/genie/query`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      genie_space_id: genieSpaceId,
-      question: question,
-    }),
-  })
-  return handleResponse<GenieQueryResponse>(response)
+  return fetchWithTimeout<GenieQueryResponse>(
+    `${API_BASE}/genie/query`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        genie_space_id: genieSpaceId,
+        question: question,
+      }),
+    },
+    LONG_TIMEOUT // Genie can take time to respond
+  )
 }
 
 /**
@@ -205,27 +262,30 @@ export async function executeSql(
   sql: string,
   warehouseId?: string
 ): Promise<SqlExecutionResult> {
-  const response = await fetch(`${API_BASE}/sql/execute`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      sql: sql,
-      warehouse_id: warehouseId,
-    }),
-  })
-  return handleResponse<SqlExecutionResult>(response)
+  return fetchWithTimeout<SqlExecutionResult>(
+    `${API_BASE}/sql/execute`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sql: sql,
+        warehouse_id: warehouseId,
+      }),
+    },
+    LONG_TIMEOUT // SQL execution can be slow
+  )
 }
 
 /**
  * Get application settings.
  */
 export async function getSettings(): Promise<AppSettings> {
-  const response = await fetch(`${API_BASE}/settings`)
-  return handleResponse<AppSettings>(response)
+  return fetchWithTimeout<AppSettings>(`${API_BASE}/settings`, {}, DEFAULT_TIMEOUT)
 }
 
 /**
  * Generate optimization suggestions based on labeling feedback.
+ * No timeout - optimization can take several minutes for large spaces.
  */
 export async function generateOptimizations(
   genieSpaceId: string,

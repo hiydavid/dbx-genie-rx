@@ -8,9 +8,13 @@ and stream analysis progress.
 import json
 from pathlib import Path
 
+import logging
+
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+logger = logging.getLogger(__name__)
 
 from agent_server.agent import GenieSpaceAnalyzer, SECTIONS, get_analyzer
 from agent_server.ingest import get_serialized_space
@@ -26,14 +30,36 @@ from agent_server.optimizer import get_optimizer
 router = APIRouter(prefix="/api")
 
 
+def _safe_error(e: Exception, status_code: int, context: str) -> HTTPException:
+    """Create an HTTP exception with safe error message.
+
+    Logs detailed error server-side but returns generic message to client.
+    """
+    logger.exception(f"{context}: {e}")
+
+    generic_messages = {
+        400: "Invalid request. Please check your input and try again.",
+        404: "The requested resource was not found.",
+        500: "An internal error occurred. Please try again later.",
+        504: "The operation timed out. Please try again.",
+    }
+
+    message = generic_messages.get(status_code, "An error occurred.")
+    return HTTPException(status_code=status_code, detail=message)
+
+
 # Request/Response models
 class FetchSpaceRequest(BaseModel):
     """Request to fetch a Genie Space."""
-    genie_space_id: str
+
+    genie_space_id: str = Field(
+        ..., min_length=1, max_length=64, pattern=r"^[a-zA-Z0-9\-_]+$"
+    )
 
 
 class FetchSpaceResponse(BaseModel):
     """Response containing the fetched Genie Space data."""
+
     genie_space_id: str
     space_data: dict
     sections: list[dict]  # List of {name, data, has_data}
@@ -41,7 +67,8 @@ class FetchSpaceResponse(BaseModel):
 
 class ParseJsonRequest(BaseModel):
     """Request to parse pasted JSON."""
-    json_content: str
+
+    json_content: str = Field(..., min_length=1, max_length=1_000_000)  # 1MB limit
 
 
 class AnalyzeSectionRequest(BaseModel):
@@ -53,13 +80,19 @@ class AnalyzeSectionRequest(BaseModel):
 
 class StreamAnalysisRequest(BaseModel):
     """Request for streaming analysis."""
-    genie_space_id: str
+
+    genie_space_id: str = Field(
+        ..., min_length=1, max_length=64, pattern=r"^[a-zA-Z0-9\-_]+$"
+    )
 
 
 class GenieQueryRequest(BaseModel):
     """Request to query Genie for SQL."""
-    genie_space_id: str
-    question: str
+
+    genie_space_id: str = Field(
+        ..., min_length=1, max_length=64, pattern=r"^[a-zA-Z0-9\-_]+$"
+    )
+    question: str = Field(..., min_length=1, max_length=10000)
 
 
 class GenieQueryResponse(BaseModel):
@@ -73,8 +106,9 @@ class GenieQueryResponse(BaseModel):
 
 class ExecuteSqlRequest(BaseModel):
     """Request to execute SQL on a warehouse."""
-    sql: str
-    warehouse_id: str | None = None
+
+    sql: str = Field(..., min_length=1, max_length=100_000)  # 100KB limit
+    warehouse_id: str | None = Field(None, max_length=64)
 
 
 class ExecuteSqlResponse(BaseModel):
@@ -117,27 +151,32 @@ async def fetch_space(request: FetchSpaceRequest):
         return FetchSpaceResponse(
             genie_space_id=request.genie_space_id,
             space_data=space_data,
-            sections=sections
+            sections=sections,
         )
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise _safe_error(e, 400, "Failed to fetch Genie space")
 
 
 @router.post("/space/parse", response_model=FetchSpaceResponse)
 async def parse_space_json(request: ParseJsonRequest):
     """Parse pasted Genie Space JSON.
-    
+
     Accepts the raw API response from GET /api/2.0/genie/spaces/{id}?include_serialized_space=true
+    Requires valid JSON format.
     """
-    import ast
     from datetime import datetime
-    
+
     try:
-        # Try JSON first, then fall back to Python dict syntax
         try:
             raw_response = json.loads(request.json_content)
-        except json.JSONDecodeError:
-            raw_response = ast.literal_eval(request.json_content)
+        except json.JSONDecodeError as e:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Invalid JSON at line {e.lineno}, column {e.colno}: {e.msg}. "
+                    "Please ensure you are pasting valid JSON from the Databricks API response."
+                ),
+            )
         
         # Extract and parse the serialized_space field
         if "serialized_space" not in raw_response:
@@ -186,11 +225,11 @@ async def analyze_section(request: AnalyzeSectionRequest) -> SectionAnalysis:
         analysis = analyzer.analyze_section(
             request.section_name,
             request.section_data,
-            full_space=request.full_space
+            full_space=request.full_space,
         )
         return analysis
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise _safe_error(e, 500, "Section analysis failed")
 
 
 @router.post("/analyze/stream")
@@ -237,9 +276,9 @@ async def query_genie(request: GenieQueryRequest):
 
         return GenieQueryResponse(**result)
     except TimeoutError as e:
-        raise HTTPException(status_code=504, detail=str(e))
+        raise _safe_error(e, 504, "Genie query timed out")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise _safe_error(e, 500, "Genie query failed")
 
 
 @router.get("/checklist")
@@ -262,13 +301,18 @@ async def get_sections():
 @router.get("/debug/auth")
 async def debug_auth():
     """Debug endpoint to check authentication status.
-    
+
     Returns information about the current authentication context.
-    Useful for troubleshooting service principal and API access issues.
+    Only available in development mode (not on Databricks Apps).
     """
     import os
+
     from agent_server.auth import get_workspace_client, is_running_on_databricks_apps
-    
+
+    # Disable in production to avoid exposing auth info
+    if is_running_on_databricks_apps():
+        raise HTTPException(status_code=404, detail="Not found")
+
     try:
         client = get_workspace_client()
         
@@ -306,6 +350,7 @@ async def execute_sql_endpoint(request: ExecuteSqlRequest):
 
     Returns tabular results for display in the UI.
     Limited to 1000 rows to prevent memory issues.
+    Only read-only SELECT queries are allowed.
     """
     from agent_server.sql_executor import execute_sql
 
@@ -316,7 +361,7 @@ async def execute_sql_endpoint(request: ExecuteSqlRequest):
         )
         return ExecuteSqlResponse(**result)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise _safe_error(e, 500, "SQL execution failed")
 
 
 @router.get("/settings", response_model=SettingsResponse)
@@ -344,9 +389,6 @@ async def generate_optimizations(request: OptimizationRequest):
     Analyzes the Genie Space configuration and labeling session results
     to generate field-level improvement suggestions.
     """
-    import logging
-    logger = logging.getLogger(__name__)
-
     logger.info(f"Received optimization request for space: {request.genie_space_id}")
     logger.info(f"Feedback items count: {len(request.labeling_feedback)}")
 
