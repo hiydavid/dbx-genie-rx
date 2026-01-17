@@ -72,11 +72,35 @@ from mlflow.genai.agent_server import (
     AgentServer,
     setup_mlflow_git_based_version_tracking,
 )
-from starlette.responses import StreamingResponse
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import Response, StreamingResponse
 
 from agent_server.agent import get_analyzer, save_analysis_output
 from agent_server.api import router as api_router
+from agent_server.auth import is_running_on_databricks_apps
 from agent_server.models import AgentInput
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Add security headers to all responses."""
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        response = await call_next(request)
+
+        # Prevent MIME type sniffing
+        response.headers["X-Content-Type-Options"] = "nosniff"
+
+        # Prevent clickjacking
+        response.headers["X-Frame-Options"] = "DENY"
+
+        # XSS protection (legacy, but still useful)
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+
+        # Referrer policy
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+
+        return response
 
 
 agent_server = AgentServer()
@@ -90,14 +114,19 @@ if _mlflow_configured:
     except Exception as e:
         logger.warning(f"MLflow git-based version tracking not configured: {e}")
 
-# Add CORS middleware for development
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],  # Vite dev server
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Add security headers middleware
+app.add_middleware(SecurityHeadersMiddleware)
+
+# Add CORS middleware for development only
+# On Databricks Apps, frontend and backend are served from same origin (no CORS needed)
+if not is_running_on_databricks_apps():
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],  # Vite dev server
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=["Content-Type", "Authorization"],
+    )
 
 # Mount API router
 app.include_router(api_router)
