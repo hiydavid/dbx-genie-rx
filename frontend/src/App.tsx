@@ -81,11 +81,9 @@ function App() {
           expectedResults={state.labelingExpectedResults}
           correctAnswers={state.labelingCorrectAnswers}
           feedbackTexts={state.labelingFeedbackTexts}
+          processingErrors={state.labelingProcessingErrors}
           // Actions
           onSetCurrentIndex={actions.setLabelingCurrentIndex}
-          onSetGeneratedSql={actions.setLabelingGeneratedSql}
-          onSetGenieResult={actions.setLabelingGenieResult}
-          onSetExpectedResult={actions.setLabelingExpectedResult}
           onSetCorrectAnswer={actions.setLabelingCorrectAnswer}
           onSetFeedbackText={actions.setLabelingFeedbackText}
           onBack={actions.goToBenchmarks}
@@ -103,7 +101,12 @@ function App() {
           onToggleSelection={actions.toggleQuestionSelection}
           onSelectAll={actions.selectAllQuestions}
           onDeselectAll={actions.deselectAllQuestions}
-          onBeginLabeling={actions.goToLabeling}
+          // Processing state
+          isProcessingBenchmarks={state.isProcessingBenchmarks}
+          benchmarkProcessingProgress={state.benchmarkProcessingProgress}
+          // Actions
+          onProcessBenchmarksAndGoToLabeling={actions.processBenchmarksAndGoToLabeling}
+          onCancelBenchmarkProcessing={actions.cancelBenchmarkProcessing}
         />
       )
     }
