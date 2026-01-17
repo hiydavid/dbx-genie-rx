@@ -4,6 +4,7 @@ SQL execution utilities using Databricks Statement Execution API.
 
 import logging
 import os
+import re
 
 from agent_server.auth import get_workspace_client
 
@@ -13,6 +14,48 @@ logger = logging.getLogger(__name__)
 MAX_ROWS = 1000
 # Wait timeout for synchronous execution
 WAIT_TIMEOUT = "30s"
+
+# Dangerous SQL patterns that should be blocked for read-only execution
+_BLOCKED_SQL_PATTERNS = [
+    r"\b(DROP|DELETE|TRUNCATE|UPDATE|INSERT|ALTER|CREATE|GRANT|REVOKE)\b",
+    r"\b(EXEC|EXECUTE|CALL)\b",  # Stored procedures
+    r";\s*\w",  # Statement chaining (multiple statements)
+]
+
+
+class SqlValidationError(Exception):
+    """Raised when SQL validation fails."""
+
+    pass
+
+
+def validate_sql_read_only(sql: str) -> None:
+    """Validate that SQL is a read-only SELECT query.
+
+    Only allows SELECT statements and WITH clauses (CTEs).
+    Blocks dangerous operations like DROP, DELETE, UPDATE, INSERT, etc.
+
+    Args:
+        sql: The SQL statement to validate
+
+    Raises:
+        SqlValidationError: If SQL contains dangerous patterns
+    """
+    sql_upper = sql.upper().strip()
+
+    # Must start with SELECT or WITH (for CTEs)
+    if not (sql_upper.startswith("SELECT") or sql_upper.startswith("WITH")):
+        raise SqlValidationError(
+            "Only SELECT queries are allowed. Query must start with SELECT or WITH."
+        )
+
+    # Check for blocked patterns
+    for pattern in _BLOCKED_SQL_PATTERNS:
+        if re.search(pattern, sql_upper, re.IGNORECASE):
+            raise SqlValidationError(
+                "Query contains disallowed SQL operation. "
+                "Only read-only SELECT queries are permitted."
+            )
 
 
 def get_sql_warehouse_id() -> str | None:
@@ -52,6 +95,19 @@ def execute_sql(
             "row_count": 0,
             "truncated": False,
             "error": "SQL_WAREHOUSE_ID not configured",
+        }
+
+    # Validate SQL is read-only before execution
+    try:
+        validate_sql_read_only(sql)
+    except SqlValidationError as e:
+        logger.warning(f"SQL validation failed: {e}")
+        return {
+            "columns": [],
+            "data": [],
+            "row_count": 0,
+            "truncated": False,
+            "error": str(e),
         }
 
     client = get_workspace_client()
