@@ -26,7 +26,7 @@ env:
   - name: LLM_MODEL
     value: "databricks-claude-sonnet-4-5"
   - name: SQL_WAREHOUSE_ID
-    value: "862f1d757f0424f7" 
+    value: "862f1d757f0424f7"  # Required for Optimize mode SQL execution
     
 # Service Principal authorization
 # The app uses its own service principal identity to access Databricks resources.

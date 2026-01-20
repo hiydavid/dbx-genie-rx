@@ -177,7 +177,7 @@ MLFLOW_EXPERIMENT_ID=123456789
 # LLM model for analysis
 LLM_MODEL=databricks-claude-sonnet-4-5
 
-# SQL Warehouse for Optimize mode labeling (optional)
+# SQL Warehouse for Optimize mode labeling
 SQL_WAREHOUSE_ID=abc123def456
 ```
 
@@ -188,7 +188,7 @@ SQL_WAREHOUSE_ID=abc123def456
 | `DATABRICKS_TOKEN` | No | PAT token (alternative to OAuth) |
 | `MLFLOW_EXPERIMENT_ID` | No | MLflow experiment ID - set to enable tracing |
 | `LLM_MODEL` | Yes | LLM model name (default: `databricks-claude-sonnet-4-5`) |
-| `SQL_WAREHOUSE_ID` | No | SQL Warehouse ID for executing benchmark queries in Optimize mode |
+| `SQL_WAREHOUSE_ID` | For Optimize | SQL Warehouse ID for executing benchmark queries in Optimize mode |
 
 ### Databricks Apps Deployment (`app.yaml`)
 
@@ -201,14 +201,14 @@ env:
   - name: LLM_MODEL
     value: "databricks-claude-sonnet-4"
   - name: SQL_WAREHOUSE_ID
-    value: "abc123def456"  # OPTIONAL: Set to enable Optimize mode labeling
+    value: ""  # Required for Optimize mode SQL execution
 ```
 
 | Variable | Required | Description |
 | ---------- | ---------- | ------------- |
 | `MLFLOW_EXPERIMENT_ID` | No | MLflow experiment ID - set to enable tracing |
 | `LLM_MODEL` | Yes | LLM model name |
-| `SQL_WAREHOUSE_ID` | No | SQL Warehouse ID for executing benchmark queries in Optimize mode |
+| `SQL_WAREHOUSE_ID` | For Optimize | SQL Warehouse ID for executing benchmark queries in Optimize mode |
 
 > **Note:** In Databricks Apps, authentication is handled automatically via OAuth (OBO)—no need to configure `DATABRICKS_HOST` or tokens. The `MLFLOW_TRACKING_URI` and `MLFLOW_REGISTRY_URI` are pre-set to `databricks` and `databricks-uc`.
 
