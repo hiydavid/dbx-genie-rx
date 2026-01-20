@@ -22,10 +22,12 @@ env:
   - name: MLFLOW_REGISTRY_URI
     value: "databricks-uc"
   - name: MLFLOW_EXPERIMENT_ID
-    value: ""  # OPTIONAL: Set to your MLflow experiment ID if you want to enable tracing
+    value: ""  # OPTIONAL: Set to your MLflow experiment ID to enable tracing
   - name: LLM_MODEL
-    value: "databricks-claude-sonnet-4"
-
+    value: "databricks-claude-sonnet-4-5"
+  - name: SQL_WAREHOUSE_ID
+    value: "862f1d757f0424f7" 
+    
 # Service Principal authorization
 # The app uses its own service principal identity to access Databricks resources.
 # You must grant the app's service principal access to:
