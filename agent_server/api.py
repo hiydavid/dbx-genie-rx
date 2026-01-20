@@ -382,25 +382,68 @@ async def get_settings():
     )
 
 
-@router.post("/optimize", response_model=OptimizationResponse)
-async def generate_optimizations(request: OptimizationRequest):
-    """Generate optimization suggestions based on labeling feedback.
+@router.post("/optimize")
+async def stream_optimizations(request: OptimizationRequest):
+    """Stream optimization progress with heartbeats to prevent proxy timeouts.
 
-    Analyzes the Genie Space configuration and labeling session results
-    to generate field-level improvement suggestions.
+    Returns Server-Sent Events with:
+    - {"status": "processing", "message": "...", "elapsed_seconds": N} - heartbeats every 15s
+    - {"status": "complete", "data": {...}} - final result
+    - {"status": "error", "message": "..."} - if optimization fails
     """
-    logger.info(f"Received optimization request for space: {request.genie_space_id}")
+    import threading
+    import time
+
+    logger.info(f"Received streaming optimization request for space: {request.genie_space_id}")
     logger.info(f"Feedback items count: {len(request.labeling_feedback)}")
 
-    try:
-        optimizer = get_optimizer()
-        response = optimizer.generate_optimizations(
-            space_data=request.space_data,
-            labeling_feedback=request.labeling_feedback,
-        )
-        logger.info(f"Generated {len(response.suggestions)} suggestions")
-        return response
-    except Exception as e:
-        logger.exception(f"Optimization failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    # Thread-safe result container
+    result_container: dict = {"done": False, "result": None, "error": None}
+    lock = threading.Lock()
+
+    def run_optimizer():
+        """Run optimizer in background thread."""
+        try:
+            optimizer = get_optimizer()
+            response = optimizer.generate_optimizations(
+                space_data=request.space_data,
+                labeling_feedback=request.labeling_feedback,
+            )
+            with lock:
+                result_container["result"] = response
+                result_container["done"] = True
+            logger.info(f"Generated {len(response.suggestions)} suggestions")
+        except Exception as e:
+            logger.exception(f"Optimization failed: {e}")
+            with lock:
+                result_container["error"] = str(e)
+                result_container["done"] = True
+
+    def generate():
+        """SSE generator with heartbeats."""
+        # Start optimizer in background thread
+        optimizer_thread = threading.Thread(target=run_optimizer, daemon=True)
+        optimizer_thread.start()
+
+        start_time = time.time()
+        heartbeat_interval = 15  # seconds
+
+        while True:
+            # Check if done
+            with lock:
+                if result_container["done"]:
+                    if result_container["error"]:
+                        yield f"data: {json.dumps({'status': 'error', 'message': result_container['error']})}\n\n"
+                    else:
+                        yield f"data: {json.dumps({'status': 'complete', 'data': result_container['result'].model_dump()})}\n\n"
+                    break
+
+            # Send heartbeat
+            elapsed = int(time.time() - start_time)
+            yield f"data: {json.dumps({'status': 'processing', 'message': f'Generating suggestions... ({elapsed}s elapsed)', 'elapsed_seconds': elapsed})}\n\n"
+
+            # Wait for next heartbeat or completion
+            time.sleep(heartbeat_interval)
+
+    return StreamingResponse(generate(), media_type="text/event-stream")
 

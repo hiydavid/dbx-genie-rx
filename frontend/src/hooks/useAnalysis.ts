@@ -19,7 +19,7 @@ import {
   parseSpaceJson,
   analyzeSection,
   analyzeAllSections as analyzeAllSectionsApi,
-  generateOptimizations as generateOptimizationsApi,
+  streamOptimizations,
   queryGenie,
   executeSql,
 } from "@/lib/api"
@@ -412,46 +412,51 @@ export function useAnalysis() {
     }))
   }, [])
 
-  const startOptimization = useCallback(async () => {
+  const startOptimization = useCallback(() => {
     const { genieSpaceId, spaceData, selectedQuestions, labelingCorrectAnswers, labelingFeedbackTexts } = state
     if (!spaceData) return
 
     setState((prev) => ({ ...prev, isOptimizing: true, error: null, optimizeView: "optimization" }))
 
-    try {
-      // Get benchmark questions and build labeling feedback
-      const benchmarks = spaceData?.benchmarks as { questions?: BenchmarkQuestion[] }
-      const allQuestions = benchmarks?.questions || []
+    // Get benchmark questions and build labeling feedback
+    const benchmarks = spaceData?.benchmarks as { questions?: BenchmarkQuestion[] }
+    const allQuestions = benchmarks?.questions || []
 
-      // Build feedback items from selected questions
-      const labelingFeedback = selectedQuestions.map(id => {
-        const question = allQuestions.find(q => q.id === id)
-        return {
-          question_text: question?.question.join(" ") || "",
-          is_correct: labelingCorrectAnswers[id] ?? null,
-          feedback_text: labelingFeedbackTexts[id] || null,
-        }
-      })
+    // Build feedback items from selected questions
+    const labelingFeedback = selectedQuestions.map(id => {
+      const question = allQuestions.find(q => q.id === id)
+      return {
+        question_text: question?.question.join(" ") || "",
+        is_correct: labelingCorrectAnswers[id] ?? null,
+        feedback_text: labelingFeedbackTexts[id] || null,
+      }
+    })
 
-      const response = await generateOptimizationsApi(
-        genieSpaceId,
-        spaceData,
-        labelingFeedback
-      )
-
-      setState((prev) => ({
-        ...prev,
-        optimizationSuggestions: response.suggestions,
-        optimizationSummary: response.summary,
-        isOptimizing: false,
-      }))
-    } catch (err) {
-      setState((prev) => ({
-        ...prev,
-        error: err instanceof Error ? err.message : "Optimization failed",
-        isOptimizing: false,
-      }))
-    }
+    // Use streaming API to avoid proxy timeouts
+    streamOptimizations(
+      genieSpaceId,
+      spaceData,
+      labelingFeedback,
+      // onProgress - heartbeats to keep connection alive (no UI update needed)
+      () => {},
+      // onComplete
+      (response) => {
+        setState((prev) => ({
+          ...prev,
+          optimizationSuggestions: response.suggestions,
+          optimizationSummary: response.summary,
+          isOptimizing: false,
+        }))
+      },
+      // onError
+      (err) => {
+        setState((prev) => ({
+          ...prev,
+          error: err instanceof Error ? err.message : "Optimization failed",
+          isOptimizing: false,
+        }))
+      }
+    )
   }, [state.genieSpaceId, state.spaceData, state.selectedQuestions, state.labelingCorrectAnswers, state.labelingFeedbackTexts])
 
   const clearSpaceData = useCallback(() => {
