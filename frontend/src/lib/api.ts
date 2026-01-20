@@ -284,15 +284,30 @@ export async function getSettings(): Promise<AppSettings> {
 }
 
 /**
- * Generate optimization suggestions based on labeling feedback.
- * No timeout - optimization can take several minutes for large spaces.
+ * Progress event from streaming optimization.
  */
-export async function generateOptimizations(
+export interface OptimizationStreamProgress {
+  status: "processing" | "complete" | "error"
+  message?: string
+  elapsed_seconds?: number
+  data?: OptimizationResponse
+}
+
+/**
+ * Stream optimization progress using Server-Sent Events.
+ * Sends heartbeats to keep the connection alive during long LLM calls.
+ */
+export function streamOptimizations(
   genieSpaceId: string,
   spaceData: Record<string, unknown>,
-  labelingFeedback: LabelingFeedbackItem[]
-): Promise<OptimizationResponse> {
-  const response = await fetch(`${API_BASE}/optimize`, {
+  labelingFeedback: LabelingFeedbackItem[],
+  onProgress: (progress: OptimizationStreamProgress) => void,
+  onComplete: (result: OptimizationResponse) => void,
+  onError: (error: Error) => void
+): () => void {
+  const abortController = new AbortController()
+
+  fetch(`${API_BASE}/optimize`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -300,8 +315,54 @@ export async function generateOptimizations(
       space_data: spaceData,
       labeling_feedback: labelingFeedback,
     }),
+    signal: abortController.signal,
   })
-  return handleResponse<OptimizationResponse>(response)
+    .then(async (response) => {
+      if (!response.ok) {
+        throw new ApiError("Stream request failed", response.status)
+      }
+
+      const reader = response.body?.getReader()
+      if (!reader) {
+        throw new Error("No response body")
+      }
+
+      const decoder = new TextDecoder()
+      let buffer = ""
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split("\n\n")
+        buffer = lines.pop() || ""
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              const data = JSON.parse(line.slice(6)) as OptimizationStreamProgress
+              if (data.status === "complete" && data.data) {
+                onComplete(data.data)
+              } else if (data.status === "error") {
+                onError(new Error(data.message || "Optimization failed"))
+              } else {
+                onProgress(data)
+              }
+            } catch {
+              // Ignore parse errors
+            }
+          }
+        }
+      }
+    })
+    .catch((error) => {
+      if (error.name !== "AbortError") {
+        onError(error)
+      }
+    })
+
+  return () => abortController.abort()
 }
 
 export { ApiError }
