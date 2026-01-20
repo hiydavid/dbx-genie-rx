@@ -330,29 +330,39 @@ export function streamOptimizations(
       const decoder = new TextDecoder()
       let buffer = ""
 
+      const processLine = (line: string) => {
+        if (line.startsWith("data: ")) {
+          try {
+            const data = JSON.parse(line.slice(6)) as OptimizationStreamProgress
+            if (data.status === "complete" && data.data) {
+              onComplete(data.data)
+            } else if (data.status === "error") {
+              onError(new Error(data.message || "Optimization failed"))
+            } else {
+              onProgress(data)
+            }
+          } catch {
+            // Ignore parse errors
+          }
+        }
+      }
+
       while (true) {
         const { done, value } = await reader.read()
-        if (done) break
+        if (done) {
+          // Process any remaining data in the buffer
+          if (buffer.trim()) {
+            processLine(buffer.trim())
+          }
+          break
+        }
 
         buffer += decoder.decode(value, { stream: true })
         const lines = buffer.split("\n\n")
         buffer = lines.pop() || ""
 
         for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            try {
-              const data = JSON.parse(line.slice(6)) as OptimizationStreamProgress
-              if (data.status === "complete" && data.data) {
-                onComplete(data.data)
-              } else if (data.status === "error") {
-                onError(new Error(data.message || "Optimization failed"))
-              } else {
-                onProgress(data)
-              }
-            } catch {
-              // Ignore parse errors
-            }
-          }
+          processLine(line)
         }
       }
     })
