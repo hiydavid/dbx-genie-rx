@@ -391,59 +391,55 @@ async def stream_optimizations(request: OptimizationRequest):
     - {"status": "complete", "data": {...}} - final result
     - {"status": "error", "message": "..."} - if optimization fails
     """
-    import threading
-    import time
+    import asyncio
+    import concurrent.futures
 
     logger.info(f"Received streaming optimization request for space: {request.genie_space_id}")
     logger.info(f"Feedback items count: {len(request.labeling_feedback)}")
 
-    # Thread-safe result container
-    result_container: dict = {"done": False, "result": None, "error": None}
-    lock = threading.Lock()
+    async def generate():
+        """Async SSE generator with heartbeats."""
+        loop = asyncio.get_event_loop()
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
 
-    def run_optimizer():
-        """Run optimizer in background thread."""
-        try:
+        # Run optimizer in thread pool
+        def run_optimizer():
             optimizer = get_optimizer()
-            response = optimizer.generate_optimizations(
+            return optimizer.generate_optimizations(
                 space_data=request.space_data,
                 labeling_feedback=request.labeling_feedback,
             )
-            with lock:
-                result_container["result"] = response
-                result_container["done"] = True
-            logger.info(f"Generated {len(response.suggestions)} suggestions")
-        except Exception as e:
-            logger.exception(f"Optimization failed: {e}")
-            with lock:
-                result_container["error"] = str(e)
-                result_container["done"] = True
 
-    def generate():
-        """SSE generator with heartbeats."""
-        # Start optimizer in background thread
-        optimizer_thread = threading.Thread(target=run_optimizer, daemon=True)
-        optimizer_thread.start()
-
-        start_time = time.time()
+        future = loop.run_in_executor(executor, run_optimizer)
+        start_time = asyncio.get_event_loop().time()
         heartbeat_interval = 15  # seconds
 
         while True:
-            # Check if done
-            with lock:
-                if result_container["done"]:
-                    if result_container["error"]:
-                        yield f"data: {json.dumps({'status': 'error', 'message': result_container['error']})}\n\n"
-                    else:
-                        yield f"data: {json.dumps({'status': 'complete', 'data': result_container['result'].model_dump()})}\n\n"
-                    break
+            try:
+                # Wait for result with timeout (heartbeat interval)
+                result = await asyncio.wait_for(
+                    asyncio.shield(future), timeout=heartbeat_interval
+                )
+                # Success - send complete event
+                logger.info(f"Generated {len(result.suggestions)} suggestions, sending complete event")
+                yield f"data: {json.dumps({'status': 'complete', 'data': result.model_dump()})}\n\n"
+                logger.info("Complete event sent")
+                break
+            except asyncio.TimeoutError:
+                # Still running - send heartbeat
+                elapsed = int(asyncio.get_event_loop().time() - start_time)
+                logger.info(f"Sending heartbeat at {elapsed}s")
+                yield f"data: {json.dumps({'status': 'processing', 'message': f'Generating suggestions... ({elapsed}s elapsed)', 'elapsed_seconds': elapsed})}\n\n"
+            except Exception as e:
+                # Error - send error event
+                logger.exception(f"Optimization failed: {e}")
+                yield f"data: {json.dumps({'status': 'error', 'message': str(e)})}\n\n"
+                break
 
-            # Send heartbeat
-            elapsed = int(time.time() - start_time)
-            yield f"data: {json.dumps({'status': 'processing', 'message': f'Generating suggestions... ({elapsed}s elapsed)', 'elapsed_seconds': elapsed})}\n\n"
-
-            # Wait for next heartbeat or completion
-            time.sleep(heartbeat_interval)
-
-    return StreamingResponse(generate(), media_type="text/event-stream")
+    # Headers to prevent proxy buffering
+    headers = {
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",
+    }
+    return StreamingResponse(generate(), media_type="text/event-stream", headers=headers)
 
