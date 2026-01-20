@@ -151,9 +151,16 @@ Then complete deployment via the Databricks UI. After deployment, grant the app'
 
 ## ⚙️ Configuration
 
-### Environment Variables
+There are two configuration files, each for a different environment:
 
-The quickstart script creates `.env.local` with your configuration:
+| File | Purpose |
+| ------ | --------- |
+| `.env.local` | Local development (created by `quickstart.sh`) |
+| `app.yaml` | Databricks Apps deployment |
+
+### Local Development (`.env.local`)
+
+The quickstart script creates `.env.local` for running the app locally:
 
 ```bash
 # Databricks workspace URL
@@ -169,19 +176,41 @@ MLFLOW_EXPERIMENT_ID=123456789
 
 # LLM model for analysis
 LLM_MODEL=databricks-claude-sonnet-4-5
+
+# SQL Warehouse for Optimize mode labeling
+SQL_WAREHOUSE_ID=abc123def456
 ```
 
 | Variable | Required | Description |
 | ---------- | ---------- | ------------- |
-| `DATABRICKS_HOST` | Yes (local) | Your Databricks workspace URL |
+| `DATABRICKS_HOST` | Yes | Your Databricks workspace URL |
 | `DATABRICKS_CONFIG_PROFILE` | No | Databricks CLI profile (default: DEFAULT) |
-| `DATABRICKS_TOKEN` | Optional | PAT token (alternative to OAuth) |
-| `MLFLOW_TRACKING_URI` | No | Set to `databricks` to log traces to workspace |
+| `DATABRICKS_TOKEN` | No | PAT token (alternative to OAuth) |
 | `MLFLOW_EXPERIMENT_ID` | No | MLflow experiment ID - set to enable tracing |
 | `LLM_MODEL` | Yes | LLM model name (default: `databricks-claude-sonnet-4-5`) |
-| `SQL_WAREHOUSE_ID` | No | SQL Warehouse ID for executing benchmark queries in labeling sessions |
+| `SQL_WAREHOUSE_ID` | For Optimize | SQL Warehouse ID for executing benchmark queries in Optimize mode |
 
-> **Note:** When deployed to Databricks Apps, configure these in `app.yaml`. MLflow tracing is optional—leave `MLFLOW_EXPERIMENT_ID` empty to disable it. Authentication is handled automatically via OAuth (OBO).
+### Databricks Apps Deployment (`app.yaml`)
+
+When deploying to Databricks Apps, configure environment variables in `app.yaml`:
+
+```yaml
+env:
+  - name: MLFLOW_EXPERIMENT_ID
+    value: "123456789"  # OPTIONAL: Set to enable tracing
+  - name: LLM_MODEL
+    value: "databricks-claude-sonnet-4"
+  - name: SQL_WAREHOUSE_ID
+    value: ""  # Required for Optimize mode SQL execution
+```
+
+| Variable | Required | Description |
+| ---------- | ---------- | ------------- |
+| `MLFLOW_EXPERIMENT_ID` | No | MLflow experiment ID - set to enable tracing |
+| `LLM_MODEL` | Yes | LLM model name |
+| `SQL_WAREHOUSE_ID` | For Optimize | SQL Warehouse ID for executing benchmark queries in Optimize mode |
+
+> **Note:** In Databricks Apps, authentication is handled automatically via OAuth (OBO)—no need to configure `DATABRICKS_HOST` or tokens. The `MLFLOW_TRACKING_URI` and `MLFLOW_REGISTRY_URI` are pre-set to `databricks` and `databricks-uc`.
 
 ## 📁 Project Structure
 
