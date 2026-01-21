@@ -37,8 +37,6 @@ GENIE_SPACE_ID=<id> uv run python test_agent.py --url http://localhost:8000
 ./scripts/deploy.sh genie-space-analyzer
 ```
 
-Note: `app.py` at the root is a deprecated Streamlit UI; use `agent_server/` for active development.
-
 ## Architecture
 
 ```text
