@@ -1,5 +1,5 @@
 <!-- markdownlint-disable MD033 -->
-# 🔍 GenieRx: The Genie Space Analyzer
+# 🔍 GenieRx: Analyze and Optimize Your Genie Space
 
 > ⚠️ **Note:** This project is experimental and under active development.
 
@@ -10,46 +10,66 @@ This app was designed to be deployed on Databricks Apps. You can either:
 - **Quick deploy**: Clone the repo directly into your Databricks workspace and deploy via Databricks Apps (see [Quick Start](#-quick-start))
 - **Local development**: Clone locally and use the shell scripts for development and deployment
 
-![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)
-![MLflow](https://img.shields.io/badge/MLflow-3.6+-green.svg)
-![React](https://img.shields.io/badge/React-18+-61DAFB.svg)
-![TypeScript](https://img.shields.io/badge/TypeScript-5+-3178C6.svg)
-
 ## 📸 Walkthrough
 
-<p align="center">
-  <img src="images/intro.png" alt="Enter Genie Space ID" width="800"><br>
-  <em>1) Select mode (Analyze/Optimize), enter your Genie Space ID or paste JSON</em>
+### Analyze Mode
+
+<p align="left">
+  <img src="images/app-intro.png" alt="Enter Genie Space ID" width="400"><br>
+  <em>1) Enter your Genie Space ID or paste JSON, and then select mode (Analyze/Optimize)</em>
 </p>
 
-<p align="center">
-  <img src="images/ingest.png" alt="Preview ingested data" width="800"><br>
+<p align="left">
+  <img src="images/ingest.png" alt="Preview ingested data" width="400"><br>
   <em>2) Preview the ingested configuration data</em>
 </p>
 
-<p align="center">
-  <img src="images/pending.png" alt="Sections ready for analysis" width="800"><br>
+<p align="left">
+  <img src="images/pending-analysis.png" alt="Sections ready for analysis" width="400"><br>
   <em>3) Review sections pending analysis</em>
 </p>
 
-<p align="center">
-  <img src="images/analysis.png" alt="Section analysis in progress" width="800"><br>
+<p align="left">
+  <img src="images/analysis-result.png" alt="Section analysis in progress" width="400"><br>
   <em>4) Analyze each section against best practices</em>
 </p>
 
-<p align="center">
-  <img src="images/summary.png" alt="Final compliance summary" width="800"><br>
+<p align="left">
+  <img src="images/analysis-summary.png" alt="Final compliance summary" width="400"><br>
   <em>5) View the final compliance summary and scores</em>
 </p>
 
 ### Optimize Mode
 
-The app also supports an **Optimize** workflow for improving Genie accuracy:
+<p align="left">
+  <img src="images/select-benchmarks.png" alt="Preview ingested data" width="400"><br>
+  <em>1) Select benchmark questions</em>
+</p>
 
-1. **Benchmarks** - Select benchmark questions from your Genie Space config
-2. **Labeling** - Query Genie for each question, execute the SQL, and mark responses as correct/incorrect
-3. **Feedback** - Review the labeling session summary
-4. **Optimization** - AI generates field-level suggestions based on your feedback (instruction changes, SQL examples, filters, etc.)
+<p align="left">
+  <img src="images/generating.png" alt="Preview ingested data" width="400"><br>
+  <em>2) Generating Genie responses</em>
+</p>
+
+<p align="left">
+  <img src="images/labeling.png" alt="Preview ingested data" width="400"><br>
+  <em>3) Label Genie responses with feedback</em>
+</p>
+
+<p align="left">
+  <img src="images/feedback.png" alt="Preview ingested data" width="400"><br>
+  <em>4) Aggregating user labeling feedback</em>
+</p>
+
+<p align="left">
+  <img src="images/optimizing.png" alt="Preview ingested data" width="400"><br>
+  <em>5) Generating optimization suggestions</em>
+</p>
+
+<p align="left">
+  <img src="images/optimization-results.png" alt="Preview ingested data" width="400"><br>
+  <em>6) Review optimization suggestions</em>
+</p>
 
 ## 📋 Prerequisites
 
