@@ -225,12 +225,7 @@ export function SidebarNav({
             onClick={() => setIsOptimizeExpanded(!isOptimizeExpanded)}
             className="w-full flex items-center justify-between px-2 py-1.5 text-xs font-semibold text-muted uppercase tracking-wider hover:text-secondary transition-colors"
           >
-            <span className="flex items-center gap-1.5">
-              Optimize
-              <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-warning/20 text-warning normal-case tracking-normal">
-                Soon
-              </span>
-            </span>
+            <span>Optimize</span>
             <ChevronDown
               className={cn(
                 "w-4 h-4 transition-transform duration-200",
