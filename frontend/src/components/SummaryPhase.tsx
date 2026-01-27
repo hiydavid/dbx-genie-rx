@@ -13,6 +13,7 @@ import type { SectionAnalysis } from "@/types"
 interface SummaryPhaseProps {
   genieSpaceId: string
   sectionAnalyses: SectionAnalysis[]
+  selectedSections: number[]
   expandedSections: Record<string, boolean>
   onToggleSection: (sectionName: string) => void
   onExpandAll: () => void
@@ -30,17 +31,23 @@ function formatSectionName(sectionName: string): string {
 export function SummaryPhase({
   genieSpaceId,
   sectionAnalyses,
+  selectedSections,
   expandedSections,
   onToggleSection,
   onExpandAll,
   onCollapseAll,
 }: SummaryPhaseProps) {
-  // Calculate totals
-  const totalChecklist = sectionAnalyses.reduce(
+  // Filter analyses to only show selected sections
+  const filteredAnalyses = selectedSections
+    .map((index) => sectionAnalyses[index])
+    .filter((a): a is SectionAnalysis => a !== undefined)
+
+  // Calculate totals from filtered analyses
+  const totalChecklist = filteredAnalyses.reduce(
     (sum, a) => sum + a.checklist.length,
     0
   )
-  const passedChecklist = sectionAnalyses.reduce(
+  const passedChecklist = filteredAnalyses.reduce(
     (sum, a) => sum + a.checklist.filter((c) => c.passed).length,
     0
   )
@@ -85,7 +92,7 @@ export function SummaryPhase({
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {sectionAnalyses.map((analysis, index) => {
+            {filteredAnalyses.map((analysis, index) => {
               const displayName = formatSectionName(analysis.section_name)
               const passed = analysis.checklist.filter((c) => c.passed).length
               const total = analysis.checklist.length

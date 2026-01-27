@@ -44,6 +44,7 @@ export interface AnalysisState {
   expandedSections: Record<string, boolean>
   analysisProgress: { completed: number; total: number } | null
   analyzingSection: number | null
+  selectedSections: number[]  // Indices of selected sections for analysis
   selectedQuestions: string[]
   hasLabelingSession: boolean
   // Labeling session state (persists across navigation)
@@ -80,6 +81,7 @@ const initialState: AnalysisState = {
   expandedSections: {},
   analysisProgress: null,
   analyzingSection: null,
+  selectedSections: [],  // Will be populated when sections are loaded
   selectedQuestions: [],
   hasLabelingSession: false,
   // Labeling session state
@@ -135,11 +137,16 @@ export function useAnalysis() {
 
     try {
       const response: FetchSpaceResponse = await fetchSpace(spaceId)
+      // Initialize selectedSections with all configured sections (where has_data is true)
+      const configuredIndices = response.sections
+        .map((s, i) => (s.has_data ? i : -1))
+        .filter((i) => i !== -1)
       setState((prev) => ({
         ...prev,
         genieSpaceId: response.genie_space_id,
         spaceData: response.space_data,
         sections: response.sections,
+        selectedSections: configuredIndices,
         isLoading: false,
       }))
     } catch (err) {
@@ -156,11 +163,16 @@ export function useAnalysis() {
 
     try {
       const response: FetchSpaceResponse = await parseSpaceJson(jsonContent)
+      // Initialize selectedSections with all configured sections (where has_data is true)
+      const configuredIndices = response.sections
+        .map((s, i) => (s.has_data ? i : -1))
+        .filter((i) => i !== -1)
       setState((prev) => ({
         ...prev,
         genieSpaceId: response.genie_space_id,
         spaceData: response.space_data,
         sections: response.sections,
+        selectedSections: configuredIndices,
         isLoading: false,
       }))
     } catch (err) {
@@ -183,27 +195,36 @@ export function useAnalysis() {
   }, [])
 
   const analyzeAllSections = useCallback(async () => {
-    const { sections, spaceData } = state
-    if (!spaceData) return
+    const { sections, spaceData, selectedSections } = state
+    if (!spaceData || selectedSections.length === 0) return
+
+    // Filter sections to only analyze selected ones
+    const sectionsToAnalyze = selectedSections.map((i) => sections[i])
 
     setState((prev) => ({
       ...prev,
       isLoading: true,
       error: null,
-      analysisProgress: { completed: 0, total: sections.length },
+      analysisProgress: { completed: 0, total: sectionsToAnalyze.length },
     }))
 
     try {
       const results = await analyzeAllSectionsApi(
-        sections,
+        sectionsToAnalyze,
         spaceData,
         (completed, total) =>
           setState((prev) => ({ ...prev, analysisProgress: { completed, total } }))
       )
 
+      // Map results back to original section indices (sparse array)
+      const sparseAnalyses: SectionAnalysis[] = []
+      selectedSections.forEach((sectionIndex, resultIndex) => {
+        sparseAnalyses[sectionIndex] = results[resultIndex]
+      })
+
       setState((prev) => ({
         ...prev,
-        sectionAnalyses: results,
+        sectionAnalyses: sparseAnalyses,
         allSectionsAnalyzed: true,
         phase: "summary",
         isLoading: false,
@@ -217,7 +238,7 @@ export function useAnalysis() {
         analysisProgress: null,
       }))
     }
-  }, [state.sections, state.spaceData])
+  }, [state.sections, state.spaceData, state.selectedSections])
 
   const analyzeSingleSection = useCallback(
     async (index: number) => {
@@ -361,6 +382,31 @@ export function useAnalysis() {
       ...prev,
       expandedSections: {},
     }))
+  }, [])
+
+  const toggleSectionSelection = useCallback((index: number) => {
+    setState((prev) => {
+      const isSelected = prev.selectedSections.includes(index)
+      return {
+        ...prev,
+        selectedSections: isSelected
+          ? prev.selectedSections.filter((i) => i !== index)
+          : [...prev.selectedSections, index].sort((a, b) => a - b),
+      }
+    })
+  }, [])
+
+  const selectAllSections = useCallback(() => {
+    setState((prev) => {
+      const configuredIndices = prev.sections
+        .map((s, i) => (s.has_data ? i : -1))
+        .filter((i) => i !== -1)
+      return { ...prev, selectedSections: configuredIndices }
+    })
+  }, [])
+
+  const deselectAllSections = useCallback(() => {
+    setState((prev) => ({ ...prev, selectedSections: [] }))
   }, [])
 
   const goToBenchmarks = useCallback(() => {
@@ -719,6 +765,9 @@ export function useAnalysis() {
       toggleSectionExpanded,
       expandAllSections,
       collapseAllSections,
+      toggleSectionSelection,
+      selectAllSections,
+      deselectAllSections,
       toggleQuestionSelection,
       selectAllQuestions,
       deselectAllQuestions,

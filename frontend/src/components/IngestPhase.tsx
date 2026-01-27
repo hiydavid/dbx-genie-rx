@@ -20,9 +20,11 @@ interface IngestPhaseProps {
   sectionAnalyses: SectionAnalysis[]
   isLoading: boolean
   analysisProgress: { completed: number; total: number } | null
-  analyzingSection: number | null
+  selectedSections: number[]
+  onToggleSectionSelection: (index: number) => void
+  onSelectAllSections: () => void
+  onDeselectAllSections: () => void
   onAnalyzeAllSections: () => void
-  onAnalyzeSingleSection: (index: number) => void
   onGoToSection: (index: number) => void
 }
 
@@ -39,12 +41,15 @@ export function IngestPhase({
   sectionAnalyses,
   isLoading,
   analysisProgress,
-  analyzingSection,
+  selectedSections,
+  onToggleSectionSelection,
+  onSelectAllSections,
+  onDeselectAllSections,
   onAnalyzeAllSections,
-  onAnalyzeSingleSection,
   onGoToSection,
 }: IngestPhaseProps) {
   const configuredCount = sections.filter((s) => s.has_data).length
+  const selectedCount = selectedSections.length
 
   return (
     <div className="space-y-6 animate-slide-up">
@@ -61,19 +66,37 @@ export function IngestPhase({
             </code>
           </p>
         </div>
-        <Button onClick={onAnalyzeAllSections} disabled={isLoading}>
-          {analysisProgress ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Analyzing {analysisProgress.completed}/{analysisProgress.total}...
-            </>
-          ) : (
-            <>
-              <Play className="w-4 h-4 mr-2" />
-              Start Analysis
-            </>
-          )}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onSelectAllSections}
+            disabled={isLoading || selectedCount === configuredCount}
+          >
+            Select All
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onDeselectAllSections}
+            disabled={isLoading || selectedCount === 0}
+          >
+            Deselect All
+          </Button>
+          <Button onClick={onAnalyzeAllSections} disabled={isLoading || selectedCount === 0}>
+            {analysisProgress ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Analyzing {analysisProgress.completed}/{analysisProgress.total}...
+              </>
+            ) : (
+              <>
+                <Play className="w-4 h-4 mr-2" />
+                Begin Analysis ({selectedCount})
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Summary stats */}
@@ -102,9 +125,9 @@ export function IngestPhase({
             {sections.map((section, index) => {
               const displayName = formatSectionName(section.name)
               const itemCount = Array.isArray(section.data) ? section.data.length : 1
-              const isAnalyzingThis = analyzingSection === index
               const analysis = sectionAnalyses[index]
               const isAnalyzed = analysis !== undefined
+              const isSelected = selectedSections.includes(index)
 
               if (!section.has_data) {
                 return (
@@ -155,7 +178,19 @@ export function IngestPhase({
                       )}
                     </span>
                   }
-                  icon={<Check className="w-4 h-4 text-success" />}
+                  icon={
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      disabled={isLoading}
+                      onChange={(e) => {
+                        e.stopPropagation()
+                        onToggleSectionSelection(index)
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-4 h-4 rounded border-default text-accent focus:ring-accent focus:ring-offset-0 cursor-pointer"
+                    />
+                  }
                   action={
                     isAnalyzed ? (
                       <Button
@@ -169,25 +204,7 @@ export function IngestPhase({
                       >
                         <Check className="w-4 h-4" />
                       </Button>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled={isLoading || analyzingSection !== null}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onAnalyzeSingleSection(index)
-                        }}
-                        className="h-7 w-7 p-0 text-accent hover:text-accent hover:bg-accent/10"
-                        title="Analyze this section"
-                      >
-                        {isAnalyzingThis ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <Play className="w-3.5 h-3.5" />
-                        )}
-                      </Button>
-                    )
+                    ) : undefined
                   }
                 >
                   <pre className="text-xs font-mono overflow-auto max-h-[32rem] p-3 bg-surface rounded-lg border border-default">

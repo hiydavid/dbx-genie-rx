@@ -134,9 +134,11 @@ function App() {
             sectionAnalyses={state.sectionAnalyses}
             isLoading={state.isLoading}
             analysisProgress={state.analysisProgress}
-            analyzingSection={state.analyzingSection}
+            selectedSections={state.selectedSections}
+            onToggleSectionSelection={actions.toggleSectionSelection}
+            onSelectAllSections={actions.selectAllSections}
+            onDeselectAllSections={actions.deselectAllSections}
             onAnalyzeAllSections={actions.analyzeAllSections}
-            onAnalyzeSingleSection={actions.analyzeSingleSection}
             onGoToSection={actions.goToSection}
           />
         )
@@ -163,6 +165,7 @@ function App() {
           <SummaryPhase
             genieSpaceId={state.genieSpaceId}
             sectionAnalyses={state.sectionAnalyses}
+            selectedSections={state.selectedSections}
             expandedSections={state.expandedSections}
             onToggleSection={actions.toggleSectionExpanded}
             onExpandAll={actions.expandAllSections}
