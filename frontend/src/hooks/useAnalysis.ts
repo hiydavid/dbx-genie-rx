@@ -45,6 +45,7 @@ export interface AnalysisState {
   analysisProgress: { completed: number; total: number } | null
   analyzingSection: number | null
   selectedSections: number[]  // Indices of selected sections for analysis
+  analysisViewIndex: number  // Index within filtered analyzed sections list
   selectedQuestions: string[]
   hasLabelingSession: boolean
   // Labeling session state (persists across navigation)
@@ -82,6 +83,7 @@ const initialState: AnalysisState = {
   analysisProgress: null,
   analyzingSection: null,
   selectedSections: [],  // Will be populated when sections are loaded
+  analysisViewIndex: 0,
   selectedQuestions: [],
   hasLabelingSession: false,
   // Labeling session state
@@ -317,12 +319,53 @@ export function useAnalysis() {
   }, [state])
 
   const goToSection = useCallback((index: number) => {
-    setState((prev) => ({
-      ...prev,
-      phase: "analysis",
-      currentSectionIndex: index,
-      showChecklist: false,
-    }))
+    setState((prev) => {
+      // Compute the view index within analyzed sections
+      const analyzedIndices = prev.sectionAnalyses
+        .map((a, i) => (a !== undefined ? i : -1))
+        .filter((i) => i !== -1)
+      const viewIndex = analyzedIndices.indexOf(index)
+      return {
+        ...prev,
+        phase: "analysis",
+        currentSectionIndex: index,
+        analysisViewIndex: viewIndex >= 0 ? viewIndex : 0,
+        showChecklist: false,
+      }
+    })
+  }, [])
+
+  const setAnalysisViewIndex = useCallback((index: number) => {
+    setState((prev) => {
+      // Get the list of analyzed section indices
+      const analyzedIndices = prev.sectionAnalyses
+        .map((a, i) => (a !== undefined ? i : -1))
+        .filter((i) => i !== -1)
+      // Clamp index to valid range
+      const clampedIndex = Math.max(0, Math.min(analyzedIndices.length - 1, index))
+      const originalIndex = analyzedIndices[clampedIndex] ?? prev.currentSectionIndex
+      return {
+        ...prev,
+        analysisViewIndex: clampedIndex,
+        currentSectionIndex: originalIndex,
+      }
+    })
+  }, [])
+
+  const goToAnalysis = useCallback(() => {
+    setState((prev) => {
+      const analyzedIndices = prev.sectionAnalyses
+        .map((a, i) => (a !== undefined ? i : -1))
+        .filter((i) => i !== -1)
+      const firstAnalyzedIndex = analyzedIndices[0] ?? 0
+      return {
+        ...prev,
+        phase: "analysis",
+        currentSectionIndex: firstAnalyzedIndex,
+        analysisViewIndex: 0,
+        showChecklist: false,
+      }
+    })
   }, [])
 
   const nextSection = useCallback(() => {
@@ -751,6 +794,8 @@ export function useAnalysis() {
       analyzeSingleSection,
       analyzeCurrentSection,
       goToSection,
+      setAnalysisViewIndex,
+      goToAnalysis,
       nextSection,
       prevSection,
       goToSummary,
