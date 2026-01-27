@@ -134,9 +134,11 @@ function App() {
             sectionAnalyses={state.sectionAnalyses}
             isLoading={state.isLoading}
             analysisProgress={state.analysisProgress}
-            analyzingSection={state.analyzingSection}
+            selectedSections={state.selectedSections}
+            onToggleSectionSelection={actions.toggleSectionSelection}
+            onSelectAllSections={actions.selectAllSections}
+            onDeselectAllSections={actions.deselectAllSections}
             onAnalyzeAllSections={actions.analyzeAllSections}
-            onAnalyzeSingleSection={actions.analyzeSingleSection}
             onGoToSection={actions.goToSection}
           />
         )
@@ -146,14 +148,12 @@ function App() {
           <AnalysisPhase
             genieSpaceId={state.genieSpaceId}
             sections={state.sections}
-            currentSectionIndex={state.currentSectionIndex}
             sectionAnalyses={state.sectionAnalyses}
-            allSectionsAnalyzed={state.allSectionsAnalyzed}
+            analysisViewIndex={state.analysisViewIndex}
             isLoading={state.isLoading}
             error={state.error}
             onAnalyzeSection={actions.analyzeCurrentSection}
-            onPrevSection={actions.prevSection}
-            onNextSection={actions.nextSection}
+            onSetAnalysisViewIndex={actions.setAnalysisViewIndex}
             onGoToSummary={actions.goToSummary}
           />
         )
@@ -163,6 +163,7 @@ function App() {
           <SummaryPhase
             genieSpaceId={state.genieSpaceId}
             sectionAnalyses={state.sectionAnalyses}
+            selectedSections={state.selectedSections}
             expandedSections={state.expandedSections}
             onToggleSection={actions.toggleSectionExpanded}
             onExpandAll={actions.expandAllSections}
@@ -182,16 +183,15 @@ function App() {
         <SidebarNav
           phase={state.phase}
           optimizeView={state.optimizeView}
-          sections={state.sections}
-          currentSectionIndex={state.currentSectionIndex}
-          sectionAnalyses={state.sectionAnalyses}
+          hasAnalyzedSections={state.sectionAnalyses.some(a => a !== undefined)}
+          analyzedCount={state.sectionAnalyses.filter(a => a !== undefined).length}
           allSectionsAnalyzed={state.allSectionsAnalyzed}
           showChecklist={state.showChecklist}
           showSettings={state.showSettings}
           hasLabelingSession={state.hasLabelingSession}
           hasOptimizationResults={state.optimizationSuggestions !== null}
           onGoToIngest={actions.goToIngest}
-          onGoToSection={actions.goToSection}
+          onGoToAnalysis={actions.goToAnalysis}
           onGoToSummary={actions.goToSummary}
           onGoToBenchmarks={actions.goToBenchmarks}
           onGoToLabeling={actions.goToLabeling}

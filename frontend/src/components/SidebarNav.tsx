@@ -9,8 +9,6 @@ import {
   ClipboardCheck,
   RotateCcw,
   Check,
-  AlertTriangle,
-  Circle,
   Search,
   ChevronDown,
   MessageSquare,
@@ -21,21 +19,20 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import type { Phase, OptimizeView, SectionInfo, SectionAnalysis } from "@/types"
+import type { Phase, OptimizeView } from "@/types"
 
 interface SidebarNavProps {
   phase: Phase
   optimizeView: OptimizeView | null
-  sections: SectionInfo[]
-  currentSectionIndex: number
-  sectionAnalyses: SectionAnalysis[]
+  hasAnalyzedSections: boolean
+  analyzedCount: number
   allSectionsAnalyzed: boolean
   showChecklist: boolean
   showSettings: boolean
   hasLabelingSession: boolean
   hasOptimizationResults: boolean
   onGoToIngest: () => void
-  onGoToSection: (index: number) => void
+  onGoToAnalysis: () => void
   onGoToSummary: () => void
   onGoToBenchmarks: () => void
   onGoToLabeling: () => void
@@ -46,28 +43,18 @@ interface SidebarNavProps {
   onReset: () => void
 }
 
-function getShortSectionName(sectionName: string): string {
-  return sectionName
-    .split(".")
-    .pop()!
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (l) => l.toUpperCase())
-    .replace(/Sql/g, "SQL")
-}
-
 export function SidebarNav({
   phase,
   optimizeView,
-  sections,
-  currentSectionIndex,
-  sectionAnalyses,
+  hasAnalyzedSections,
+  analyzedCount,
   allSectionsAnalyzed,
   showChecklist,
   showSettings,
   hasLabelingSession,
   hasOptimizationResults,
   onGoToIngest,
-  onGoToSection,
+  onGoToAnalysis,
   onGoToSummary,
   onGoToBenchmarks,
   onGoToLabeling,
@@ -79,7 +66,6 @@ export function SidebarNav({
 }: SidebarNavProps) {
   const [isAnalysisExpanded, setIsAnalysisExpanded] = useState(true)
   const [isOptimizeExpanded, setIsOptimizeExpanded] = useState(true)
-  const completedCount = sectionAnalyses.length
 
   if (phase === "input") {
     return (
@@ -143,67 +129,38 @@ export function SidebarNav({
             )}
           >
             <div className="overflow-hidden">
-              {/* Section steps */}
+              {/* Single Analysis button */}
               <div className="space-y-1 pl-2 mt-1">
-                {sections.map((section, index) => {
-                  const shortName = getShortSectionName(section.name)
-                  const isMissing = !section.has_data
-                  const isCurrent =
-                    phase === "analysis" && index === currentSectionIndex && !showChecklist
-                  const isCompleted = sectionAnalyses[index] !== undefined
-
-                  let icon = <Circle className="w-4 h-4" />
-                  let className =
-                    "bg-elevated text-muted cursor-not-allowed opacity-60"
-
-                  if (isCurrent) {
-                    icon = isMissing ? (
-                      <AlertTriangle className="w-4 h-4" />
-                    ) : (
-                      <Search className="w-4 h-4" />
-                    )
-                    className = "gradient-accent text-white shadow-lg shadow-accent/20 dark:glow-accent dark:animate-pulse-glow"
-                  } else if (isCompleted) {
-                    icon = isMissing ? (
-                      <AlertTriangle className="w-4 h-4" />
-                    ) : (
-                      <Check className="w-4 h-4" />
-                    )
-                    className = isMissing
-                      ? "bg-warning/10 text-warning hover:bg-warning/20 cursor-pointer dark:bg-warning/15"
-                      : "bg-success/10 text-success hover:bg-success/20 cursor-pointer dark:bg-success/15"
-                  } else if (isMissing) {
-                    icon = <AlertTriangle className="w-4 h-4" />
-                    className = "bg-warning/10 text-warning opacity-50"
-                  }
-
-                  return (
-                    <button
-                      key={section.name}
-                      onClick={() => isCompleted && onGoToSection(index)}
-                      disabled={!isCompleted}
-                      className={cn(
-                        "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left",
-                        className
-                      )}
-                    >
-                      {icon}
-                      <span className="truncate">{shortName}</span>
-                    </button>
-                  )
-                })}
+                <button
+                  onClick={onGoToAnalysis}
+                  disabled={!hasAnalyzedSections}
+                  className={cn(
+                    "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left",
+                    phase === "analysis" && !showChecklist
+                      ? "gradient-accent text-white shadow-lg shadow-accent/20 dark:glow-accent"
+                      : hasAnalyzedSections
+                      ? "bg-elevated text-secondary hover:bg-sunken cursor-pointer"
+                      : "bg-elevated text-muted cursor-not-allowed opacity-60"
+                  )}
+                >
+                  <Search className="w-4 h-4" />
+                  Analysis
+                  {hasAnalyzedSections && (
+                    <span className="ml-auto text-xs opacity-70">{analyzedCount}</span>
+                  )}
+                </button>
               </div>
 
               {/* Summary step - inside Analysis group */}
               <div className="pl-2 mt-2">
                 <button
                   onClick={onGoToSummary}
-                  disabled={!allSectionsAnalyzed && completedCount !== sections.length}
+                  disabled={!allSectionsAnalyzed}
                   className={cn(
                     "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left",
                     phase === "summary" && !showChecklist
                       ? "gradient-accent text-white shadow-lg shadow-accent/20 dark:glow-accent"
-                      : allSectionsAnalyzed || completedCount === sections.length
+                      : allSectionsAnalyzed
                       ? "bg-elevated text-secondary hover:bg-sunken cursor-pointer"
                       : "bg-elevated text-muted cursor-not-allowed opacity-60"
                   )}
