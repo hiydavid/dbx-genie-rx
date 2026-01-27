@@ -364,6 +364,7 @@ export function useAnalysis() {
         currentSectionIndex: firstAnalyzedIndex,
         analysisViewIndex: 0,
         showChecklist: false,
+        optimizeView: null,
       }
     })
   }, [])
@@ -386,7 +387,7 @@ export function useAnalysis() {
   }, [])
 
   const goToSummary = useCallback(() => {
-    setState((prev) => ({ ...prev, phase: "summary", showChecklist: false }))
+    setState((prev) => ({ ...prev, phase: "summary", showChecklist: false, optimizeView: null }))
   }, [])
 
   const goToIngest = useCallback(() => {
