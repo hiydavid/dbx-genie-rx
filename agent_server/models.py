@@ -71,8 +71,8 @@ class OptimizationSuggestion(BaseModel):
     """A single field-level optimization suggestion."""
 
     field_path: str  # e.g., "instructions.text_instructions[0].content"
-    current_value: str | dict | list | None  # Current value
-    suggested_value: str | dict | list | None  # Suggested new value
+    current_value: str | dict | list | bool | int | float | None  # Current value
+    suggested_value: str | dict | list | bool | int | float | None  # Suggested new value
     rationale: str  # Why this change helps
     checklist_reference: str | None = None  # Related checklist item ID
     priority: str  # "high", "medium", "low"

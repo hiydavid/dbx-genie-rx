@@ -1,14 +1,12 @@
 """Optimizer module for generating Genie Space optimization suggestions."""
 
-import json
 import logging
-import os
 from pathlib import Path
 
 import mlflow
 from mlflow.entities import SpanType
 
-from agent_server.auth import get_workspace_client
+from agent_server.llm_utils import call_serving_endpoint, get_llm_model, parse_json_from_llm_response
 from agent_server.models import (
     ConfigMergeResponse,
     LabelingFeedbackItem,
@@ -24,52 +22,8 @@ class GenieSpaceOptimizer:
     """Generates optimization suggestions for Genie Space configurations."""
 
     def __init__(self):
-        self.model = os.environ.get("LLM_MODEL", "databricks-claude-sonnet-4")
+        self.model = get_llm_model()
         self._checklist_content: str | None = None
-
-    def _call_serving_endpoint(self, messages: list[dict]) -> str:
-        """Call the LLM serving endpoint using the SDK's API client.
-
-        Uses the SDK's api_client.do() which handles OBO authentication
-        automatically on Databricks Apps.
-
-        Args:
-            messages: List of chat messages in OpenAI format
-
-        Returns:
-            The assistant's response content
-        """
-        client = get_workspace_client()
-
-        logger.info(f"Calling serving endpoint: {self.model}")
-
-        response = client.api_client.do(
-            method="POST",
-            path=f"/serving-endpoints/{self.model}/invocations",
-            body={
-                "messages": messages,
-                "max_tokens": 8192,  # Ensure enough tokens for response
-            },
-        )
-
-        logger.info(f"Response keys: {response.keys() if isinstance(response, dict) else type(response)}")
-
-        # Response is in OpenAI-compatible format
-        if not isinstance(response, dict):
-            raise ValueError(f"Unexpected response type: {type(response)}")
-
-        if "choices" not in response:
-            logger.error(f"Response missing 'choices': {response}")
-            raise ValueError(f"Response missing 'choices' key: {list(response.keys())}")
-
-        if not response["choices"]:
-            raise ValueError("Response has empty 'choices' list")
-
-        content = response["choices"][0]["message"]["content"]
-        if not content:
-            raise ValueError("LLM returned empty content")
-
-        return content
 
     def _get_checklist_content(self) -> str:
         """Load the checklist markdown content."""
@@ -114,56 +68,15 @@ class GenieSpaceOptimizer:
         )
 
         # Call the LLM
-        content = self._call_serving_endpoint(
-            messages=[{"role": "user", "content": prompt}]
+        content = call_serving_endpoint(
+            messages=[{"role": "user", "content": prompt}],
+            model=self.model,
+            max_tokens=8192,  # Ensure enough tokens for response
         )
 
         logger.info(f"Raw LLM response length: {len(content)}")
 
-        # Parse response, handling potential markdown code blocks
-        content = content.strip()
-        if content.startswith("```"):
-            # Find the end of the code block
-            lines = content.split("\n")
-            # Skip first line (```json or ```)
-            start_idx = 1
-            # Find closing ```
-            end_idx = len(lines)
-            for i in range(len(lines) - 1, 0, -1):
-                if lines[i].strip() == "```":
-                    end_idx = i
-                    break
-            content = "\n".join(lines[start_idx:end_idx])
-
-        # Handle case where response might have text before JSON
-        if not content.startswith("{"):
-            # Try to find JSON object in the response
-            json_start = content.find("{")
-            if json_start != -1:
-                # Find matching closing brace
-                brace_count = 0
-                json_end = -1
-                for i, char in enumerate(content[json_start:], json_start):
-                    if char == "{":
-                        brace_count += 1
-                    elif char == "}":
-                        brace_count -= 1
-                        if brace_count == 0:
-                            json_end = i + 1
-                            break
-                if json_end != -1:
-                    content = content[json_start:json_end]
-
-        logger.info(f"Parsed content length: {len(content)}")
-        if not content:
-            raise ValueError("LLM returned empty response after parsing")
-
-        try:
-            result = json.loads(content)
-        except json.JSONDecodeError as e:
-            logger.error(f"JSON parse error: {e}")
-            logger.error(f"Content preview: {content[:500]}...")
-            raise
+        result = parse_json_from_llm_response(content)
 
         # Convert to response model
         suggestions = [

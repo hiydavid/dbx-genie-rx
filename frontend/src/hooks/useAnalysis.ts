@@ -2,7 +2,7 @@
  * Custom hook for managing the Genie Space analysis state.
  */
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useRef } from "react"
 import type {
   Phase,
   AppMode,
@@ -12,7 +12,6 @@ import type {
   FetchSpaceResponse,
   SqlExecutionResult,
   OptimizationSuggestion,
-  BenchmarkQuestion,
 } from "@/types"
 import {
   fetchSpace,
@@ -24,9 +23,7 @@ import {
   queryGenie,
   executeSql,
 } from "@/lib/api"
-
-// Ref to track cancellation for benchmark processing
-let benchmarkProcessingCancelledRef = false
+import { getBenchmarkQuestions, getExpectedSql } from "@/lib/benchmarkUtils"
 
 export interface AnalysisState {
   mode: AppMode | null
@@ -116,6 +113,7 @@ const initialState: AnalysisState = {
 
 export function useAnalysis() {
   const [state, setState] = useState<AnalysisState>(initialState)
+  const benchmarkProcessingCancelledRef = useRef(false)
 
   const setMode = useCallback((mode: AppMode | null) => {
     setState((prev) => {
@@ -552,8 +550,7 @@ export function useAnalysis() {
     setState((prev) => ({ ...prev, isOptimizing: true, error: null, optimizeView: "optimization" }))
 
     // Get benchmark questions and build labeling feedback
-    const benchmarks = spaceData?.benchmarks as { questions?: BenchmarkQuestion[] }
-    const allQuestions = benchmarks?.questions || []
+    const allQuestions = getBenchmarkQuestions(spaceData)
 
     // Build feedback items from selected questions
     const labelingFeedback = selectedQuestions.map(id => {
@@ -704,11 +701,10 @@ export function useAnalysis() {
     if (!spaceData || selectedQuestions.length === 0) return
 
     // Get all benchmark questions
-    const benchmarks = spaceData?.benchmarks as { questions?: BenchmarkQuestion[] }
-    const allQuestions = benchmarks?.questions || []
+    const allQuestions = getBenchmarkQuestions(spaceData)
 
     // Reset cancellation flag
-    benchmarkProcessingCancelledRef = false
+    benchmarkProcessingCancelledRef.current = false
 
     setState((prev) => ({
       ...prev,
@@ -717,17 +713,9 @@ export function useAnalysis() {
       labelingProcessingErrors: {},
     }))
 
-    // Helper to get expected SQL for a question
-    const getExpectedSql = (question: BenchmarkQuestion): string | null => {
-      if (!question?.answer?.length) return null
-      const sqlAnswer = question.answer.find(a => a.format.toLowerCase() === "sql")
-      const answer = sqlAnswer || question.answer[0]
-      return answer?.content?.join("") || null
-    }
-
     // Process each question sequentially
     for (let i = 0; i < selectedQuestions.length; i++) {
-      if (benchmarkProcessingCancelledRef) {
+      if (benchmarkProcessingCancelledRef.current) {
         // User cancelled - stop processing but don't navigate
         setState((prev) => ({
           ...prev,
@@ -755,7 +743,7 @@ export function useAnalysis() {
         const questionText = question.question.join(" ")
         const response = await queryGenie(genieSpaceId, questionText)
 
-        if (benchmarkProcessingCancelledRef) continue
+        if (benchmarkProcessingCancelledRef.current) continue
 
         if (response.status === "COMPLETED" && response.sql) {
           // Store generated SQL
@@ -771,7 +759,7 @@ export function useAnalysis() {
             expectedSql ? executeSql(expectedSql) : Promise.resolve(null),
           ])
 
-          if (benchmarkProcessingCancelledRef) continue
+          if (benchmarkProcessingCancelledRef.current) continue
 
           // Store Genie result
           if (genieExec.status === "fulfilled" && genieExec.value) {
@@ -834,7 +822,7 @@ export function useAnalysis() {
     }
 
     // Processing complete - navigate to labeling
-    if (!benchmarkProcessingCancelledRef) {
+    if (!benchmarkProcessingCancelledRef.current) {
       setState((prev) => ({
         ...prev,
         isProcessingBenchmarks: false,
@@ -846,7 +834,7 @@ export function useAnalysis() {
   }, [state.genieSpaceId, state.spaceData, state.selectedQuestions, state.labelingGeneratedSql])
 
   const cancelBenchmarkProcessing = useCallback(() => {
-    benchmarkProcessingCancelledRef = true
+    benchmarkProcessingCancelledRef.current = true
     setState((prev) => ({
       ...prev,
       isProcessingBenchmarks: false,

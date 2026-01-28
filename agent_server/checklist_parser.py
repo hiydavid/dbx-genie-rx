@@ -9,8 +9,9 @@ from pathlib import Path
 from functools import lru_cache
 
 
-# Recognized sections that map to Genie Space schema paths
-RECOGNIZED_SECTIONS = {
+# Sections to analyze (in order for UI walkthrough)
+# This is the single source of truth for section names
+SECTIONS = [
     "data_sources.tables",
     "data_sources.metric_views",
     "instructions.text_instructions",
@@ -21,7 +22,10 @@ RECOGNIZED_SECTIONS = {
     "instructions.sql_snippets.expressions",
     "instructions.sql_snippets.measures",
     "benchmarks.questions",
-}
+]
+
+# Set version for fast lookup (derived from SECTIONS)
+RECOGNIZED_SECTIONS = set(SECTIONS)
 
 # Default path to checklist markdown file
 DEFAULT_CHECKLIST_PATH = Path(__file__).parent.parent / "docs" / "checklist-by-schema.md"

@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 import re
@@ -10,9 +9,9 @@ import mlflow
 from mlflow.entities import SpanType
 from mlflow.genai.agent_server import invoke as invoke_decorator
 
-from agent_server.auth import get_workspace_client
-from agent_server.checks import get_llm_checklist_items_for_section
+from agent_server.checklist_parser import get_checklist_items_for_section, SECTIONS
 from agent_server.ingest import get_serialized_space
+from agent_server.llm_utils import call_serving_endpoint, get_llm_model, parse_json_from_llm_response
 from agent_server.models import (
     AgentInput,
     AgentOutput,
@@ -43,52 +42,13 @@ else:
     )
     mlflow.tracing.disable()
 
-# Sections to analyze (in order for future UI walkthrough)
-SECTIONS = [
-    "data_sources.tables",
-    "data_sources.metric_views",
-    "instructions.text_instructions",
-    "instructions.example_question_sqls",
-    "instructions.sql_functions",
-    "instructions.join_specs",
-    "instructions.sql_snippets.filters",
-    "instructions.sql_snippets.expressions",
-    "instructions.sql_snippets.measures",
-    "benchmarks.questions",
-]
-
 
 class GenieSpaceAnalyzer:
     """Analyzes Genie Space configurations against best practices."""
 
     def __init__(self):
-        self.model = os.environ.get("LLM_MODEL", "databricks-claude-sonnet-4")
+        self.model = get_llm_model()
         self._session_id: str | None = None
-
-    def _call_serving_endpoint(self, messages: list[dict]) -> str:
-        """Call the LLM serving endpoint using the SDK's API client.
-
-        Uses the SDK's api_client.do() which handles OBO authentication
-        automatically on Databricks Apps.
-
-        Args:
-            messages: List of chat messages in OpenAI format
-
-        Returns:
-            The assistant's response content
-        """
-        client = get_workspace_client()
-
-        response = client.api_client.do(
-            method="POST",
-            path=f"/serving-endpoints/{self.model}/invocations",
-            body={
-                "messages": messages,
-            },
-        )
-
-        # Response is in OpenAI-compatible format
-        return response["choices"][0]["message"]["content"]
 
     def start_session(self) -> str:
         """Start a new analysis session and return the session ID."""
@@ -141,7 +101,7 @@ class GenieSpaceAnalyzer:
         )
 
         # Create checklist items for missing section (all fail)
-        checklist_items = get_llm_checklist_items_for_section(section_name)
+        checklist_items = get_checklist_items_for_section(section_name)
         checklist = [
             ChecklistItem(
                 id=item["id"],
@@ -206,7 +166,7 @@ class GenieSpaceAnalyzer:
                 pass  # Ignore if trace update fails
 
         # Get all checklist items for this section
-        checklist_items = get_llm_checklist_items_for_section(section_name)
+        checklist_items = get_checklist_items_for_section(section_name)
         checklist = []
         findings = []
 
@@ -216,20 +176,12 @@ class GenieSpaceAnalyzer:
                 section_name, section_data, checklist_items
             )
 
-            content = self._call_serving_endpoint(
-                messages=[{"role": "user", "content": prompt}]
+            content = call_serving_endpoint(
+                messages=[{"role": "user", "content": prompt}],
+                model=self.model,
             )
 
-            # Parse response, handling potential markdown code blocks
-            content = content.strip()
-            if content.startswith("```"):
-                lines = content.split("\n")
-                content = (
-                    "\n".join(lines[1:-1])
-                    if lines[-1] == "```"
-                    else "\n".join(lines[1:])
-                )
-            result = json.loads(content)
+            result = parse_json_from_llm_response(content)
 
             # Process LLM evaluations into ChecklistItems
             evaluations = {e["id"]: e for e in result.get("evaluations", [])}

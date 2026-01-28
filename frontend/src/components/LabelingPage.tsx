@@ -11,7 +11,8 @@ import { Card, CardContent } from "@/components/ui/card"
 import { SqlCodeBlock } from "@/components/SqlCodeBlock"
 import { SqlDiffView } from "@/components/SqlDiffView"
 import { DataTable } from "@/components/DataTable"
-import type { BenchmarkQuestion, SqlExecutionResult } from "@/types"
+import { getSelectedBenchmarkQuestions, getExpectedSql } from "@/lib/benchmarkUtils"
+import type { SqlExecutionResult } from "@/types"
 
 interface LabelingPageProps {
   genieSpaceId: string
@@ -56,14 +57,10 @@ export function LabelingPage({
   const [showDiff, setShowDiff] = useState(false)
 
   // Get the selected questions in order
-  const questions = useMemo(() => {
-    const benchmarks = spaceData?.benchmarks as { questions?: BenchmarkQuestion[] }
-    const allQuestions = benchmarks?.questions || []
-    // Filter to only selected questions, preserving selection order
-    return selectedQuestions
-      .map(id => allQuestions.find(q => q.id === id))
-      .filter((q): q is BenchmarkQuestion => q !== undefined)
-  }, [spaceData, selectedQuestions])
+  const questions = useMemo(
+    () => getSelectedBenchmarkQuestions(spaceData, selectedQuestions),
+    [spaceData, selectedQuestions]
+  )
 
   const totalQuestions = questions.length
   const currentQuestion = questions[currentIndex]
@@ -88,15 +85,7 @@ export function LabelingPage({
   }
 
   // Get expected SQL from answer (look for SQL format first, then fall back to first answer)
-  const expectedSql = useMemo(() => {
-    if (!currentQuestion?.answer?.length) return null
-    const sqlAnswer = currentQuestion.answer.find(a =>
-      a.format.toLowerCase() === "sql"
-    )
-    const answer = sqlAnswer || currentQuestion.answer[0]
-    // Content array elements already include \n, so join with empty string
-    return answer?.content?.join("") || null
-  }, [currentQuestion])
+  const expectedSql = useMemo(() => getExpectedSql(currentQuestion), [currentQuestion])
 
   // Get current question's generated SQL
   const currentGeneratedSql = currentQuestion ? generatedSql[currentQuestion.id] : null
