@@ -113,10 +113,16 @@ export interface OptimizationResponse {
   trace_id: string
 }
 
+export interface ConfigMergeResponse {
+  merged_config: Record<string, unknown>
+  summary: string
+  trace_id: string
+}
+
 // App state types
 export type AppMode = "analyze" | "optimize"
 export type Phase = "input" | "ingest" | "analysis" | "summary"
-export type OptimizeView = "benchmarks" | "labeling" | "feedback" | "optimization"
+export type OptimizeView = "benchmarks" | "labeling" | "feedback" | "optimization" | "preview"
 
 // Benchmark question from Genie Space JSON
 export interface BenchmarkQuestion {

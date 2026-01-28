@@ -10,6 +10,7 @@ from mlflow.entities import SpanType
 
 from agent_server.auth import get_workspace_client
 from agent_server.models import (
+    ConfigMergeResponse,
     LabelingFeedbackItem,
     OptimizationResponse,
     OptimizationSuggestion,
@@ -183,6 +184,102 @@ class GenieSpaceOptimizer:
             summary=summary,
             trace_id=trace_id,
         )
+
+    def merge_config(
+        self,
+        space_data: dict,
+        suggestions: list[OptimizationSuggestion],
+    ) -> ConfigMergeResponse:
+        """Merge optimization suggestions into the config programmatically.
+
+        Args:
+            space_data: The original Genie Space configuration
+            suggestions: List of optimization suggestions to apply
+
+        Returns:
+            ConfigMergeResponse with merged config and summary
+        """
+        import copy
+        import re
+
+        # Deep copy to avoid modifying original
+        merged = copy.deepcopy(space_data)
+
+        applied_count = 0
+        failed_paths = []
+
+        for suggestion in suggestions:
+            try:
+                self._apply_suggestion(merged, suggestion.field_path, suggestion.suggested_value)
+                applied_count += 1
+            except Exception as e:
+                logger.warning(f"Failed to apply suggestion at {suggestion.field_path}: {e}")
+                failed_paths.append(suggestion.field_path)
+
+        # Build summary
+        if failed_paths:
+            summary = f"Applied {applied_count} of {len(suggestions)} suggestions. Failed paths: {', '.join(failed_paths[:3])}{'...' if len(failed_paths) > 3 else ''}"
+        else:
+            summary = f"Successfully applied all {applied_count} suggestions to the configuration."
+
+        return ConfigMergeResponse(
+            merged_config=merged,
+            summary=summary,
+            trace_id="",
+        )
+
+    def _apply_suggestion(self, config: dict, field_path: str, value: any) -> None:
+        """Apply a single suggestion to the config at the given path.
+
+        Supports paths like:
+        - "instructions.text_instructions[0].content"
+        - "data_sources.tables[2].columns[0].synonyms"
+        """
+        import re
+
+        # Parse path into segments
+        # Split on dots, but handle array indices
+        segments = []
+        for part in field_path.split("."):
+            # Check for array index like "text_instructions[0]"
+            match = re.match(r"^(.+?)\[(\d+)\]$", part)
+            if match:
+                segments.append(match.group(1))  # key name
+                segments.append(int(match.group(2)))  # array index
+            else:
+                segments.append(part)
+
+        # Navigate to parent and set value
+        current = config
+        for i, segment in enumerate(segments[:-1]):
+            if isinstance(segment, int):
+                # Array index
+                if not isinstance(current, list) or segment >= len(current):
+                    raise ValueError(f"Invalid array index {segment} at path position {i}")
+                current = current[segment]
+            else:
+                # Object key
+                if not isinstance(current, dict):
+                    raise ValueError(f"Expected dict at {segment}, got {type(current)}")
+                if segment not in current:
+                    # Create missing intermediate objects
+                    next_segment = segments[i + 1] if i + 1 < len(segments) else None
+                    current[segment] = [] if isinstance(next_segment, int) else {}
+                current = current[segment]
+
+        # Set the final value
+        final_key = segments[-1]
+        if isinstance(final_key, int):
+            if not isinstance(current, list):
+                raise ValueError(f"Expected list for index {final_key}")
+            # Extend list if needed
+            while len(current) <= final_key:
+                current.append(None)
+            current[final_key] = value
+        else:
+            if not isinstance(current, dict):
+                raise ValueError(f"Expected dict for key {final_key}")
+            current[final_key] = value
 
 
 # Lazy initialization

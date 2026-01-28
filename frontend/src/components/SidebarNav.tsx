@@ -16,6 +16,7 @@ import {
   FileText,
   Settings,
   Sparkles,
+  GitCompare,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -31,6 +32,7 @@ interface SidebarNavProps {
   showSettings: boolean
   hasLabelingSession: boolean
   hasOptimizationResults: boolean
+  hasPreviewResults: boolean
   onGoToIngest: () => void
   onGoToAnalysis: () => void
   onGoToSummary: () => void
@@ -38,6 +40,7 @@ interface SidebarNavProps {
   onGoToLabeling: () => void
   onGoToFeedback: () => void
   onGoToOptimization: () => void
+  onGoToPreview: () => void
   onToggleChecklist: () => void
   onToggleSettings: () => void
   onReset: () => void
@@ -53,6 +56,7 @@ export function SidebarNav({
   showSettings,
   hasLabelingSession,
   hasOptimizationResults,
+  hasPreviewResults,
   onGoToIngest,
   onGoToAnalysis,
   onGoToSummary,
@@ -60,6 +64,7 @@ export function SidebarNav({
   onGoToLabeling,
   onGoToFeedback,
   onGoToOptimization,
+  onGoToPreview,
   onToggleChecklist,
   onToggleSettings,
   onReset,
@@ -262,6 +267,23 @@ export function SidebarNav({
                 >
                   <Sparkles className="w-4 h-4" />
                   Optimization
+                </button>
+
+                {/* Preview button */}
+                <button
+                  onClick={onGoToPreview}
+                  disabled={!hasPreviewResults}
+                  className={cn(
+                    "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left",
+                    optimizeView === "preview" && !showChecklist
+                      ? "gradient-accent text-white shadow-lg shadow-accent/20 dark:glow-accent"
+                      : hasPreviewResults
+                      ? "bg-elevated text-secondary hover:bg-sunken cursor-pointer"
+                      : "bg-elevated text-muted cursor-not-allowed opacity-60"
+                  )}
+                >
+                  <GitCompare className="w-4 h-4" />
+                  Preview
                 </button>
               </div>
             </div>

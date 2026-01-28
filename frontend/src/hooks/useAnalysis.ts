@@ -20,6 +20,7 @@ import {
   analyzeSection,
   analyzeAllSections as analyzeAllSectionsApi,
   streamOptimizations,
+  mergeConfig,
   queryGenie,
   executeSql,
 } from "@/lib/api"
@@ -63,6 +64,11 @@ export interface AnalysisState {
   optimizationSuggestions: OptimizationSuggestion[] | null
   optimizationSummary: string | null
   isOptimizing: boolean
+  // Preview state
+  selectedSuggestions: Set<number>  // Original indices of selected suggestions
+  previewConfig: Record<string, unknown> | null
+  previewSummary: string | null
+  isGeneratingPreview: boolean
 }
 
 const initialState: AnalysisState = {
@@ -101,6 +107,11 @@ const initialState: AnalysisState = {
   optimizationSuggestions: null,
   optimizationSummary: null,
   isOptimizing: false,
+  // Preview state
+  selectedSuggestions: new Set<number>(),
+  previewConfig: null,
+  previewSummary: null,
+  isGeneratingPreview: false,
 }
 
 export function useAnalysis() {
@@ -502,6 +513,38 @@ export function useAnalysis() {
     }))
   }, [])
 
+  const goToPreview = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      optimizeView: "preview",
+      showChecklist: false,
+    }))
+  }, [])
+
+  const toggleSuggestionSelection = useCallback((index: number) => {
+    setState((prev) => {
+      const newSelected = new Set(prev.selectedSuggestions)
+      if (newSelected.has(index)) {
+        newSelected.delete(index)
+      } else {
+        newSelected.add(index)
+      }
+      return { ...prev, selectedSuggestions: newSelected }
+    })
+  }, [])
+
+  const selectAllSuggestions = useCallback(() => {
+    setState((prev) => {
+      if (!prev.optimizationSuggestions) return prev
+      const allIndices = new Set(prev.optimizationSuggestions.map((_, i) => i))
+      return { ...prev, selectedSuggestions: allIndices }
+    })
+  }, [])
+
+  const deselectAllSuggestions = useCallback(() => {
+    setState((prev) => ({ ...prev, selectedSuggestions: new Set<number>() }))
+  }, [])
+
   const startOptimization = useCallback(() => {
     const { genieSpaceId, spaceData, selectedQuestions, labelingCorrectAnswers, labelingFeedbackTexts } = state
     if (!spaceData) return
@@ -548,6 +591,40 @@ export function useAnalysis() {
       }
     )
   }, [state.genieSpaceId, state.spaceData, state.selectedQuestions, state.labelingCorrectAnswers, state.labelingFeedbackTexts])
+
+  const generatePreviewConfig = useCallback(async () => {
+    const { spaceData, optimizationSuggestions, selectedSuggestions } = state
+    if (!spaceData || !optimizationSuggestions || selectedSuggestions.size === 0) return
+
+    setState((prev) => ({
+      ...prev,
+      isGeneratingPreview: true,
+      error: null,
+      optimizeView: "preview",
+    }))
+
+    // Get selected suggestions by their original indices
+    const selectedSuggestionsList = Array.from(selectedSuggestions)
+      .sort((a, b) => a - b)
+      .map((i) => optimizationSuggestions[i])
+      .filter(Boolean)
+
+    try {
+      const response = await mergeConfig(spaceData, selectedSuggestionsList)
+      setState((prev) => ({
+        ...prev,
+        previewConfig: response.merged_config,
+        previewSummary: response.summary,
+        isGeneratingPreview: false,
+      }))
+    } catch (err) {
+      setState((prev) => ({
+        ...prev,
+        error: err instanceof Error ? err.message : "Preview generation failed",
+        isGeneratingPreview: false,
+      }))
+    }
+  }, [state.spaceData, state.optimizationSuggestions, state.selectedSuggestions])
 
   const clearSpaceData = useCallback(() => {
     setState((prev) => ({
@@ -805,7 +882,12 @@ export function useAnalysis() {
       goToLabeling,
       goToFeedback,
       goToOptimization,
+      goToPreview,
       startOptimization,
+      generatePreviewConfig,
+      toggleSuggestionSelection,
+      selectAllSuggestions,
+      deselectAllSuggestions,
       toggleChecklist,
       toggleSettings,
       toggleSectionExpanded,
