@@ -2,7 +2,9 @@
  * PreviewPage component displaying side-by-side JSON diff of config changes.
  */
 
-import { ArrowLeft, Loader2, Sparkles, AlertTriangle } from "lucide-react"
+import { useState } from "react"
+import { ArrowLeft, Loader2, Sparkles, AlertTriangle, Expand, Minimize2 } from "lucide-react"
+import { cn } from "@/lib/utils"
 import ReactDiffViewer, { DiffMethod } from "react-diff-viewer-continued"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -28,6 +30,7 @@ export function PreviewPage({
   onBack,
 }: PreviewPageProps) {
   const { isDark } = useTheme()
+  const [showFullDiff, setShowFullDiff] = useState(false)
 
   // Custom styles matching the design system (from SqlDiffView.tsx)
   const customStyles = {
@@ -169,8 +172,28 @@ export function PreviewPage({
             <div className="flex-1 px-4 py-2 bg-elevated text-sm font-medium text-secondary">
               Current Configuration
             </div>
-            <div className="flex-1 px-4 py-2 bg-elevated text-sm font-medium text-secondary border-l border-default">
-              New Configuration
+            <div className="flex-1 px-4 py-2 bg-elevated text-sm font-medium text-secondary border-l border-default flex items-center justify-between">
+              <span>New Configuration</span>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowFullDiff(false)}
+                  className={cn("h-7 px-2", !showFullDiff && "bg-sunken")}
+                >
+                  <Minimize2 className="w-3.5 h-3.5 mr-1.5" />
+                  Changes Only
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowFullDiff(true)}
+                  className={cn("h-7 px-2", showFullDiff && "bg-sunken")}
+                >
+                  <Expand className="w-3.5 h-3.5 mr-1.5" />
+                  Show All
+                </Button>
+              </div>
             </div>
           </div>
           <ReactDiffViewer
@@ -181,7 +204,8 @@ export function PreviewPage({
             compareMethod={DiffMethod.WORDS}
             styles={customStyles}
             hideLineNumbers={false}
-            showDiffOnly={false}
+            showDiffOnly={!showFullDiff}
+            extraLinesSurroundingDiff={3}
           />
         </div>
       )}
