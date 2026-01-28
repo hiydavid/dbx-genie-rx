@@ -1,16 +1,16 @@
 <!-- markdownlint-disable MD033 -->
-# 🔍 GenieRx: Analyze and Optimize Your Genie Space
+# GenieRx: Analyze and Optimize Your Genie Space
 
-> ⚠️ **Note:** This project is experimental and under active development.
+> **Note:** This project is experimental and under active development.
 
 An LLM-powered linting tool that analyzes Databricks Genie Space configurations against best practices. Get actionable insights and recommendations to improve your Genie Space setup.
 
 This app was designed to be deployed on Databricks Apps. You can either:
 
-- **Quick deploy**: Clone the repo directly into your Databricks workspace and deploy via Databricks Apps (see [Quick Start](#-quick-start))
+- **Quick deploy**: Clone the repo directly into your Databricks workspace and deploy via Databricks Apps (see [Quick Start](#quick-start))
 - **Local development**: Clone locally and use the shell scripts for development and deployment
 
-## 📸 Walkthrough
+## Walkthrough
 
 ### Analyze Mode
 
@@ -71,7 +71,7 @@ This app was designed to be deployed on Databricks Apps. You can either:
   <em>6) Review optimization suggestions</em>
 </p>
 
-## 📋 Prerequisites
+## Prerequisites
 
 - Python 3.11+
 - Node.js 18+ and npm
@@ -80,7 +80,7 @@ This app was designed to be deployed on Databricks Apps. You can either:
 - Access to a Databricks workspace with Genie Spaces
 - Access to a Databricks-hosted LLM endpoint (Claude Sonnet recommended)
 
-## 🚀 Quick Start
+## Quick Start
 
 There are two main ways to deploy the app:
 
@@ -126,12 +126,12 @@ cd dbx-genie-rx
 
 The quickstart script will:
 
-1. ✅ Check for required tools (uv, Databricks CLI)
-2. ✅ Set up Databricks authentication (OAuth via CLI)
-3. ✅ Create an MLflow experiment for tracing (optional)
-4. ✅ Update `app.yaml` with your experiment ID
-5. ✅ Create `.env.local` with your configuration
-6. ✅ Install Python dependencies
+1. Check for required tools (uv, Databricks CLI)
+2. Set up Databricks authentication (OAuth via CLI)
+3. Create an MLflow experiment for tracing (optional)
+4. Update `app.yaml` with your experiment ID
+5. Create `.env.local` with your configuration
+6. Install Python dependencies
 
 #### 2. Build the Frontend
 
@@ -167,7 +167,7 @@ Then open <http://localhost:5173> instead.
 
 Then complete deployment via the Databricks UI. After deployment, grant the app's service principal permissions as described in Option 1, Step 4.
 
-## ⚙️ Configuration
+## Configuration
 
 There are two configuration files, each for a different environment:
 
@@ -230,7 +230,7 @@ env:
 
 > **Note:** In Databricks Apps, authentication is handled automatically via OAuth (OBO)—no need to configure `DATABRICKS_HOST` or tokens. The `MLFLOW_TRACKING_URI` and `MLFLOW_REGISTRY_URI` are pre-set to `databricks` and `databricks-uc`.
 
-## 🔐 Service Principal Permissions
+## Service Principal Permissions
 
 After deploying, you must grant the app's service principal (SP) access to required resources:
 
@@ -266,7 +266,7 @@ After deploying, you must grant the app's service principal (SP) access to requi
    GRANT SELECT ON SCHEMA your_catalog.your_schema TO `app-XXXXX [your-app-name]`;
    ```
 
-## 🔄 Updating the Deployed App
+## Updating the Deployed App
 
 After making code changes:
 
@@ -278,7 +278,7 @@ After making code changes:
 # Then in Databricks UI: click Deploy on your app
 ```
 
-## 📊 MLflow Tracing (Optional)
+## MLflow Tracing (Optional)
 
 MLflow tracing is optional. To enable it, set `MLFLOW_EXPERIMENT_ID` in `app.yaml` to a valid experiment ID.
 
