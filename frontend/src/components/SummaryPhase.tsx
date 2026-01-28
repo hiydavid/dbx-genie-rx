@@ -28,6 +28,16 @@ function formatSectionName(sectionName: string): string {
     .replace(/Sql/g, "SQL")
 }
 
+function getScoreColorClasses(percentage: number): string {
+  if (percentage === 100) {
+    return "bg-success/10 text-success dark:bg-success/20"
+  }
+  if (percentage >= 60) {
+    return "bg-warning/10 text-warning dark:bg-warning/20"
+  }
+  return "bg-danger/10 text-danger dark:bg-danger/20"
+}
+
 export function SummaryPhase({
   genieSpaceId,
   sectionAnalyses,
@@ -117,11 +127,7 @@ export function SummaryPhase({
                       <span
                         className={cn(
                           "text-sm px-2.5 py-0.5 rounded-full font-medium",
-                          percentage === 100
-                            ? "bg-success/10 text-success dark:bg-success/20"
-                            : percentage >= 60
-                            ? "bg-warning/10 text-warning dark:bg-warning/20"
-                            : "bg-danger/10 text-danger dark:bg-danger/20"
+                          getScoreColorClasses(percentage)
                         )}
                       >
                         {passed}/{total}

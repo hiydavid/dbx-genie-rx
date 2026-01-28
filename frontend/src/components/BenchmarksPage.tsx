@@ -20,7 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import type { BenchmarkQuestion } from "@/types"
+import { getBenchmarkQuestions } from "@/lib/benchmarkUtils"
 
 interface BenchmarksPageProps {
   genieSpaceId: string
@@ -53,10 +53,7 @@ export function BenchmarksPage({
   const [searchQuery, setSearchQuery] = useState("")
 
   // Extract benchmark questions from space data
-  const benchmarkQuestions = useMemo(() => {
-    const benchmarks = spaceData?.benchmarks as { questions?: BenchmarkQuestion[] } | undefined
-    return benchmarks?.questions || []
-  }, [spaceData])
+  const benchmarkQuestions = useMemo(() => getBenchmarkQuestions(spaceData), [spaceData])
 
   // Filter questions based on search query
   const filteredQuestions = useMemo(() => {

@@ -6,7 +6,7 @@ import { useMemo } from "react"
 import { ArrowLeft, Sparkles, Check, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import type { BenchmarkQuestion } from "@/types"
+import { getSelectedBenchmarkQuestions } from "@/lib/benchmarkUtils"
 
 interface FeedbackPageProps {
   spaceData: Record<string, unknown>
@@ -26,14 +26,10 @@ export function FeedbackPage({
   onBeginOptimization,
 }: FeedbackPageProps) {
   // Get the selected questions in order
-  const questions = useMemo(() => {
-    const benchmarks = spaceData?.benchmarks as { questions?: BenchmarkQuestion[] }
-    const allQuestions = benchmarks?.questions || []
-    // Filter to only selected questions, preserving selection order
-    return selectedQuestions
-      .map(id => allQuestions.find(q => q.id === id))
-      .filter((q): q is BenchmarkQuestion => q !== undefined)
-  }, [spaceData, selectedQuestions])
+  const questions = useMemo(
+    () => getSelectedBenchmarkQuestions(spaceData, selectedQuestions),
+    [spaceData, selectedQuestions]
+  )
 
   const correctCount = questions.filter(q => correctAnswers[q.id] === true).length
   const incorrectCount = questions.filter(q => correctAnswers[q.id] === false).length

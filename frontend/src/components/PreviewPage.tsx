@@ -5,6 +5,7 @@
 import { useState } from "react"
 import { ArrowLeft, Loader2, Sparkles, AlertTriangle, Expand, Minimize2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { diffViewerStyles } from "@/lib/diffViewerStyles"
 import ReactDiffViewer, { DiffMethod } from "react-diff-viewer-continued"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -31,66 +32,6 @@ export function PreviewPage({
 }: PreviewPageProps) {
   const { isDark } = useTheme()
   const [showFullDiff, setShowFullDiff] = useState(false)
-
-  // Custom styles matching the design system (from SqlDiffView.tsx)
-  const customStyles = {
-    variables: {
-      light: {
-        diffViewerBackground: "#FFFFFF",
-        diffViewerColor: "#0F172A",
-        addedBackground: "#ECFDF5",
-        addedColor: "#065F46",
-        removedBackground: "#FEF2F2",
-        removedColor: "#991B1B",
-        wordAddedBackground: "#D1FAE5",
-        wordRemovedBackground: "#FECACA",
-        addedGutterBackground: "#D1FAE5",
-        removedGutterBackground: "#FECACA",
-        gutterBackground: "#F8FAFC",
-        gutterBackgroundDark: "#F1F5F9",
-        gutterColor: "#64748B",
-        highlightBackground: "#FEF9C3",
-        highlightGutterBackground: "#FEF08A",
-        codeFoldGutterBackground: "#E2E8F0",
-        codeFoldBackground: "#F1F5F9",
-        codeFoldContentColor: "#475569",
-        emptyLineBackground: "#F8FAFC",
-      },
-      dark: {
-        diffViewerBackground: "#1E293B",
-        diffViewerColor: "#F1F5F9",
-        addedBackground: "#064E3B",
-        addedColor: "#A7F3D0",
-        removedBackground: "#7F1D1D",
-        removedColor: "#FECACA",
-        wordAddedBackground: "#065F46",
-        wordRemovedBackground: "#991B1B",
-        addedGutterBackground: "#064E3B",
-        removedGutterBackground: "#7F1D1D",
-        gutterBackground: "#0F172A",
-        gutterBackgroundDark: "#1E293B",
-        gutterColor: "#94A3B8",
-        highlightBackground: "#713F12",
-        highlightGutterBackground: "#854D0E",
-        codeFoldGutterBackground: "#334155",
-        codeFoldBackground: "#1E293B",
-        codeFoldContentColor: "#94A3B8",
-        emptyLineBackground: "#0F172A",
-      },
-    },
-    contentText: {
-      fontFamily: "'JetBrains Mono', monospace",
-      fontSize: "13px",
-      lineHeight: "1.6",
-    },
-    gutter: {
-      minWidth: "40px",
-      padding: "0 8px",
-    },
-    line: {
-      padding: "2px 8px",
-    },
-  }
 
   const currentJson = currentConfig ? JSON.stringify(currentConfig, null, 2) : ""
   const previewJson = previewConfig ? JSON.stringify(previewConfig, null, 2) : ""
@@ -202,7 +143,7 @@ export function PreviewPage({
             splitView={true}
             useDarkTheme={isDark}
             compareMethod={DiffMethod.WORDS}
-            styles={customStyles}
+            styles={diffViewerStyles}
             hideLineNumbers={false}
             showDiffOnly={!showFullDiff}
             extraLinesSurroundingDiff={3}

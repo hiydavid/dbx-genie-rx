@@ -2,7 +2,6 @@
  * Main application component for the Genie Space Analyzer.
  */
 
-import { useEffect } from "react"
 import { Sparkles } from "lucide-react"
 import { useAnalysis } from "@/hooks/useAnalysis"
 import { useTheme } from "@/hooks/useTheme"
@@ -22,12 +21,7 @@ import { ThemeToggle } from "@/components/ThemeToggle"
 
 function App() {
   const { state, actions } = useAnalysis()
-  const { resolvedTheme } = useTheme()
-
-  // Initialize theme on mount (ensures dark class is applied)
-  useEffect(() => {
-    // Theme hook handles this automatically
-  }, [resolvedTheme])
+  useTheme() // Ensures theme is applied on mount
 
   const renderPhase = () => {
     if (state.showSettings) {
