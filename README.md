@@ -15,59 +15,59 @@ This app was designed to be deployed on Databricks Apps. You can either:
 ### Analyze Mode
 
 <p align="left">
-  <img src="images/app-intro.png" alt="Enter Genie Space ID" width="400"><br>
+  <img src="images/app-intro.png" alt="Enter Genie Space ID" width="700"><br>
   <em>1) Enter your Genie Space ID or paste JSON, and then select mode (Analyze/Optimize)</em>
 </p>
 
 <p align="left">
-  <img src="images/ingest.png" alt="Preview ingested data" width="400"><br>
+  <img src="images/ingest.png" alt="Preview ingested data" width="700"><br>
   <em>2) Preview the ingested configuration data</em>
 </p>
 
 <p align="left">
-  <img src="images/pending-analysis.png" alt="Sections ready for analysis" width="400"><br>
+  <img src="images/pending-analysis.png" alt="Sections ready for analysis" width="700"><br>
   <em>3) Review sections pending analysis</em>
 </p>
 
 <p align="left">
-  <img src="images/analysis-result.png" alt="Section analysis in progress" width="400"><br>
+  <img src="images/analysis-result.png" alt="Section analysis in progress" width="700"><br>
   <em>4) Analyze each section against best practices</em>
 </p>
 
 <p align="left">
-  <img src="images/analysis-summary.png" alt="Final compliance summary" width="400"><br>
+  <img src="images/analysis-summary.png" alt="Final compliance summary" width="700"><br>
   <em>5) View the final compliance summary and scores</em>
 </p>
 
 ### Optimize Mode
 
 <p align="left">
-  <img src="images/select-benchmarks.png" alt="Preview ingested data" width="400"><br>
+  <img src="images/select-benchmarks.png" alt="Preview ingested data" width="700"><br>
   <em>1) Select benchmark questions</em>
 </p>
 
 <p align="left">
-  <img src="images/generating.png" alt="Preview ingested data" width="400"><br>
+  <img src="images/generating.png" alt="Preview ingested data" width="700"><br>
   <em>2) Generating Genie responses</em>
 </p>
 
 <p align="left">
-  <img src="images/labeling.png" alt="Preview ingested data" width="400"><br>
+  <img src="images/labeling.png" alt="Preview ingested data" width="700"><br>
   <em>3) Label Genie responses with feedback</em>
 </p>
 
 <p align="left">
-  <img src="images/feedback.png" alt="Preview ingested data" width="400"><br>
+  <img src="images/feedback.png" alt="Preview ingested data" width="700"><br>
   <em>4) Aggregating user labeling feedback</em>
 </p>
 
 <p align="left">
-  <img src="images/optimizing.png" alt="Preview ingested data" width="400"><br>
+  <img src="images/optimizing.png" alt="Preview ingested data" width="700"><br>
   <em>5) Generating optimization suggestions</em>
 </p>
 
 <p align="left">
-  <img src="images/optimization-results.png" alt="Preview ingested data" width="400"><br>
+  <img src="images/optimization-results.png" alt="Preview ingested data" width="700"><br>
   <em>6) Review optimization suggestions</em>
 </p>
 
@@ -93,8 +93,9 @@ If you want to use the app as-is, simply clone the repo into your Databricks wor
    - Enter the Git URL: `https://github.com/your-org/dbx-genie-rx.git`
    - Click **Create Repo**
 
-2. **Configure the app** (optional):
+2. **Configure the app**:
    - Open `app.yaml` in the workspace editor
+   - Set `SQL_WAREHOUSE_ID` to enable Optimize mode (required for labeling)
    - Set `MLFLOW_EXPERIMENT_ID` to enable tracing (optional)
    - Change `LLM_MODEL` if you want to use a different Databricks-hosted model
 
@@ -104,10 +105,7 @@ If you want to use the app as-is, simply clone the repo into your Databricks wor
    - Click **Deploy** and select your repo folder as the source
    - Click **Deploy** to start
 
-4. **Grant permissions** to the app's service principal:
-   - Go to **Compute > Apps > [your app] > Authorization** to find the SP name
-   - Add the SP to each Genie Space you want to analyze with **Can Edit** permission
-   - Add the SP to the LLM serving endpoint with **Can Query** permission
+4. **Grant permissions** to the app's service principal (see [Service Principal Permissions](#service-principal-permissions) for details)
 
 > **Note:** The frontend is pre-built and included in the repo (`frontend/dist/`), so no build step is required.
 
@@ -232,56 +230,7 @@ env:
 
 > **Note:** In Databricks Apps, authentication is handled automatically via OAuth (OBO)—no need to configure `DATABRICKS_HOST` or tokens. The `MLFLOW_TRACKING_URI` and `MLFLOW_REGISTRY_URI` are pre-set to `databricks` and `databricks-uc`.
 
-## 📁 Project Structure
-
-```text
-dbx-genie-rx/
-├── agent_server/           # Core analyzer backend
-│   ├── agent.py           # GenieSpaceAnalyzer class & MLflow tracing
-│   ├── optimizer.py       # GenieSpaceOptimizer for optimization suggestions
-│   ├── api.py             # REST API endpoints for React frontend
-│   ├── auth.py            # Authentication (PAT local, OBO for Apps)
-│   ├── checklist_parser.py # Parses checklist from docs/checklist-by-schema.md
-│   ├── checks.py          # Wrapper for checklist item retrieval
-│   ├── ingest.py          # Databricks SDK client for Genie Spaces
-│   ├── models.py          # Pydantic models (AgentInput, AgentOutput, OptimizationSuggestion)
-│   ├── prompts.py         # LLM prompt templates
-│   ├── sql_executor.py    # SQL execution via Databricks Statement Execution API
-│   └── start_server.py    # FastAPI server entry point
-├── frontend/               # React frontend application
-│   ├── public/fonts/      # Self-hosted font files (woff2)
-│   ├── src/
-│   │   ├── components/    # React components
-│   │   │   ├── ui/       # Reusable UI components (Button, Card, etc.)
-│   │   │   ├── *Phase.tsx # Analyze mode: InputPhase, IngestPhase, AnalysisPhase, SummaryPhase
-│   │   │   ├── BenchmarksPage.tsx   # Optimize mode: Select benchmark questions
-│   │   │   ├── LabelingPage.tsx     # Optimize mode: Label Genie responses
-│   │   │   ├── FeedbackPage.tsx     # Optimize mode: Review labeling summary
-│   │   │   ├── OptimizationPage.tsx # Optimize mode: View AI suggestions
-│   │   │   ├── SuggestionCard.tsx   # Card for displaying optimization suggestions
-│   │   │   └── ...
-│   │   ├── hooks/        # Custom React hooks (useAnalysis, useTheme)
-│   │   ├── lib/          # Utilities and API client
-│   │   └── types/        # TypeScript type definitions
-│   ├── package.json
-│   └── vite.config.ts
-├── scripts/
-│   ├── quickstart.sh      # Local development setup
-│   ├── build.sh           # Build frontend and backend
-│   └── deploy.sh          # Databricks Apps deployment
-├── docs/                   # Checklist and schema documentation
-│   ├── checklist-by-schema.md  # Source of truth for all checks (editable)
-│   └── genie-space-schema.md   # Genie Space JSON schema reference
-├── app.yaml                # Databricks Apps configuration
-├── requirements.txt        # Python dependencies (for Databricks Apps)
-└── pyproject.toml          # Project configuration
-```
-
-## 🚀 Deploying to Databricks Apps
-
-See the [Quick Start](#-quick-start) section for step-by-step deployment instructions.
-
-### Service Principal Permissions
+## 🔐 Service Principal Permissions
 
 After deploying, you must grant the app's service principal (SP) access to required resources:
 
@@ -296,18 +245,28 @@ After deploying, you must grant the app's service principal (SP) access to requi
    - Go to **Serving > [your LLM endpoint] > Permissions**
    - Add the SP with **Can Query** permission
 
-4. **Grant SQL Warehouse access** (optional, for labeling sessions):
+4. **Grant SQL Warehouse access** (for Optimize mode):
    - Go to **SQL > SQL Warehouses > [your warehouse] > Permissions**
    - Add the SP with **Can Use** permission
+   - Update `SQL_WAREHOUSE_ID` in `app.yaml` with your warehouse ID
 
-### Authentication
+5. **Grant table access** (for Optimize mode):
+   - The SP needs SELECT access to the tables your Genie Space queries
+   - Run the following SQL (replace with your SP name and table paths):
 
-| Environment | Auth Method | Description |
-| ------------- | ------------- | ------------- |
-| Local Development | PAT / OAuth | Uses `DATABRICKS_TOKEN` or CLI OAuth |
-| Databricks Apps | SP + OBO | SP accesses resources; OBO for user context |
+   ```sql
+   -- Grant catalog and schema access
+   GRANT USE CATALOG ON CATALOG your_catalog TO `app-XXXXX [your-app-name]`;
+   GRANT USE SCHEMA ON SCHEMA your_catalog.your_schema TO `app-XXXXX [your-app-name]`;
 
-### Updating the Deployed App
+   -- Grant SELECT on tables (option A: specific tables)
+   GRANT SELECT ON TABLE your_catalog.your_schema.table1 TO `app-XXXXX [your-app-name]`;
+
+   -- Or grant SELECT on entire schema (option B: all tables in schema)
+   GRANT SELECT ON SCHEMA your_catalog.your_schema TO `app-XXXXX [your-app-name]`;
+   ```
+
+## 🔄 Updating the Deployed App
 
 After making code changes:
 
