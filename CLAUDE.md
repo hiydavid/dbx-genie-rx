@@ -59,12 +59,12 @@ GENIE_SPACE_ID=<id> uv run python test_agent.py --url http://localhost:8000
 | ------ | --------- |
 | `agent_server/agent.py` | `GenieSpaceAnalyzer` class with LLM integration, MLflow tracing, streaming |
 | `agent_server/optimizer.py` | `GenieSpaceOptimizer` class for generating field-level optimization suggestions |
-| `agent_server/api.py` | REST API endpoints for frontend (`/api/space/fetch`, `/api/analyze/section`, `/api/optimize`, etc.) |
+| `agent_server/api.py` | REST API endpoints for frontend (`/api/space/fetch`, `/api/analyze/section`, `/api/optimize`, `/api/config/merge`, etc.) |
 | `agent_server/checklist_parser.py` | Parses `docs/checklist-by-schema.md` to extract checklist items by section |
 | `agent_server/checks.py` | Thin wrapper around checklist_parser for getting items per section |
 | `agent_server/auth.py` | OBO authentication for Databricks Apps, PAT/OAuth for local dev |
 | `agent_server/ingest.py` | Databricks SDK wrapper for fetching Genie Space configs |
-| `agent_server/models.py` | Pydantic models: `AgentInput`, `AgentOutput`, `Finding`, `SectionAnalysis`, `ChecklistItem`, `OptimizationSuggestion`, `OptimizationRequest/Response` |
+| `agent_server/models.py` | Pydantic models: `AgentInput`, `AgentOutput`, `Finding`, `SectionAnalysis`, `ChecklistItem`, `OptimizationSuggestion`, `OptimizationRequest/Response`, `ConfigMergeRequest/Response` |
 | `agent_server/prompts.py` | LLM prompt templates for checklist evaluation and optimization suggestions |
 | `agent_server/sql_executor.py` | SQL execution via Databricks Statement Execution API |
 | `frontend/src/App.tsx` | Main React app orchestrating both Analyze and Optimize modes |
@@ -72,7 +72,8 @@ GENIE_SPACE_ID=<id> uv run python test_agent.py --url http://localhost:8000
 | `frontend/src/components/BenchmarksPage.tsx` | Optimize mode: Select benchmark questions for labeling |
 | `frontend/src/components/LabelingPage.tsx` | Optimize mode: Label Genie responses as correct/incorrect with feedback |
 | `frontend/src/components/FeedbackPage.tsx` | Optimize mode: Review labeling session summary |
-| `frontend/src/components/OptimizationPage.tsx` | Optimize mode: Display AI-generated optimization suggestions |
+| `frontend/src/components/OptimizationPage.tsx` | Optimize mode: Display AI-generated optimization suggestions with selection |
+| `frontend/src/components/PreviewPage.tsx` | Optimize mode: Side-by-side JSON diff of selected config changes |
 | `frontend/src/components/SuggestionCard.tsx` | Card component showing field path, rationale, and current vs. suggested values |
 | `frontend/src/hooks/useAnalysis.ts` | Main state hook managing both Analyze and Optimize workflows |
 | `frontend/src/hooks/useTheme.ts` | Theme hook: system preference detection, localStorage persistence |
@@ -85,11 +86,12 @@ All checklist items are defined in `docs/checklist-by-schema.md` and evaluated b
 
 ### Optimization Approach
 
-The Optimize mode follows a 4-step workflow:
+The Optimize mode follows a 5-step workflow:
 1. **Benchmarks**: Select benchmark questions from the Genie Space config
 2. **Labeling**: For each question, query Genie for SQL, execute it, and mark as correct/incorrect with optional feedback
 3. **Feedback**: Review the labeling session summary
 4. **Optimization**: AI analyzes the config + labeling feedback to generate field-level suggestions (field path, current value, suggested value, rationale, priority)
+5. **Preview**: Select suggestions and view a side-by-side JSON diff of the proposed config changes (programmatic merge, no LLM needed)
 
 ## Key Patterns
 

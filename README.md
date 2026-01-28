@@ -71,6 +71,10 @@ This app was designed to be deployed on Databricks Apps. You can either:
   <em>6) Review optimization suggestions</em>
 </p>
 
+<p align="left">
+  <em>7) Select suggestions and click "Create New Genie" to preview a side-by-side JSON diff of the proposed configuration changes</em>
+</p>
+
 ## Prerequisites
 
 - Python 3.11+
