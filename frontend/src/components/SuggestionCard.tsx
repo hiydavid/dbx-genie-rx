@@ -10,6 +10,9 @@ import type { OptimizationSuggestion } from "@/types"
 interface SuggestionCardProps {
   suggestion: OptimizationSuggestion
   index: number
+  selectionEnabled?: boolean
+  isSelected?: boolean
+  onToggleSelection?: () => void
 }
 
 const categoryLabels: Record<string, string> = {
@@ -51,7 +54,13 @@ function formatValue(value: unknown): string {
   return JSON.stringify(value, null, 2)
 }
 
-export function SuggestionCard({ suggestion, index }: SuggestionCardProps) {
+export function SuggestionCard({
+  suggestion,
+  index,
+  selectionEnabled = false,
+  isSelected = false,
+  onToggleSelection,
+}: SuggestionCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
 
   const colors = priorityColors[suggestion.priority] || priorityColors.medium
@@ -68,6 +77,14 @@ export function SuggestionCard({ suggestion, index }: SuggestionCardProps) {
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1 flex-wrap">
+                {selectionEnabled && (
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={onToggleSelection}
+                    className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-accent focus:ring-accent cursor-pointer"
+                  />
+                )}
                 <span className="text-muted font-mono text-sm">{index + 1}.</span>
                 <span
                   className={`px-2 py-0.5 rounded text-xs font-medium ${colors.text} bg-white/50 dark:bg-black/20`}

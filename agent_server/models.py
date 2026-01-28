@@ -111,3 +111,18 @@ class OptimizationResponse(BaseModel):
     suggestions: list[OptimizationSuggestion]
     summary: str
     trace_id: str
+
+
+class ConfigMergeRequest(BaseModel):
+    """Request to merge optimization suggestions into a config."""
+
+    space_data: dict
+    suggestions: list[OptimizationSuggestion]
+
+
+class ConfigMergeResponse(BaseModel):
+    """Response containing merged configuration."""
+
+    merged_config: dict
+    summary: str
+    trace_id: str

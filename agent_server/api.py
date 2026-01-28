@@ -20,9 +20,12 @@ from agent_server.agent import GenieSpaceAnalyzer, SECTIONS, get_analyzer
 from agent_server.ingest import get_serialized_space
 from agent_server.models import (
     AgentInput,
+    ConfigMergeRequest,
+    ConfigMergeResponse,
     LabelingFeedbackItem,
     OptimizationRequest,
     OptimizationResponse,
+    OptimizationSuggestion,
     SectionAnalysis,
 )
 from agent_server.optimizer import get_optimizer
@@ -442,4 +445,23 @@ async def stream_optimizations(request: OptimizationRequest):
         "X-Accel-Buffering": "no",
     }
     return StreamingResponse(generate(), media_type="text/event-stream", headers=headers)
+
+
+@router.post("/config/merge", response_model=ConfigMergeResponse)
+async def merge_config(request: ConfigMergeRequest):
+    """Merge optimization suggestions into a config programmatically.
+
+    This is a fast operation that applies field-level changes without LLM calls.
+    """
+    logger.info(f"Received config merge request with {len(request.suggestions)} suggestions")
+
+    try:
+        optimizer = get_optimizer()
+        result = optimizer.merge_config(
+            space_data=request.space_data,
+            suggestions=request.suggestions,
+        )
+        return result
+    except Exception as e:
+        raise _safe_error(e, 500, "Config merge failed")
 

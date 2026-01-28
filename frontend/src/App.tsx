@@ -16,6 +16,7 @@ import { BenchmarksPage } from "@/components/BenchmarksPage"
 import { LabelingPage } from "@/components/LabelingPage"
 import { FeedbackPage } from "@/components/FeedbackPage"
 import { OptimizationPage } from "@/components/OptimizationPage"
+import { PreviewPage } from "@/components/PreviewPage"
 import { SettingsPage } from "@/components/SettingsPage"
 import { ThemeToggle } from "@/components/ThemeToggle"
 
@@ -43,6 +44,20 @@ function App() {
     }
 
     // Handle optimize views
+    if (state.optimizeView === "preview" && state.spaceData) {
+      return (
+        <PreviewPage
+          currentConfig={state.spaceData}
+          previewConfig={state.previewConfig}
+          summary={state.previewSummary}
+          isLoading={state.isGeneratingPreview}
+          error={state.error}
+          selectedCount={state.selectedSuggestions.size}
+          onBack={actions.goToOptimization}
+        />
+      )
+    }
+
     if (state.optimizeView === "optimization" && state.spaceData) {
       return (
         <OptimizationPage
@@ -50,7 +65,12 @@ function App() {
           summary={state.optimizationSummary}
           isLoading={state.isOptimizing}
           error={state.error}
+          selectedSuggestions={state.selectedSuggestions}
           onBack={actions.goToFeedback}
+          onToggleSuggestionSelection={actions.toggleSuggestionSelection}
+          onSelectAllSuggestions={actions.selectAllSuggestions}
+          onDeselectAllSuggestions={actions.deselectAllSuggestions}
+          onCreateNewGenie={actions.generatePreviewConfig}
         />
       )
     }
@@ -190,6 +210,7 @@ function App() {
           showSettings={state.showSettings}
           hasLabelingSession={state.hasLabelingSession}
           hasOptimizationResults={state.optimizationSuggestions !== null}
+          hasPreviewResults={state.previewConfig !== null}
           onGoToIngest={actions.goToIngest}
           onGoToAnalysis={actions.goToAnalysis}
           onGoToSummary={actions.goToSummary}
@@ -197,6 +218,7 @@ function App() {
           onGoToLabeling={actions.goToLabeling}
           onGoToFeedback={actions.goToFeedback}
           onGoToOptimization={actions.goToOptimization}
+          onGoToPreview={actions.goToPreview}
           onToggleChecklist={actions.toggleChecklist}
           onToggleSettings={actions.toggleSettings}
           onReset={actions.reset}

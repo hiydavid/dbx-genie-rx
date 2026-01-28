@@ -3,7 +3,7 @@
  */
 
 import { useMemo } from "react"
-import { ArrowLeft, Loader2, Sparkles, AlertTriangle } from "lucide-react"
+import { ArrowLeft, Loader2, Sparkles, AlertTriangle, GitCompare } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { SuggestionCard } from "@/components/SuggestionCard"
@@ -14,7 +14,12 @@ interface OptimizationPageProps {
   summary: string | null
   isLoading: boolean
   error: string | null
+  selectedSuggestions: Set<number>
   onBack: () => void
+  onToggleSuggestionSelection: (index: number) => void
+  onSelectAllSuggestions: () => void
+  onDeselectAllSuggestions: () => void
+  onCreateNewGenie: () => void
 }
 
 export function OptimizationPage({
@@ -22,20 +27,40 @@ export function OptimizationPage({
   summary,
   isLoading,
   error,
+  selectedSuggestions,
   onBack,
+  onToggleSuggestionSelection,
+  onSelectAllSuggestions,
+  onDeselectAllSuggestions,
+  onCreateNewGenie,
 }: OptimizationPageProps) {
-  // Group suggestions by priority
+  // Group suggestions by priority with original indices
   const groupedSuggestions = useMemo(() => {
     if (!suggestions) return { high: [], medium: [], low: [] }
 
-    return {
-      high: suggestions.filter(s => s.priority === "high"),
-      medium: suggestions.filter(s => s.priority === "medium"),
-      low: suggestions.filter(s => s.priority === "low"),
+    type SuggestionWithIndex = { suggestion: OptimizationSuggestion; originalIndex: number }
+    const grouped: { high: SuggestionWithIndex[]; medium: SuggestionWithIndex[]; low: SuggestionWithIndex[] } = {
+      high: [],
+      medium: [],
+      low: [],
     }
+
+    suggestions.forEach((suggestion, index) => {
+      const item = { suggestion, originalIndex: index }
+      if (suggestion.priority === "high") {
+        grouped.high.push(item)
+      } else if (suggestion.priority === "medium") {
+        grouped.medium.push(item)
+      } else {
+        grouped.low.push(item)
+      }
+    })
+
+    return grouped
   }, [suggestions])
 
   const totalCount = suggestions?.length || 0
+  const selectedCount = selectedSuggestions.size
 
   return (
     <div className="space-y-6 animate-slide-up">
@@ -107,33 +132,57 @@ export function OptimizationPage({
         </Card>
       )}
 
-      {/* Stats */}
+      {/* Stats and Selection Controls */}
       {suggestions && suggestions.length > 0 && !isLoading && (
-        <div className="flex gap-4 flex-wrap">
-          {groupedSuggestions.high.length > 0 && (
-            <div className="flex items-center gap-2 text-sm">
-              <div className="w-3 h-3 rounded-full bg-red-500" />
-              <span className="text-secondary">
-                {groupedSuggestions.high.length} high priority
+        <div className="space-y-4">
+          {/* Priority stats */}
+          <div className="flex gap-4 flex-wrap">
+            {groupedSuggestions.high.length > 0 && (
+              <div className="flex items-center gap-2 text-sm">
+                <div className="w-3 h-3 rounded-full bg-red-500" />
+                <span className="text-secondary">
+                  {groupedSuggestions.high.length} high priority
+                </span>
+              </div>
+            )}
+            {groupedSuggestions.medium.length > 0 && (
+              <div className="flex items-center gap-2 text-sm">
+                <div className="w-3 h-3 rounded-full bg-amber-500" />
+                <span className="text-secondary">
+                  {groupedSuggestions.medium.length} medium priority
+                </span>
+              </div>
+            )}
+            {groupedSuggestions.low.length > 0 && (
+              <div className="flex items-center gap-2 text-sm">
+                <div className="w-3 h-3 rounded-full bg-blue-500" />
+                <span className="text-secondary">
+                  {groupedSuggestions.low.length} low priority
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Selection controls */}
+          <div className="flex items-center justify-between flex-wrap gap-3 p-3 bg-elevated rounded-lg border border-default">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="sm" onClick={onSelectAllSuggestions}>
+                Select All
+              </Button>
+              <Button variant="ghost" size="sm" onClick={onDeselectAllSuggestions}>
+                Deselect All
+              </Button>
+              <span className="text-sm text-muted">
+                {selectedCount} of {totalCount} selected
               </span>
             </div>
-          )}
-          {groupedSuggestions.medium.length > 0 && (
-            <div className="flex items-center gap-2 text-sm">
-              <div className="w-3 h-3 rounded-full bg-amber-500" />
-              <span className="text-secondary">
-                {groupedSuggestions.medium.length} medium priority
-              </span>
-            </div>
-          )}
-          {groupedSuggestions.low.length > 0 && (
-            <div className="flex items-center gap-2 text-sm">
-              <div className="w-3 h-3 rounded-full bg-blue-500" />
-              <span className="text-secondary">
-                {groupedSuggestions.low.length} low priority
-              </span>
-            </div>
-          )}
+            {selectedCount > 0 && (
+              <Button onClick={onCreateNewGenie}>
+                <GitCompare className="w-4 h-4 mr-2" />
+                Create New Genie
+              </Button>
+            )}
+          </div>
         </div>
       )}
 
@@ -148,11 +197,14 @@ export function OptimizationPage({
                 High Priority
               </h2>
               <div className="space-y-4">
-                {groupedSuggestions.high.map((suggestion, index) => (
+                {groupedSuggestions.high.map(({ suggestion, originalIndex }) => (
                   <SuggestionCard
-                    key={`high-${index}`}
+                    key={`high-${originalIndex}`}
                     suggestion={suggestion}
-                    index={index}
+                    index={originalIndex}
+                    selectionEnabled={true}
+                    isSelected={selectedSuggestions.has(originalIndex)}
+                    onToggleSelection={() => onToggleSuggestionSelection(originalIndex)}
                   />
                 ))}
               </div>
@@ -167,11 +219,14 @@ export function OptimizationPage({
                 Medium Priority
               </h2>
               <div className="space-y-4">
-                {groupedSuggestions.medium.map((suggestion, index) => (
+                {groupedSuggestions.medium.map(({ suggestion, originalIndex }) => (
                   <SuggestionCard
-                    key={`medium-${index}`}
+                    key={`medium-${originalIndex}`}
                     suggestion={suggestion}
-                    index={index}
+                    index={originalIndex}
+                    selectionEnabled={true}
+                    isSelected={selectedSuggestions.has(originalIndex)}
+                    onToggleSelection={() => onToggleSuggestionSelection(originalIndex)}
                   />
                 ))}
               </div>
@@ -186,11 +241,14 @@ export function OptimizationPage({
                 Low Priority
               </h2>
               <div className="space-y-4">
-                {groupedSuggestions.low.map((suggestion, index) => (
+                {groupedSuggestions.low.map(({ suggestion, originalIndex }) => (
                   <SuggestionCard
-                    key={`low-${index}`}
+                    key={`low-${originalIndex}`}
                     suggestion={suggestion}
-                    index={index}
+                    index={originalIndex}
+                    selectionEnabled={true}
+                    isSelected={selectedSuggestions.has(originalIndex)}
+                    onToggleSelection={() => onToggleSuggestionSelection(originalIndex)}
                   />
                 ))}
               </div>

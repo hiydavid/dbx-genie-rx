@@ -13,6 +13,8 @@ import type {
   AppSettings,
   LabelingFeedbackItem,
   OptimizationResponse,
+  OptimizationSuggestion,
+  ConfigMergeResponse,
 } from "@/types"
 
 const API_BASE = "/api"
@@ -373,6 +375,28 @@ export function streamOptimizations(
     })
 
   return () => abortController.abort()
+}
+
+/**
+ * Merge config with selected suggestions.
+ * This is a fast programmatic operation (no LLM involved).
+ */
+export async function mergeConfig(
+  spaceData: Record<string, unknown>,
+  suggestions: OptimizationSuggestion[]
+): Promise<ConfigMergeResponse> {
+  return fetchWithTimeout<ConfigMergeResponse>(
+    `${API_BASE}/config/merge`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        space_data: spaceData,
+        suggestions: suggestions,
+      }),
+    },
+    DEFAULT_TIMEOUT
+  )
 }
 
 export { ApiError }
