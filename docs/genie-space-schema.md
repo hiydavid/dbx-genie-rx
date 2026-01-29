@@ -5,7 +5,7 @@ This document describes the JSON schema for Databricks Genie Space configuration
 ## Root Structure
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ------- | ------ | ---------- | ------------- |
 | `version` | integer | Yes | Schema version number |
 | `config` | object | Yes | Configuration settings including sample questions |
 | `data_sources` | object | Yes | Data source definitions (tables) |
@@ -34,10 +34,10 @@ This document describes the JSON schema for Databricks Genie Space configuration
           {
             "column_name": "string",
             "description": ["string"],
-            "get_example_values": true,
+            "enable_format_assistance": true,
             "exclude": false,
             "synonyms": ["string"],
-            "build_value_dictionary": false
+            "enable_entity_matching": false
           }
         ]
       }
