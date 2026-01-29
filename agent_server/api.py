@@ -20,6 +20,7 @@ from agent_server.agent import GenieSpaceAnalyzer, SECTIONS, get_analyzer
 from agent_server.ingest import get_serialized_space
 from agent_server.models import (
     AgentInput,
+    AgentOutput,
     ConfigMergeRequest,
     ConfigMergeResponse,
     LabelingFeedbackItem,
@@ -27,8 +28,12 @@ from agent_server.models import (
     OptimizationResponse,
     OptimizationSuggestion,
     SectionAnalysis,
+    StyleDetectionResult,
+    SynthesisResult,
 )
 from agent_server.optimizer import get_optimizer
+from agent_server.style_detector import detect_style
+from agent_server.synthesizer import synthesize_analysis
 
 router = APIRouter(prefix="/api")
 
@@ -129,6 +134,20 @@ class SettingsResponse(BaseModel):
     llm_model: str
     sql_warehouse_id: str | None
     databricks_host: str | None
+
+
+class AnalyzeAllSectionsRequest(BaseModel):
+    """Request to analyze all sections with cross-sectional synthesis."""
+    sections: list[dict]  # List of {name, data} for sections to analyze
+    full_space: dict
+
+
+class AnalyzeAllSectionsResponse(BaseModel):
+    """Response with all section analyses plus style and synthesis."""
+    analyses: list[SectionAnalysis]
+    style: StyleDetectionResult
+    synthesis: SynthesisResult | None  # Only present for full analysis
+    is_full_analysis: bool
 
 
 @router.post("/space/fetch", response_model=FetchSpaceResponse)
@@ -233,6 +252,62 @@ async def analyze_section(request: AnalyzeSectionRequest) -> SectionAnalysis:
         return analysis
     except Exception as e:
         raise _safe_error(e, 500, "Section analysis failed")
+
+
+@router.post("/analyze/all", response_model=AnalyzeAllSectionsResponse)
+async def analyze_all_sections(request: AnalyzeAllSectionsRequest):
+    """Analyze all selected sections with cross-sectional synthesis.
+
+    Returns style detection (heuristic), section analyses (LLM),
+    and synthesis (LLM, for full analysis).
+
+    Full analysis = analyzed all CONFIGURED sections (sections with data).
+    This means a space with only tables configured gets full synthesis
+    when tables are analyzed, without being penalized for not having
+    metric views or other optional sections.
+    """
+    try:
+        analyzer = get_analyzer()
+        analyzer.start_session()
+
+        try:
+            # Detect style (no LLM call)
+            style = detect_style(request.full_space)
+
+            # Analyze each section
+            analyses = []
+            for section in request.sections:
+                analysis = analyzer.analyze_section(
+                    section["name"],
+                    section.get("data"),
+                    full_space=request.full_space,
+                )
+                analyses.append(analysis)
+
+            # Determine configured sections in the full space
+            all_sections = analyzer.get_all_sections(request.full_space)
+            configured_section_names = {name for name, data in all_sections if data is not None}
+            analyzed_section_names = {s["name"] for s in request.sections}
+
+            # Full analysis = analyzed all configured sections
+            # (user analyzed everything they have set up)
+            is_full_analysis = configured_section_names <= analyzed_section_names
+
+            # Run synthesis for full analysis
+            synthesis = None
+            if is_full_analysis:
+                synthesis = synthesize_analysis(analyses, style, is_full_analysis)
+
+            return AnalyzeAllSectionsResponse(
+                analyses=analyses,
+                style=style,
+                synthesis=synthesis,
+                is_full_analysis=is_full_analysis,
+            )
+        finally:
+            analyzer.end_session()
+    except Exception as e:
+        raise _safe_error(e, 500, "Analysis failed")
 
 
 @router.post("/analyze/stream")

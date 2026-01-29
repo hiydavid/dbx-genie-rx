@@ -162,3 +162,83 @@ Output your suggestions as JSON with this exact structure:
 }}
 
 Focus on actionable changes that will measurably improve Genie's ability to answer the types of questions that were marked incorrect."""
+
+
+def get_synthesis_prompt(
+    section_analyses: list[dict],
+    detected_style: dict,
+    is_full_analysis: bool,
+) -> str:
+    """Build the prompt for cross-sectional synthesis after all sections are analyzed.
+
+    Args:
+        section_analyses: List of section analysis results (section_name, checklist, findings, score, summary)
+        detected_style: The detected configuration style info
+        is_full_analysis: Whether all 10 sections were analyzed
+
+    Returns:
+        The formatted prompt string
+    """
+    # Format section summaries
+    section_summaries = []
+    for analysis in section_analyses:
+        passed = sum(1 for c in analysis.get("checklist", []) if c.get("passed"))
+        total = len(analysis.get("checklist", []))
+        section_summaries.append(
+            f"- **{analysis['section_name']}**: {passed}/{total} passed. {analysis.get('summary', '')}"
+        )
+    sections_text = "\n".join(section_summaries)
+
+    style_name = detected_style.get("detected_style", "hybrid")
+    style_desc = detected_style.get("description", "")
+
+    return f"""You are synthesizing a cross-sectional analysis of a Databricks Genie Space configuration.
+
+## Configuration Style
+Detected style: {style_name}
+{style_desc}
+
+## Section Analysis Results
+{sections_text}
+
+## Instructions
+
+Based on the section analyses and detected configuration style, provide a holistic assessment that:
+
+1. **Identifies compensating strengths**: Where one section's strength makes up for another's weakness.
+   - For example, rich metric views can compensate for missing table descriptions
+   - Strong example SQLs can compensate for missing join specifications
+   - Rich text instructions can compensate for missing snippets
+
+2. **Celebrates what's working well**: Highlight 2-4 strengths worth preserving.
+
+3. **Identifies quick wins**: List 3-5 specific, actionable improvements that would have high impact.
+
+4. **Determines overall assessment**:
+   - "good_to_go": The space is well-configured for its style, minor improvements only
+   - "quick_wins": The space works but has clear opportunities for improvement
+   - "foundation_needed": The space needs fundamental improvements to be effective
+
+Be encouraging but honest. Focus on improvement opportunities rather than failures.
+Consider the detected style when evaluating - a metric-views-focused space shouldn't be penalized for minimal tables.
+
+{"Note: This is a partial analysis (not all sections were analyzed). Be tentative in the overall assessment." if not is_full_analysis else ""}
+
+Output your synthesis as JSON with this exact structure:
+{{
+  "assessment": "good_to_go" | "quick_wins" | "foundation_needed",
+  "assessment_rationale": "Brief explanation of the assessment",
+  "compensating_strengths": [
+    {{
+      "covering_section": "section that provides the strength",
+      "covered_section": "section being compensated for",
+      "explanation": "How the strength compensates"
+    }}
+  ],
+  "celebration_points": [
+    "What's working well (2-4 items)"
+  ],
+  "top_quick_wins": [
+    "Specific actionable improvement (3-5 items)"
+  ]
+}}"""

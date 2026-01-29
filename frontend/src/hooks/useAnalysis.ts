@@ -12,6 +12,8 @@ import type {
   FetchSpaceResponse,
   SqlExecutionResult,
   OptimizationSuggestion,
+  StyleDetectionResult,
+  SynthesisResult,
 } from "@/types"
 import {
   fetchSpace,
@@ -46,6 +48,10 @@ export interface AnalysisState {
   analysisViewIndex: number  // Index within filtered analyzed sections list
   selectedQuestions: string[]
   hasLabelingSession: boolean
+  // Cross-sectional analysis state
+  detectedStyle: StyleDetectionResult | null
+  synthesis: SynthesisResult | null
+  isFullAnalysis: boolean
   // Labeling session state (persists across navigation)
   labelingCurrentIndex: number
   labelingGeneratedSql: Record<string, string>
@@ -89,6 +95,10 @@ const initialState: AnalysisState = {
   analysisViewIndex: 0,
   selectedQuestions: [],
   hasLabelingSession: false,
+  // Cross-sectional analysis state
+  detectedStyle: null,
+  synthesis: null,
+  isFullAnalysis: false,
   // Labeling session state
   labelingCurrentIndex: 0,
   labelingGeneratedSql: {},
@@ -220,7 +230,7 @@ export function useAnalysis() {
     }))
 
     try {
-      const results = await analyzeAllSectionsApi(
+      const response = await analyzeAllSectionsApi(
         sectionsToAnalyze,
         spaceData,
         (completed, total) =>
@@ -230,12 +240,15 @@ export function useAnalysis() {
       // Map results back to original section indices (sparse array)
       const sparseAnalyses: SectionAnalysis[] = []
       selectedSections.forEach((sectionIndex, resultIndex) => {
-        sparseAnalyses[sectionIndex] = results[resultIndex]
+        sparseAnalyses[sectionIndex] = response.analyses[resultIndex]
       })
 
       setState((prev) => ({
         ...prev,
         sectionAnalyses: sparseAnalyses,
+        detectedStyle: response.style,
+        synthesis: response.synthesis,
+        isFullAnalysis: response.is_full_analysis,
         allSectionsAnalyzed: true,
         phase: "summary",
         isLoading: false,

@@ -1,6 +1,53 @@
 import re
+from enum import Enum
+from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
+
+
+class ConfigStyle(str, Enum):
+    """Detected configuration style for a Genie Space."""
+
+    METRIC_VIEWS_FOCUSED = "metric-views-focused"
+    TABLES_WITH_KNOWLEDGE_BASE = "tables-with-knowledge-base"
+    EXAMPLE_DRIVEN = "example-driven"
+    MINIMAL_VIABLE = "minimal-viable"
+    HYBRID = "hybrid"
+
+
+class AssessmentCategory(str, Enum):
+    """Qualitative assessment category replacing numeric scores."""
+
+    GOOD_TO_GO = "good_to_go"
+    QUICK_WINS = "quick_wins"
+    FOUNDATION_NEEDED = "foundation_needed"
+
+
+class StyleDetectionResult(BaseModel):
+    """Result of heuristic-based configuration style detection."""
+
+    detected_style: ConfigStyle
+    confidence: float  # 0.0 to 1.0
+    indicators: dict[str, Any]  # Counts and signals that led to the detection
+    description: str  # Human-readable description of the detected style
+
+
+class CompensatingStrength(BaseModel):
+    """Represents how one section compensates for another's weakness."""
+
+    covering_section: str  # Section providing the strength
+    covered_section: str  # Section being compensated for
+    explanation: str  # How the strength compensates
+
+
+class SynthesisResult(BaseModel):
+    """Cross-sectional synthesis result from analyzing all sections together."""
+
+    assessment: AssessmentCategory
+    assessment_rationale: str
+    compensating_strengths: list[CompensatingStrength]
+    celebration_points: list[str]  # What's working well
+    top_quick_wins: list[str]  # Actionable improvements
 
 # Genie Space ID format: alphanumeric, hyphens, underscores (max 64 chars)
 _GENIE_SPACE_ID_PATTERN = re.compile(r"^[a-zA-Z0-9\-_]{1,64}$")
@@ -60,7 +107,9 @@ class AgentOutput(BaseModel):
 
     genie_space_id: str
     analyses: list[SectionAnalysis]
-    overall_score: int
+    style: StyleDetectionResult | None = None  # Detected config style
+    synthesis: SynthesisResult | None = None  # Cross-sectional synthesis (full analysis only)
+    overall_score: int  # Kept for backward compatibility
     trace_id: str
 
 
