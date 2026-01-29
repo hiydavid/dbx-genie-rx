@@ -27,10 +27,10 @@ This checklist is organized according to the serialized Genie Space JSON schema 
 - [ ] Key columns have synonyms defined
 - [ ] Synonyms include business terminology, abbreviations, and alternative phrasings users would naturally use
 
-**Example Values / Value Dictionary:**
+**Format Assistance / Entity Matching:**
 
-- [ ] Filterable columns have `get_example_values` enabled
-- [ ] Columns with discrete values have `build_value_dictionary` enabled
+- [ ] Filterable columns have `enable_format_assistance` enabled
+- [ ] Columns with discrete values have `enable_entity_matching` enabled
 
 **Column Exclusions:**
 
@@ -112,7 +112,7 @@ This checklist is organized according to the serialized Genie Space JSON schema 
 ## Summary
 
 | Section | Items |
-|---------|-------|
+| --------- | ------- |
 | `data_sources.tables` | 12 |
 | `data_sources.metric_views` | 2 |
 | `instructions.text_instructions` | 5 |
