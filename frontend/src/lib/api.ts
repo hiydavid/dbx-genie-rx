@@ -15,6 +15,8 @@ import type {
   OptimizationResponse,
   OptimizationSuggestion,
   ConfigMergeResponse,
+  StyleDetectionResult,
+  SynthesisResult,
 } from "@/types"
 
 const API_BASE = "/api"
@@ -130,29 +132,60 @@ export async function analyzeSection(
 }
 
 /**
- * Analyze all sections in parallel.
+ * Response from analyzing all sections with cross-sectional synthesis.
+ */
+export interface AnalyzeAllResponse {
+  analyses: SectionAnalysis[]
+  style: StyleDetectionResult
+  synthesis: SynthesisResult | null
+  is_full_analysis: boolean
+}
+
+/**
+ * Analyze all sections with cross-sectional synthesis.
+ * Returns style detection, section analyses, and synthesis (for full analysis only).
  */
 export async function analyzeAllSections(
   sections: SectionInfo[],
   fullSpace: Record<string, unknown>,
   onProgress?: (completed: number, total: number) => void
-): Promise<SectionAnalysis[]> {
+): Promise<AnalyzeAllResponse> {
+  // Simulate progress updates during the request
   const total = sections.length
-  let completed = 0
+  let progressInterval: ReturnType<typeof setInterval> | null = null
 
-  const results = await Promise.all(
-    sections.map(async (section) => {
-      const result = await analyzeSection({
-        section_name: section.name,
-        section_data: section.data,
-        full_space: fullSpace,
-      })
-      completed++
-      onProgress?.(completed, total)
-      return result
-    })
-  )
-  return results
+  if (onProgress) {
+    let current = 0
+    progressInterval = setInterval(() => {
+      if (current < total - 1) {
+        current++
+        onProgress(current, total)
+      }
+    }, 2000) // Update every 2 seconds
+  }
+
+  try {
+    const result = await fetchWithTimeout<AnalyzeAllResponse>(
+      `${API_BASE}/analyze/all`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sections: sections.map((s) => ({ name: s.name, data: s.data })),
+          full_space: fullSpace,
+        }),
+      },
+      LONG_TIMEOUT // LLM operation
+    )
+
+    // Final progress update
+    onProgress?.(total, total)
+    return result
+  } finally {
+    if (progressInterval) {
+      clearInterval(progressInterval)
+    }
+  }
 }
 
 /**
