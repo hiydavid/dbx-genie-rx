@@ -62,8 +62,8 @@ function App() {
           selectedSuggestions={state.selectedSuggestions}
           onBack={actions.goToFeedback}
           onToggleSuggestionSelection={actions.toggleSuggestionSelection}
-          onSelectAllSuggestions={actions.selectAllSuggestions}
-          onDeselectAllSuggestions={actions.deselectAllSuggestions}
+          onSelectAllByPriority={actions.selectAllByPriority}
+          onDeselectAllByPriority={actions.deselectAllByPriority}
           onCreateNewGenie={actions.generatePreviewConfig}
         />
       )

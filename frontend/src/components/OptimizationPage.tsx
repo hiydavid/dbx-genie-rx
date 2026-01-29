@@ -1,11 +1,13 @@
 /**
  * OptimizationPage component displaying AI-generated optimization suggestions.
+ * Organized in a two-level collapsible hierarchy: Priority > Category.
  */
 
 import { useMemo } from "react"
 import { ArrowLeft, Loader2, Sparkles, AlertTriangle, GitCompare } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { AccordionItem } from "@/components/ui/accordion"
 import { SuggestionCard } from "@/components/SuggestionCard"
 import type { OptimizationSuggestion } from "@/types"
 
@@ -17,10 +19,35 @@ interface OptimizationPageProps {
   selectedSuggestions: Set<number>
   onBack: () => void
   onToggleSuggestionSelection: (index: number) => void
-  onSelectAllSuggestions: () => void
-  onDeselectAllSuggestions: () => void
+  onSelectAllByPriority: (priority: string) => void
+  onDeselectAllByPriority: (priority: string) => void
   onCreateNewGenie: () => void
 }
+
+type SuggestionItem = { suggestion: OptimizationSuggestion; originalIndex: number }
+type CategoryGroup = { category: string; items: SuggestionItem[] }
+type PriorityGroup = { categories: CategoryGroup[]; count: number; selectedCount: number }
+
+const PRIORITY_CONFIG = {
+  high: {
+    label: "High Priority",
+    dotColor: "bg-red-500",
+    textColor: "text-red-700 dark:text-red-400",
+    defaultOpen: true,
+  },
+  medium: {
+    label: "Medium Priority",
+    dotColor: "bg-amber-500",
+    textColor: "text-amber-700 dark:text-amber-400",
+    defaultOpen: true,
+  },
+  low: {
+    label: "Low Priority",
+    dotColor: "bg-blue-500",
+    textColor: "text-blue-700 dark:text-blue-400",
+    defaultOpen: false,
+  },
+} as const
 
 export function OptimizationPage({
   suggestions,
@@ -30,34 +57,54 @@ export function OptimizationPage({
   selectedSuggestions,
   onBack,
   onToggleSuggestionSelection,
-  onSelectAllSuggestions,
-  onDeselectAllSuggestions,
+  onSelectAllByPriority,
+  onDeselectAllByPriority,
   onCreateNewGenie,
 }: OptimizationPageProps) {
-  // Group suggestions by priority with original indices
+  // Group suggestions by priority then category with original indices
   const groupedSuggestions = useMemo(() => {
-    if (!suggestions) return { high: [], medium: [], low: [] }
+    if (!suggestions) {
+      return {
+        high: { categories: [], count: 0, selectedCount: 0 },
+        medium: { categories: [], count: 0, selectedCount: 0 },
+        low: { categories: [], count: 0, selectedCount: 0 },
+      }
+    }
 
-    type SuggestionWithIndex = { suggestion: OptimizationSuggestion; originalIndex: number }
-    const grouped: { high: SuggestionWithIndex[]; medium: SuggestionWithIndex[]; low: SuggestionWithIndex[] } = {
-      high: [],
-      medium: [],
-      low: [],
+    const priorities = ["high", "medium", "low"] as const
+    const result: Record<(typeof priorities)[number], PriorityGroup> = {
+      high: { categories: [], count: 0, selectedCount: 0 },
+      medium: { categories: [], count: 0, selectedCount: 0 },
+      low: { categories: [], count: 0, selectedCount: 0 },
+    }
+
+    // Build category maps for each priority
+    const categoryMaps = {
+      high: new Map<string, SuggestionItem[]>(),
+      medium: new Map<string, SuggestionItem[]>(),
+      low: new Map<string, SuggestionItem[]>(),
     }
 
     suggestions.forEach((suggestion, index) => {
-      const item = { suggestion, originalIndex: index }
-      if (suggestion.priority === "high") {
-        grouped.high.push(item)
-      } else if (suggestion.priority === "medium") {
-        grouped.medium.push(item)
-      } else {
-        grouped.low.push(item)
-      }
+      const priority = suggestion.priority as (typeof priorities)[number]
+      const category = suggestion.category || "Other"
+      const map = categoryMaps[priority]
+
+      if (!map.has(category)) map.set(category, [])
+      map.get(category)!.push({ suggestion, originalIndex: index })
+      result[priority].count++
+      if (selectedSuggestions.has(index)) result[priority].selectedCount++
     })
 
-    return grouped
-  }, [suggestions])
+    // Convert maps to sorted arrays
+    for (const priority of priorities) {
+      result[priority].categories = Array.from(categoryMaps[priority].entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([category, items]) => ({ category, items }))
+    }
+
+    return result
+  }, [suggestions, selectedSuggestions])
 
   const totalCount = suggestions?.length || 0
   const selectedCount = selectedSuggestions.size
@@ -132,128 +179,131 @@ export function OptimizationPage({
         </Card>
       )}
 
-      {/* Stats and Selection Controls */}
+      {/* Stats and Create button */}
       {suggestions && suggestions.length > 0 && !isLoading && (
         <div className="space-y-4">
           {/* Priority stats */}
-          <div className="flex gap-4 flex-wrap">
-            {groupedSuggestions.high.length > 0 && (
-              <div className="flex items-center gap-2 text-sm">
-                <div className="w-3 h-3 rounded-full bg-red-500" />
-                <span className="text-secondary">
-                  {groupedSuggestions.high.length} high priority
-                </span>
-              </div>
-            )}
-            {groupedSuggestions.medium.length > 0 && (
-              <div className="flex items-center gap-2 text-sm">
-                <div className="w-3 h-3 rounded-full bg-amber-500" />
-                <span className="text-secondary">
-                  {groupedSuggestions.medium.length} medium priority
-                </span>
-              </div>
-            )}
-            {groupedSuggestions.low.length > 0 && (
-              <div className="flex items-center gap-2 text-sm">
-                <div className="w-3 h-3 rounded-full bg-blue-500" />
-                <span className="text-secondary">
-                  {groupedSuggestions.low.length} low priority
-                </span>
-              </div>
-            )}
-          </div>
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex gap-4 flex-wrap">
+              {groupedSuggestions.high.count > 0 && (
+                <div className="flex items-center gap-2 text-sm">
+                  <div className="w-3 h-3 rounded-full bg-red-500" />
+                  <span className="text-secondary">
+                    {groupedSuggestions.high.count} high priority
+                  </span>
+                </div>
+              )}
+              {groupedSuggestions.medium.count > 0 && (
+                <div className="flex items-center gap-2 text-sm">
+                  <div className="w-3 h-3 rounded-full bg-amber-500" />
+                  <span className="text-secondary">
+                    {groupedSuggestions.medium.count} medium priority
+                  </span>
+                </div>
+              )}
+              {groupedSuggestions.low.count > 0 && (
+                <div className="flex items-center gap-2 text-sm">
+                  <div className="w-3 h-3 rounded-full bg-blue-500" />
+                  <span className="text-secondary">
+                    {groupedSuggestions.low.count} low priority
+                  </span>
+                </div>
+              )}
+            </div>
 
-          {/* Selection controls */}
-          <div className="flex items-center justify-between flex-wrap gap-3 p-3 bg-elevated rounded-lg border border-default">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" onClick={onSelectAllSuggestions}>
-                Select All
-              </Button>
-              <Button variant="ghost" size="sm" onClick={onDeselectAllSuggestions}>
-                Deselect All
-              </Button>
+            {/* Selection count and Create button */}
+            <div className="flex items-center gap-3">
               <span className="text-sm text-muted">
                 {selectedCount} of {totalCount} selected
               </span>
+              {selectedCount > 0 && (
+                <Button onClick={onCreateNewGenie}>
+                  <GitCompare className="w-4 h-4 mr-2" />
+                  Create New Genie
+                </Button>
+              )}
             </div>
-            {selectedCount > 0 && (
-              <Button onClick={onCreateNewGenie}>
-                <GitCompare className="w-4 h-4 mr-2" />
-                Create New Genie
-              </Button>
-            )}
           </div>
         </div>
       )}
 
-      {/* Suggestions grouped by priority */}
+      {/* Suggestions grouped by priority then category - collapsible accordions */}
       {suggestions && suggestions.length > 0 && !isLoading && (
-        <div className="space-y-8">
-          {/* High priority */}
-          {groupedSuggestions.high.length > 0 && (
-            <section>
-              <h2 className="text-lg font-semibold text-red-700 dark:text-red-400 mb-4 flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-red-500" />
-                High Priority
-              </h2>
-              <div className="space-y-4">
-                {groupedSuggestions.high.map(({ suggestion, originalIndex }) => (
-                  <SuggestionCard
-                    key={`high-${originalIndex}`}
-                    suggestion={suggestion}
-                    index={originalIndex}
-                    selectionEnabled={true}
-                    isSelected={selectedSuggestions.has(originalIndex)}
-                    onToggleSelection={() => onToggleSuggestionSelection(originalIndex)}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
+        <div className="space-y-4">
+          {(["high", "medium", "low"] as const).map((priority) => {
+            const group = groupedSuggestions[priority]
+            if (group.count === 0) return null
 
-          {/* Medium priority */}
-          {groupedSuggestions.medium.length > 0 && (
-            <section>
-              <h2 className="text-lg font-semibold text-amber-700 dark:text-amber-400 mb-4 flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-amber-500" />
-                Medium Priority
-              </h2>
-              <div className="space-y-4">
-                {groupedSuggestions.medium.map(({ suggestion, originalIndex }) => (
-                  <SuggestionCard
-                    key={`medium-${originalIndex}`}
-                    suggestion={suggestion}
-                    index={originalIndex}
-                    selectionEnabled={true}
-                    isSelected={selectedSuggestions.has(originalIndex)}
-                    onToggleSelection={() => onToggleSuggestionSelection(originalIndex)}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
+            const config = PRIORITY_CONFIG[priority]
 
-          {/* Low priority */}
-          {groupedSuggestions.low.length > 0 && (
-            <section>
-              <h2 className="text-lg font-semibold text-blue-700 dark:text-blue-400 mb-4 flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-blue-500" />
-                Low Priority
-              </h2>
-              <div className="space-y-4">
-                {groupedSuggestions.low.map(({ suggestion, originalIndex }) => (
-                  <SuggestionCard
-                    key={`low-${originalIndex}`}
-                    suggestion={suggestion}
-                    index={originalIndex}
-                    selectionEnabled={true}
-                    isSelected={selectedSuggestions.has(originalIndex)}
-                    onToggleSelection={() => onToggleSuggestionSelection(originalIndex)}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
+            return (
+              <AccordionItem
+                key={priority}
+                defaultOpen={config.defaultOpen}
+                icon={<div className={`w-3 h-3 rounded-full ${config.dotColor}`} />}
+                title={
+                  <span className={config.textColor}>
+                    {config.label} ({group.count})
+                    {group.selectedCount > 0 && (
+                      <span className="ml-2 text-xs font-normal text-muted">
+                        {group.selectedCount} selected
+                      </span>
+                    )}
+                  </span>
+                }
+                action={
+                  <div
+                    className="flex items-center gap-1"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => onSelectAllByPriority(priority)}
+                    >
+                      Select All
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => onDeselectAllByPriority(priority)}
+                    >
+                      Deselect All
+                    </Button>
+                  </div>
+                }
+              >
+                <div className="space-y-2">
+                  {group.categories.map(({ category, items }) => (
+                    <AccordionItem
+                      key={`${priority}-${category}`}
+                      defaultOpen={true}
+                      title={
+                        <span className="text-sm text-secondary">
+                          {category} ({items.length})
+                        </span>
+                      }
+                      className="border-transparent bg-black/5 dark:bg-white/5"
+                    >
+                      <div className="space-y-3">
+                        {items.map(({ suggestion, originalIndex }) => (
+                          <SuggestionCard
+                            key={`${priority}-${category}-${originalIndex}`}
+                            suggestion={suggestion}
+                            selectionEnabled={true}
+                            isSelected={selectedSuggestions.has(originalIndex)}
+                            onToggleSelection={() => onToggleSuggestionSelection(originalIndex)}
+                          />
+                        ))}
+                      </div>
+                    </AccordionItem>
+                  ))}
+                </div>
+              </AccordionItem>
+            )
+          })}
         </div>
       )}
 
