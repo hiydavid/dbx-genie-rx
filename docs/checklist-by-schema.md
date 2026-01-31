@@ -12,7 +12,7 @@ This checklist is organized according to the serialized Genie Space JSON schema 
 
 **Table Selection:**
 
-- [ ] Between 1 and 25 tables are configured
+- [ ] Ideally 5 or fewer tables are configured (max 25 supported)
 - [ ] Tables are focused (only necessary tables for intended questions)
 - [ ] Tables are well-annotated with descriptions
 - [ ] Datasets are simplified (prejoined where appropriate, unnecessary columns removed)
@@ -29,7 +29,7 @@ This checklist is organized according to the serialized Genie Space JSON schema 
 
 **Format Assistance / Entity Matching:**
 
-- [ ] Filterable columns have `enable_format_assistance` enabled
+- [ ] Filterable columns leverage prompt matching (automatic) or have `enable_format_assistance` explicitly enabled
 - [ ] Columns with discrete values have `enable_entity_matching` enabled
 
 **Column Exclusions:**
@@ -48,9 +48,10 @@ This checklist is organized according to the serialized Genie Space JSON schema 
 
 ### `text_instructions`
 
-- [ ] At least 1 text instruction exists
+- [ ] Exactly 1 text instruction exists (max 1 allowed per space)
 - [ ] Instructions are focused and minimal (not excessive)
 - [ ] Instructions provide globally-applied context
+- [ ] Clarification triggers follow structure: condition, missing details, required action, example
 - [ ] Business jargon is mapped to standard terminology where needed
 - [ ] SQL examples, metrics, join logic, and filters are moved to their respective sections (not embedded in text instructions)
 
@@ -115,7 +116,7 @@ This checklist is organized according to the serialized Genie Space JSON schema 
 | --------- | ------- |
 | `data_sources.tables` | 12 |
 | `data_sources.metric_views` | 2 |
-| `instructions.text_instructions` | 5 |
+| `instructions.text_instructions` | 6 |
 | `instructions.example_question_sqls` | 7 |
 | `instructions.sql_functions` | 1 |
 | `instructions.join_specs` | 3 |
@@ -123,7 +124,7 @@ This checklist is organized according to the serialized Genie Space JSON schema 
 | `instructions.sql_snippets.expressions` | 2 |
 | `instructions.sql_snippets.measures` | 2 |
 | `benchmarks.questions` | 1 |
-| **Total** | **37** |
+| **Total** | **38** |
 
 ---
 
