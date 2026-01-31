@@ -3,12 +3,10 @@
 
 > **Note:** This project is experimental and under active development.
 
-An LLM-powered linting tool that analyzes Databricks Genie Space configurations against best practices. Get actionable insights and recommendations to improve your Genie Space setup.
+An LLM-powered Databricks App tool that:
 
-This app was designed to be deployed on Databricks Apps. You can either:
-
-- **Quick deploy**: Clone the repo directly into your Databricks workspace and deploy via Databricks Apps (see [Quick Start](#quick-start))
-- **Local development**: Clone locally and use the shell scripts for development and deployment
+1. Analyzes your Databricks Genie Space configurations against best practices.
+2. Get actionable insights and recommendations to improve your Genie Space setup by labeling Genie results on your pre-defined Benchmark questions.
 
 ## Walkthrough
 
@@ -25,18 +23,13 @@ This app was designed to be deployed on Databricks Apps. You can either:
 </p>
 
 <p align="left">
-  <img src="images/pending-analysis.png" alt="Sections ready for analysis" width="700"><br>
-  <em>3) Review sections pending analysis</em>
-</p>
-
-<p align="left">
   <img src="images/analysis-result.png" alt="Section analysis in progress" width="700"><br>
-  <em>4) Analyze each section against best practices</em>
+  <em>3) Analyze each section against best practices</em>
 </p>
 
 <p align="left">
   <img src="images/analysis-summary.png" alt="Final compliance summary" width="700"><br>
-  <em>5) View the final compliance summary and scores</em>
+  <em>4) View the final compliance summary and scores</em>
 </p>
 
 ### Optimize Mode
@@ -53,188 +46,62 @@ This app was designed to be deployed on Databricks Apps. You can either:
 
 <p align="left">
   <img src="images/labeling.png" alt="Preview ingested data" width="700"><br>
-  <em>3) Label Genie responses with feedback</em>
-</p>
-
-<p align="left">
-  <img src="images/feedback.png" alt="Preview ingested data" width="700"><br>
-  <em>4) Aggregating user labeling feedback</em>
-</p>
-
-<p align="left">
-  <img src="images/optimizing.png" alt="Preview ingested data" width="700"><br>
-  <em>5) Generating optimization suggestions</em>
+  <em>3) Label Genie responses with feedback. All feedback are aggregated and used for optimization</em>
 </p>
 
 <p align="left">
   <img src="images/optimization-results.png" alt="Preview ingested data" width="700"><br>
-  <em>6) Review optimization suggestions</em>
+  <em>5) Review optimization suggestions</em>
 </p>
 
 <p align="left">
-  <em>7) Select suggestions and click "Create New Genie" to preview a side-by-side JSON diff of the proposed configuration changes</em>
+  <img src="images/create-new-space.png" alt="Preview ingested data" width="700"><br>
+  <em>6) Select suggestions and click "Create New Genie" to preview a side-by-side JSON diff of the proposed configuration changes</em>
 </p>
 
 ## Prerequisites
 
-- Python 3.11+
-- Node.js 18+ and npm
-- [uv](https://docs.astral.sh/uv/getting-started/installation/) (Python package manager)
-- [Databricks CLI](https://docs.databricks.com/dev-tools/cli/install) (v0.200+)
-- Access to a Databricks workspace with Genie Spaces
+- Access to Databricks Apps
 - Access to a Databricks-hosted LLM endpoint (Claude Sonnet recommended)
 
 ## Quick Start
 
-There are two main ways to deploy the app:
+### 1. Import the Repository
 
-### Option 1: Deploy Directly in Databricks (Recommended)
+1. Go to **Workspace > Repos > Add Repo**
+2. Enter the Git URL: `https://github.com/hiydavid/dbx-genie-rx.git`
+3. Click **Create Repo**
 
-If you want to use the app as-is, simply clone the repo into your Databricks workspace and deploy via Databricks Apps:
+### 2. Configure the App
 
-1. **Import the repo** into your workspace:
-   - Go to **Workspace > Repos > Add Repo**
-   - Enter the Git URL: `https://github.com/your-org/dbx-genie-rx.git`
-   - Click **Create Repo**
-
-2. **Configure the app**:
-   - Open `app.yaml` in the workspace editor
-   - Set `SQL_WAREHOUSE_ID` to enable Optimize mode (required for labeling)
-   - Set `MLFLOW_EXPERIMENT_ID` to enable tracing (optional)
-   - Change `LLM_MODEL` if you want to use a different Databricks-hosted model
-
-3. **Deploy the app**:
-   - Go to **Compute > Apps > Create App**
-   - Name it (e.g., `genie-space-analyzer`)
-   - Click **Deploy** and select your repo folder as the source
-   - Click **Deploy** to start
-
-4. **Grant permissions** to the app's service principal (see [Service Principal Permissions](#service-principal-permissions) for details)
-
-> **Note:** The frontend is pre-built and included in the repo (`frontend/dist/`), so no build step is required.
-
-### Option 2: Local Development with Shell Scripts
-
-For local development or when you need to customize the app:
-
-#### 1. Clone and Setup
-
-```bash
-# Clone the repository
-git clone https://github.com/your-org/dbx-genie-rx.git
-cd dbx-genie-rx
-
-# Run the quickstart script
-./scripts/quickstart.sh
-```
-
-The quickstart script will:
-
-1. Check for required tools (uv, Databricks CLI)
-2. Set up Databricks authentication (OAuth via CLI)
-3. Create an MLflow experiment for tracing (optional)
-4. Update `app.yaml` with your experiment ID
-5. Create `.env.local` with your configuration
-6. Install Python dependencies
-
-#### 2. Build the Frontend
-
-```bash
-./scripts/build.sh
-```
-
-#### 3. Run Locally
-
-```bash
-uv run start-server
-```
-
-Open <http://localhost:8000> in your browser. The server serves both the API and the pre-built frontend.
-
-**For frontend development with hot-reload**, run the backend and Vite dev server separately:
-
-```bash
-# Terminal 1 - Backend (with hot-reload on port 5001)
-uv run uvicorn agent_server.start_server:app --reload --port 5001
-
-# Terminal 2 - Frontend (hot-reload, proxies to backend on 5001)
-cd frontend && npm run dev
-```
-
-Then open <http://localhost:5173> instead.
-
-#### 4. Deploy to Databricks Apps
-
-```bash
-./scripts/deploy.sh genie-space-analyzer
-```
-
-Then complete deployment via the Databricks UI. After deployment, grant the app's service principal permissions as described in Option 1, Step 4.
-
-## Configuration
-
-There are two configuration files, each for a different environment:
-
-| File | Purpose |
-| ------ | --------- |
-| `.env.local` | Local development (created by `quickstart.sh`) |
-| `app.yaml` | Databricks Apps deployment |
-
-### Local Development (`.env.local`)
-
-The quickstart script creates `.env.local` for running the app locally:
-
-```bash
-# Databricks workspace URL
-DATABRICKS_HOST=https://your-workspace.cloud.databricks.com
-
-# Authentication (OAuth via Databricks CLI - recommended)
-DATABRICKS_CONFIG_PROFILE=DEFAULT
-
-# MLflow configuration - logs traces to Databricks
-MLFLOW_TRACKING_URI=databricks
-MLFLOW_REGISTRY_URI=databricks-uc
-MLFLOW_EXPERIMENT_ID=123456789
-
-# LLM model for analysis
-LLM_MODEL=databricks-claude-sonnet-4-5
-
-# SQL Warehouse for Optimize mode labeling
-SQL_WAREHOUSE_ID=abc123def456
-```
-
-| Variable | Required | Description |
-| ---------- | ---------- | ------------- |
-| `DATABRICKS_HOST` | Yes | Your Databricks workspace URL |
-| `DATABRICKS_CONFIG_PROFILE` | No | Databricks CLI profile (default: DEFAULT) |
-| `DATABRICKS_TOKEN` | No | PAT token (alternative to OAuth) |
-| `MLFLOW_EXPERIMENT_ID` | No | MLflow experiment ID - set to enable tracing |
-| `LLM_MODEL` | Yes | LLM model name (default: `databricks-claude-sonnet-4-5`) |
-| `SQL_WAREHOUSE_ID` | For Optimize | SQL Warehouse ID for executing benchmark queries in Optimize mode |
-
-### Databricks Apps Deployment (`app.yaml`)
-
-When deploying to Databricks Apps, configure environment variables in `app.yaml`:
+Open `app.yaml` in the workspace editor and configure the environment variables:
 
 ```yaml
 env:
+  # OPTIONAL: For capturing agent tracing
   - name: MLFLOW_EXPERIMENT_ID
-    value: "123456789"  # OPTIONAL: Set to enable tracing
+    value: "" 
+  # REQUIRED: Recommend sticking with Claude Sonnet 4.5 or Opus 4.5
   - name: LLM_MODEL
-    value: "databricks-claude-sonnet-4"
+    value: "databricks-claude-sonnet-4-5" 
+  # REQUIRED: For Optimize mode SQL execution
   - name: SQL_WAREHOUSE_ID
-    value: ""  # Required for Optimize mode SQL execution
+    value: ""  
+  # REQUIRED: For creating new Genie Spaces (e.g., /Workspace/Users/you@company.com/)
+  - name: GENIE_TARGET_DIRECTORY
+    value: ""  
 ```
 
-| Variable | Required | Description |
-| ---------- | ---------- | ------------- |
-| `MLFLOW_EXPERIMENT_ID` | No | MLflow experiment ID - set to enable tracing |
-| `LLM_MODEL` | Yes | LLM model name |
-| `SQL_WAREHOUSE_ID` | For Optimize | SQL Warehouse ID for executing benchmark queries in Optimize mode |
+### 3. Deploy the App
 
-> **Note:** In Databricks Apps, authentication is handled automatically via OAuth (OBO)—no need to configure `DATABRICKS_HOST` or tokens. The `MLFLOW_TRACKING_URI` and `MLFLOW_REGISTRY_URI` are pre-set to `databricks` and `databricks-uc`.
+1. Go to **Compute > Apps > Create App**
+2. Name it (e.g., `genie-space-analyzer`)
+3. Click **Deploy** and select your repo folder as the source
+4. Click **Deploy** to start
 
-## Service Principal Permissions
+> **Note:** The frontend is pre-built and included in the repo (`frontend/dist/`), so no build step is required.
+
+### 4. Grant Permissions
 
 After deploying, you must grant the app's service principal (SP) access to required resources:
 
@@ -270,29 +137,25 @@ After deploying, you must grant the app's service principal (SP) access to requi
    GRANT SELECT ON SCHEMA your_catalog.your_schema TO `app-XXXXX [your-app-name]`;
    ```
 
-## Updating the Deployed App
-
-After making code changes:
-
-```bash
-# Rebuild frontend and re-sync files
-./scripts/build.sh
-./scripts/deploy.sh genie-space-analyzer
-
-# Then in Databricks UI: click Deploy on your app
-```
-
 ## MLflow Tracing (Optional)
 
-MLflow tracing is optional. To enable it, set `MLFLOW_EXPERIMENT_ID` in `app.yaml` to a valid experiment ID.
+MLflow tracing logs all LLM calls and analysis steps to your Databricks workspace. To enable it:
 
-When enabled, all LLM calls and analysis steps are traced and logged to your Databricks workspace, grouped by session.
+### Creating an MLflow Experiment
 
-**View traces:**
+1. Navigate to **Machine Learning > Experiments**
+2. Click **Create Experiment**
+3. Name it (e.g., `genie-space-analyzer`)
+4. Leave **Artifact Location** blank (uses default)
+5. Click **Create**
+6. Copy the experiment ID from the URL (e.g., `https://your-workspace.cloud.databricks.com/ml/experiments/123456789`) or from the experiment details
+7. Update `MLFLOW_EXPERIMENT_ID` in `app.yaml` with this ID
+
+### Viewing Traces
 
 1. Go to your Databricks workspace
 2. Navigate to **Machine Learning > Experiments**
-3. Find your experiment: `/Users/<your-email>/genie-space-analyzer`
+3. Find your experiment
 4. Click on **Traces** to see all analysis traces
 
 **Filter by session:**
@@ -300,3 +163,7 @@ When enabled, all LLM calls and analysis steps are traced and logged to your Dat
 ```text
 metadata.`mlflow.trace.session` = '<session-id>'
 ```
+
+## Local Development
+
+For local development and customization, see [Local Development Guide](docs/local_development_guide.md).
