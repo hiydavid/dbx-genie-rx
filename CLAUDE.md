@@ -27,9 +27,6 @@ cd frontend && npm run dev
 cd frontend && npm run lint
 cd frontend && npm run build  # TypeScript checked during build
 
-# Test agent against a Genie Space (requires running server)
-GENIE_SPACE_ID=<id> uv run python test_agent.py --url http://localhost:8000
-
 # Build frontend for production
 ./scripts/build.sh
 
