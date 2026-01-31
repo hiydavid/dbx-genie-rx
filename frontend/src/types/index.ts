@@ -156,6 +156,19 @@ export interface ConfigMergeResponse {
   trace_id: string
 }
 
+// Genie Space creation types
+export interface GenieCreateRequest {
+  display_name: string
+  merged_config: Record<string, unknown>
+  parent_path?: string
+}
+
+export interface GenieCreateResponse {
+  genie_space_id: string
+  display_name: string
+  space_url: string
+}
+
 // App state types
 export type AppMode = "analyze" | "optimize"
 export type Phase = "input" | "ingest" | "analysis" | "summary"

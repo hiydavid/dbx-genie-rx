@@ -15,6 +15,8 @@ import type {
   OptimizationResponse,
   OptimizationSuggestion,
   ConfigMergeResponse,
+  GenieCreateRequest,
+  GenieCreateResponse,
   StyleDetectionResult,
   SynthesisResult,
 } from "@/types"
@@ -429,6 +431,23 @@ export async function mergeConfig(
       }),
     },
     DEFAULT_TIMEOUT
+  )
+}
+
+/**
+ * Create a new Genie Space with the merged configuration.
+ */
+export async function createGenieSpace(
+  request: GenieCreateRequest
+): Promise<GenieCreateResponse> {
+  return fetchWithTimeout<GenieCreateResponse>(
+    `${API_BASE}/genie/create`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request),
+    },
+    LONG_TIMEOUT // API call to Databricks
   )
 }
 

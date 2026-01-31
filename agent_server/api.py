@@ -23,6 +23,8 @@ from agent_server.models import (
     AgentOutput,
     ConfigMergeRequest,
     ConfigMergeResponse,
+    GenieCreateRequest,
+    GenieCreateResponse,
     LabelingFeedbackItem,
     OptimizationRequest,
     OptimizationResponse,
@@ -539,4 +541,34 @@ async def merge_config(request: ConfigMergeRequest):
         return result
     except Exception as e:
         raise _safe_error(e, 500, "Config merge failed")
+
+
+@router.post("/genie/create", response_model=GenieCreateResponse)
+async def create_genie_space(request: GenieCreateRequest):
+    """Create a new Genie Space with the merged configuration.
+
+    Creates a new Genie Space in the target directory using the optimized
+    configuration. Requires GENIE_TARGET_DIRECTORY to be configured.
+    """
+    from agent_server.genie_creator import create_genie_space as do_create
+
+    logger.info(f"Creating new Genie Space: {request.display_name}")
+
+    try:
+        result = do_create(
+            display_name=request.display_name,
+            merged_config=request.merged_config,
+            parent_path=request.parent_path,
+        )
+        return GenieCreateResponse(**result)
+    except ValueError as e:
+        # Invalid config or missing env var
+        raise HTTPException(status_code=400, detail=str(e))
+    except PermissionError as e:
+        # No write permission
+        raise HTTPException(status_code=403, detail=str(e))
+    except TimeoutError as e:
+        raise HTTPException(status_code=504, detail=str(e))
+    except Exception as e:
+        raise _safe_error(e, 500, "Failed to create Genie Space")
 

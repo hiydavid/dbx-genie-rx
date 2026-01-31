@@ -24,6 +24,7 @@ class GenieSpaceOptimizer:
     def __init__(self):
         self.model = get_llm_model()
         self._checklist_content: str | None = None
+        self._schema_content: str | None = None
 
     def _get_checklist_content(self) -> str:
         """Load the checklist markdown content."""
@@ -31,6 +32,13 @@ class GenieSpaceOptimizer:
             checklist_path = Path(__file__).parent.parent / "docs" / "checklist-by-schema.md"
             self._checklist_content = checklist_path.read_text()
         return self._checklist_content
+
+    def _get_schema_content(self) -> str:
+        """Load the Genie Space schema documentation."""
+        if self._schema_content is None:
+            schema_path = Path(__file__).parent.parent / "docs" / "genie-space-schema.md"
+            self._schema_content = schema_path.read_text()
+        return self._schema_content
 
     @mlflow.trace(span_type=SpanType.LLM)
     def generate_optimizations(
@@ -57,14 +65,16 @@ class GenieSpaceOptimizer:
             for item in labeling_feedback
         ]
 
-        # Get checklist content
+        # Get checklist and schema content
         checklist_content = self._get_checklist_content()
+        schema_content = self._get_schema_content()
 
         # Build the prompt
         prompt = get_optimization_prompt(
             space_data=space_data,
             labeling_feedback=feedback_dicts,
             checklist_content=checklist_content,
+            schema_content=schema_content,
         )
 
         # Call the LLM

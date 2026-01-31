@@ -4,7 +4,7 @@
  */
 
 import { useMemo } from "react"
-import { ArrowLeft, Loader2, Sparkles, AlertTriangle, GitCompare } from "lucide-react"
+import { ArrowLeft, Loader2, Sparkles, AlertTriangle, Eye } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { AccordionItem } from "@/components/ui/accordion"
@@ -218,8 +218,8 @@ export function OptimizationPage({
               </span>
               {selectedCount > 0 && (
                 <Button onClick={onCreateNewGenie}>
-                  <GitCompare className="w-4 h-4 mr-2" />
-                  Create New Genie
+                  <Eye className="w-4 h-4 mr-2" />
+                  Preview Changes
                 </Button>
               )}
             </div>
