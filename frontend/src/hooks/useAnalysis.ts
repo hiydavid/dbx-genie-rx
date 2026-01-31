@@ -14,6 +14,7 @@ import type {
   OptimizationSuggestion,
   StyleDetectionResult,
   SynthesisResult,
+  GenieCreateResponse,
 } from "@/types"
 import {
   fetchSpace,
@@ -24,6 +25,7 @@ import {
   mergeConfig,
   queryGenie,
   executeSql,
+  createGenieSpace as createGenieSpaceApi,
 } from "@/lib/api"
 import { getBenchmarkQuestions, getExpectedSql } from "@/lib/benchmarkUtils"
 
@@ -72,6 +74,10 @@ export interface AnalysisState {
   previewConfig: Record<string, unknown> | null
   previewSummary: string | null
   isGeneratingPreview: boolean
+  // Genie creation state
+  isCreatingGenie: boolean
+  genieCreateError: string | null
+  createdGenieResult: GenieCreateResponse | null
 }
 
 const initialState: AnalysisState = {
@@ -119,6 +125,10 @@ const initialState: AnalysisState = {
   previewConfig: null,
   previewSummary: null,
   isGeneratingPreview: false,
+  // Genie creation state
+  isCreatingGenie: false,
+  genieCreateError: null,
+  createdGenieResult: null,
 }
 
 export function useAnalysis() {
@@ -636,6 +646,10 @@ export function useAnalysis() {
       isGeneratingPreview: true,
       error: null,
       optimizeView: "preview",
+      // Reset creation state when generating new preview
+      isCreatingGenie: false,
+      genieCreateError: null,
+      createdGenieResult: null,
     }))
 
     // Get selected suggestions by their original indices
@@ -660,6 +674,35 @@ export function useAnalysis() {
       }))
     }
   }, [state.spaceData, state.optimizationSuggestions, state.selectedSuggestions])
+
+  const createGenieSpace = useCallback(async (displayName: string) => {
+    const { previewConfig } = state
+    if (!previewConfig) return
+
+    setState((prev) => ({
+      ...prev,
+      isCreatingGenie: true,
+      genieCreateError: null,
+    }))
+
+    try {
+      const response = await createGenieSpaceApi({
+        display_name: displayName,
+        merged_config: previewConfig,
+      })
+      setState((prev) => ({
+        ...prev,
+        isCreatingGenie: false,
+        createdGenieResult: response,
+      }))
+    } catch (err) {
+      setState((prev) => ({
+        ...prev,
+        isCreatingGenie: false,
+        genieCreateError: err instanceof Error ? err.message : "Failed to create Genie Space",
+      }))
+    }
+  }, [state.previewConfig])
 
   const clearSpaceData = useCallback(() => {
     setState((prev) => ({
@@ -911,6 +954,7 @@ export function useAnalysis() {
       goToPreview,
       startOptimization,
       generatePreviewConfig,
+      createGenieSpace,
       toggleSuggestionSelection,
       selectAllSuggestions,
       deselectAllSuggestions,

@@ -175,3 +175,22 @@ class ConfigMergeResponse(BaseModel):
     merged_config: dict
     summary: str
     trace_id: str
+
+
+# Genie Space creation models
+
+
+class GenieCreateRequest(BaseModel):
+    """Request to create a new Genie Space."""
+
+    display_name: str = Field(..., min_length=1, max_length=255)
+    merged_config: dict
+    parent_path: str | None = Field(None, max_length=1000)
+
+
+class GenieCreateResponse(BaseModel):
+    """Response from creating a new Genie Space."""
+
+    genie_space_id: str
+    display_name: str
+    space_url: str

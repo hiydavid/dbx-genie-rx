@@ -70,11 +70,50 @@ def call_serving_endpoint(
     return content
 
 
+def _repair_json(content: str) -> str:
+    """Attempt to repair common JSON syntax errors from LLM responses.
+
+    Fixes:
+    - Missing commas between array elements or object properties
+    - Trailing commas (not valid JSON but LLMs often add them)
+    """
+    import re
+
+    # Remove trailing commas before closing brackets/braces
+    content = re.sub(r",\s*([}\]])", r"\1", content)
+
+    # Fix missing commas between string values and opening braces/brackets
+    # e.g., "value"{ -> "value",{  or "value" \n { -> "value",{
+    content = re.sub(r'(")\s*\n?\s*([{\[])', r'\1,\n\2', content)
+
+    # Fix missing commas between closing and opening braces/brackets
+    # e.g., }{ -> },{  and ][ -> ],[  (with optional whitespace/newlines)
+    content = re.sub(r"([}\]])\s*\n?\s*([{\[])", r"\1,\n\2", content)
+
+    # Fix missing commas between string values (including across newlines)
+    # e.g., "value" "key" -> "value", "key"
+    # e.g., "value"\n"key" -> "value",\n"key"
+    content = re.sub(r'(")\s*\n\s*(")', r'\1,\n\2', content)
+    content = re.sub(r'(")\s+(")', r'\1, \2', content)
+
+    # Fix missing commas after closing brace/bracket before string (including newlines)
+    # e.g., } "key" -> }, "key"  or }\n"key" -> },\n"key"
+    content = re.sub(r'([}\]])\s*\n\s*(")', r'\1,\n\2', content)
+    content = re.sub(r'([}\]])\s+(")', r'\1, \2', content)
+
+    # Fix missing commas after values before keys (number/bool/null followed by string key)
+    # e.g., true\n"key" -> true,\n"key"
+    content = re.sub(r'(true|false|null|\d+)\s*\n\s*(")', r'\1,\n\2', content)
+
+    return content
+
+
 def parse_json_from_llm_response(content: str) -> dict:
     """Parse JSON from an LLM response, handling markdown code blocks.
 
     LLM responses often wrap JSON in ```json ... ``` code blocks.
-    This function extracts and parses the JSON content.
+    This function extracts and parses the JSON content, with automatic
+    repair for common LLM JSON errors.
 
     Args:
         content: The raw LLM response content
@@ -83,7 +122,7 @@ def parse_json_from_llm_response(content: str) -> dict:
         Parsed JSON as a dict
 
     Raises:
-        json.JSONDecodeError: If JSON parsing fails
+        json.JSONDecodeError: If JSON parsing fails even after repair
         ValueError: If no valid JSON found
     """
     content = content.strip()
@@ -122,4 +161,19 @@ def parse_json_from_llm_response(content: str) -> dict:
     if not content:
         raise ValueError("LLM returned empty response after parsing")
 
-    return json.loads(content)
+    # Try parsing as-is first
+    try:
+        return json.loads(content)
+    except json.JSONDecodeError as e:
+        logger.warning(f"Initial JSON parse failed: {e}. Attempting repair...")
+
+        # Try to repair and parse again
+        repaired = _repair_json(content)
+        try:
+            result = json.loads(repaired)
+            logger.info("JSON repair successful")
+            return result
+        except json.JSONDecodeError:
+            # Re-raise original error with context
+            logger.error(f"JSON repair failed. Content preview: {content[:500]}...")
+            raise e

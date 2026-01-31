@@ -74,6 +74,7 @@ def get_optimization_prompt(
     space_data: dict,
     labeling_feedback: list[dict],
     checklist_content: str,
+    schema_content: str,
 ) -> str:
     """Build the prompt for generating optimization suggestions based on labeling feedback.
 
@@ -81,6 +82,7 @@ def get_optimization_prompt(
         space_data: The full Genie Space configuration
         labeling_feedback: List of dicts with question_text, is_correct, feedback_text
         checklist_content: The best practices checklist markdown
+        schema_content: The Genie Space JSON schema documentation
 
     Returns:
         The formatted prompt string
@@ -120,15 +122,27 @@ The user labeled {len(labeling_feedback)} benchmark questions:
 ## Best Practices Checklist
 {checklist_content}
 
+## Genie Space Schema
+CRITICAL: Your suggested values MUST conform to this schema. Many fields require arrays of strings, not plain strings.
+{schema_content}
+
 ## Instructions
 
 Generate optimization suggestions that will improve Genie's accuracy, especially for the INCORRECT questions.
 
 **Constraints:**
-1. Only suggest modifications to EXISTING fields - do not suggest adding new tables
-2. Use exact JSON paths for field_path (e.g., "instructions.text_instructions[0].content", "instructions.sql_snippets.filters[2].snippet")
+1. Only suggest modifications to EXISTING fields - do not suggest adding new tables or new array items
+2. Use exact JSON paths with NUMERIC indices only (e.g., "instructions.text_instructions[0].content", "data_sources.tables[0].column_configs[2].description"). Do NOT invent query syntax like [find(...)] - only use [0], [1], [2], etc.
 3. Prioritize suggestions that directly address incorrect benchmark questions
 4. Limit to 10-15 most impactful suggestions
+5. CRITICAL: Suggested values MUST match the schema types. Fields like `description`, `content`, `question`, `sql`, `instruction`, `synonyms` must be arrays of strings, e.g., ["value"] not "value"
+6. Reference the actual array indices from the provided configuration - count the position (0-indexed) of the element you want to modify
+
+**API Constraints (do not violate):**
+- At most 1 text_instruction is allowed per space - do not add more
+- SQL fields in filters, expressions, measures must not be empty
+- All IDs must be unique within their collection
+- Do not suggest adding new items to arrays - only modify existing items
 
 **Valid categories:**
 - instruction: Text instruction modifications

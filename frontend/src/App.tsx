@@ -48,6 +48,10 @@ function App() {
           error={state.error}
           selectedCount={state.selectedSuggestions.size}
           onBack={actions.goToOptimization}
+          isCreating={state.isCreatingGenie}
+          createError={state.genieCreateError}
+          createdResult={state.createdGenieResult}
+          onCreateGenieSpace={actions.createGenieSpace}
         />
       )
     }

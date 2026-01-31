@@ -27,12 +27,15 @@ env:
     value: "databricks-claude-sonnet-4-5"
   - name: SQL_WAREHOUSE_ID
     value: ""  # Required for Optimize mode SQL execution
+  - name: GENIE_TARGET_DIRECTORY
+    value: ""  # Required for creating new Genie Spaces (e.g., /Workspace/Users/you@company.com/)
     
 # Service Principal authorization
 # The app uses its own service principal identity to access Databricks resources.
 # You must grant the app's service principal access to:
 #   1. Genie Spaces: Add SP with "Can Edit" permission
 #   2. LLM Serving Endpoints: Add SP with "Can Query" permission
+#   3. Target Directory (for creating new Genie Spaces): SP needs write permission
 #
 # Find the service principal in: Compute > Apps > [your app] > Authorization
 # The SP name follows the pattern: app-XXXXX [app-name]
