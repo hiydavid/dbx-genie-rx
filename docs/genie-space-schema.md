@@ -1,6 +1,6 @@
 # Databricks Genie Space Configuration Schema
 
-This document describes the JSON schema for Databricks Genie Space configuration files.
+This document describes the JSON schema for Databricks Genie Space configuration files. Adheres to [official doc](https://docs.databricks.com/aws/en/genie/conversation-api#create-or-select-a-genie-space)
 
 ## Root Structure
 
