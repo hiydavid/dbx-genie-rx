@@ -178,7 +178,7 @@ export function LabelingPage({
               const hasResult = generatedSql[q.id]
 
               // Determine segment color
-              let bgClass = "bg-elevated hover:bg-secondary/30"
+              let bgClass = "bg-transparent border border-secondary/30 hover:border-secondary/60"
               let title = `Question ${idx + 1}`
 
               if (isLabeled) {
