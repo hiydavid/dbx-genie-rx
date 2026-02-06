@@ -12,7 +12,6 @@ import type {
   FetchSpaceResponse,
   SqlExecutionResult,
   OptimizationSuggestion,
-  StyleDetectionResult,
   SynthesisResult,
   GenieCreateResponse,
 } from "@/types"
@@ -51,7 +50,6 @@ export interface AnalysisState {
   selectedQuestions: string[]
   hasLabelingSession: boolean
   // Cross-sectional analysis state
-  detectedStyle: StyleDetectionResult | null
   synthesis: SynthesisResult | null
   isFullAnalysis: boolean
   // Labeling session state (persists across navigation)
@@ -102,7 +100,6 @@ const initialState: AnalysisState = {
   selectedQuestions: [],
   hasLabelingSession: false,
   // Cross-sectional analysis state
-  detectedStyle: null,
   synthesis: null,
   isFullAnalysis: false,
   // Labeling session state
@@ -256,7 +253,6 @@ export function useAnalysis() {
       setState((prev) => ({
         ...prev,
         sectionAnalyses: sparseAnalyses,
-        detectedStyle: response.style,
         synthesis: response.synthesis,
         isFullAnalysis: response.is_full_analysis,
         allSectionsAnalyzed: true,

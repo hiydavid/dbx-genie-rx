@@ -18,11 +18,9 @@ from agent_server.models import (
     ChecklistItem,
     Finding,
     SectionAnalysis,
-    StyleDetectionResult,
     SynthesisResult,
 )
 from agent_server.prompts import get_checklist_evaluation_prompt
-from agent_server.style_detector import detect_style
 from agent_server.synthesizer import synthesize_analysis
 
 logger = logging.getLogger(__name__)
@@ -235,14 +233,6 @@ class GenieSpaceAnalyzer:
                     space = get_serialized_space(genie_space_id)
                     span.set_outputs({"keys": list(space.keys())})
 
-                # Detect configuration style (no LLM call)
-                with mlflow.start_span(name="detect_style") as span:
-                    style = detect_style(space)
-                    span.set_outputs({
-                        "detected_style": style.detected_style.value,
-                        "confidence": style.confidence,
-                    })
-
                 # Analyze each section sequentially
                 analyses = []
                 total_score = 0
@@ -276,7 +266,7 @@ class GenieSpaceAnalyzer:
                 synthesis = None
                 if is_full_analysis:
                     with mlflow.start_span(name="synthesize") as span:
-                        synthesis = synthesize_analysis(analyses, style, is_full_analysis)
+                        synthesis = synthesize_analysis(analyses, is_full_analysis)
                         span.set_outputs({
                             "assessment": synthesis.assessment.value,
                             "compensating_strengths_count": len(synthesis.compensating_strengths),
@@ -293,7 +283,6 @@ class GenieSpaceAnalyzer:
                     AgentOutput(
                         genie_space_id=genie_space_id,
                         analyses=analyses,
-                        style=style,
                         synthesis=synthesis,
                         overall_score=overall_score,
                         trace_id=trace_id,
@@ -367,15 +356,6 @@ class GenieSpaceAnalyzer:
                     space = get_serialized_space(genie_space_id)
                     span.set_outputs({"keys": list(space.keys())})
 
-                # Detect configuration style (no LLM call)
-                yield {"status": "detecting_style", "message": "Detecting configuration style..."}
-                with mlflow.start_span(name="detect_style") as span:
-                    style = detect_style(space)
-                    span.set_outputs({
-                        "detected_style": style.detected_style.value,
-                        "confidence": style.confidence,
-                    })
-
                 # Determine which sections to analyze
                 sections_to_analyze = selected_sections if selected_sections else SECTIONS
                 is_full_analysis = set(sections_to_analyze) == set(SECTIONS)
@@ -424,7 +404,7 @@ class GenieSpaceAnalyzer:
                 if is_full_analysis:
                     yield {"status": "synthesizing", "message": "Synthesizing cross-sectional insights..."}
                     with mlflow.start_span(name="synthesize") as span:
-                        synthesis = synthesize_analysis(analyses, style, is_full_analysis)
+                        synthesis = synthesize_analysis(analyses, is_full_analysis)
                         span.set_outputs({
                             "assessment": synthesis.assessment.value,
                             "compensating_strengths_count": len(synthesis.compensating_strengths),
@@ -441,14 +421,12 @@ class GenieSpaceAnalyzer:
                         "overall_score": overall_score,
                         "sections_analyzed": section_count,
                         "is_full_analysis": is_full_analysis,
-                        "detected_style": style.detected_style.value,
                     }
                 )
 
                 return AgentOutput(
                     genie_space_id=genie_space_id,
                     analyses=analyses,
-                    style=style,
                     synthesis=synthesis,
                     overall_score=overall_score,
                     trace_id=trace_id or "",

@@ -17,7 +17,6 @@ import type {
   ConfigMergeResponse,
   GenieCreateRequest,
   GenieCreateResponse,
-  StyleDetectionResult,
   SynthesisResult,
 } from "@/types"
 
@@ -138,7 +137,6 @@ export async function analyzeSection(
  */
 export interface AnalyzeAllResponse {
   analyses: SectionAnalysis[]
-  style: StyleDetectionResult
   synthesis: SynthesisResult | null
   is_full_analysis: boolean
 }

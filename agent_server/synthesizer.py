@@ -14,7 +14,6 @@ from agent_server.models import (
     AssessmentCategory,
     CompensatingStrength,
     SectionAnalysis,
-    StyleDetectionResult,
     SynthesisResult,
 )
 from agent_server.prompts import get_synthesis_prompt
@@ -24,14 +23,12 @@ logger = logging.getLogger(__name__)
 
 def synthesize_analysis(
     analyses: list[SectionAnalysis],
-    style: StyleDetectionResult,
     is_full_analysis: bool,
 ) -> SynthesisResult:
     """Synthesize cross-sectional analysis results.
 
     Args:
         analyses: List of section analysis results
-        style: Detected configuration style
         is_full_analysis: Whether all 10 sections were analyzed
 
     Returns:
@@ -49,18 +46,14 @@ def synthesize_analysis(
         for a in analyses
     ]
 
-    style_dict = style.model_dump()
-
     prompt = get_synthesis_prompt(
         section_analyses=section_analyses_dict,
-        detected_style=style_dict,
         is_full_analysis=is_full_analysis,
     )
 
     with mlflow.start_span(name="synthesize_analysis", span_type=SpanType.LLM) as span:
         span.set_inputs({
             "sections_analyzed": len(analyses),
-            "detected_style": style.detected_style.value,
             "is_full_analysis": is_full_analysis,
         })
 

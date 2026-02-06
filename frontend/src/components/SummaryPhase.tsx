@@ -18,7 +18,7 @@ import { ChecklistProgress } from "@/components/ChecklistProgress"
 import { AssessmentBadge } from "@/components/AssessmentBadge"
 import { ScoreGauge } from "@/components/ScoreGauge"
 import { cn } from "@/lib/utils"
-import type { SectionAnalysis, StyleDetectionResult, SynthesisResult } from "@/types"
+import type { SectionAnalysis, SynthesisResult } from "@/types"
 
 interface SummaryPhaseProps {
   genieSpaceId: string
@@ -28,7 +28,6 @@ interface SummaryPhaseProps {
   onToggleSection: (sectionName: string) => void
   onExpandAll: () => void
   onCollapseAll: () => void
-  style?: StyleDetectionResult | null
   synthesis?: SynthesisResult | null
   isFullAnalysis?: boolean
 }
@@ -51,13 +50,6 @@ function getScoreColorClasses(percentage: number): string {
   return "bg-danger/10 text-danger dark:bg-danger/20"
 }
 
-function formatStyleName(style: string): string {
-  return style
-    .split("-")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ")
-}
-
 export function SummaryPhase({
   genieSpaceId,
   sectionAnalyses,
@@ -66,7 +58,6 @@ export function SummaryPhase({
   onToggleSection,
   onExpandAll,
   onCollapseAll,
-  style,
   synthesis,
   isFullAnalysis = false,
 }: SummaryPhaseProps) {
@@ -109,18 +100,6 @@ export function SummaryPhase({
             rationale={synthesis.assessment_rationale}
           />
         </div>
-
-        {/* Style indicator */}
-        {style && (
-          <div className="flex justify-center">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-elevated rounded-full text-sm text-muted">
-              <span>Configuration Style:</span>
-              <span className="font-medium text-secondary">
-                {formatStyleName(style.detected_style)}
-              </span>
-            </div>
-          </div>
-        )}
 
         {/* Celebration Points */}
         {synthesis.celebration_points.length > 0 && (
@@ -320,19 +299,6 @@ export function SummaryPhase({
           animationDuration={1200}
         />
       </div>
-
-      {/* Style hint (if available) */}
-      {style && (
-        <div className="flex justify-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-elevated rounded-full text-sm text-muted">
-            <span>Detected Style:</span>
-            <span className="font-medium text-secondary">
-              {formatStyleName(style.detected_style)}
-            </span>
-            <span className="text-xs">(tentative)</span>
-          </div>
-        </div>
-      )}
 
       {/* Prompt for full analysis */}
       <Card className="border-accent/30 bg-accent/5 dark:bg-accent/10">

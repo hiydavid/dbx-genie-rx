@@ -2,26 +2,11 @@
  * TypeScript types matching the Python Pydantic models in agent_server/models.py
  */
 
-// Configuration style detected by heuristics
-export type ConfigStyle =
-  | "metric-views-focused"
-  | "tables-with-knowledge-base"
-  | "example-driven"
-  | "minimal-viable"
-  | "hybrid"
-
 // Qualitative assessment category (replaces numeric scores)
 export type AssessmentCategory =
   | "good_to_go"
   | "quick_wins"
   | "foundation_needed"
-
-export interface StyleDetectionResult {
-  detected_style: ConfigStyle
-  confidence: number
-  indicators: Record<string, unknown>
-  description: string
-}
 
 export interface CompensatingStrength {
   covering_section: string
@@ -63,7 +48,6 @@ export interface SectionAnalysis {
 export interface AgentOutput {
   genie_space_id: string
   analyses: SectionAnalysis[]
-  style: StyleDetectionResult | null
   synthesis: SynthesisResult | null
   overall_score: number
   trace_id: string
@@ -89,7 +73,7 @@ export interface AnalyzeSectionRequest {
 }
 
 export interface StreamProgress {
-  status: "fetching" | "detecting_style" | "analyzing" | "synthesizing" | "complete" | "result"
+  status: "fetching" | "analyzing" | "synthesizing" | "complete" | "result"
   message?: string
   section?: string
   current?: number

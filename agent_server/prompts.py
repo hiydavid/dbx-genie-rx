@@ -180,14 +180,12 @@ Focus on actionable changes that will measurably improve Genie's ability to answ
 
 def get_synthesis_prompt(
     section_analyses: list[dict],
-    detected_style: dict,
     is_full_analysis: bool,
 ) -> str:
     """Build the prompt for cross-sectional synthesis after all sections are analyzed.
 
     Args:
         section_analyses: List of section analysis results (section_name, checklist, findings, score, summary)
-        detected_style: The detected configuration style info
         is_full_analysis: Whether all 10 sections were analyzed
 
     Returns:
@@ -203,21 +201,14 @@ def get_synthesis_prompt(
         )
     sections_text = "\n".join(section_summaries)
 
-    style_name = detected_style.get("detected_style", "hybrid")
-    style_desc = detected_style.get("description", "")
-
     return f"""You are synthesizing a cross-sectional analysis of a Databricks Genie Space configuration.
-
-## Configuration Style
-Detected style: {style_name}
-{style_desc}
 
 ## Section Analysis Results
 {sections_text}
 
 ## Instructions
 
-Based on the section analyses and detected configuration style, provide a holistic assessment that:
+Based on the section analyses, provide a holistic assessment that:
 
 1. **Identifies compensating strengths**: Where one section's strength makes up for another's weakness.
    - For example, rich metric views can compensate for missing table descriptions
@@ -229,12 +220,11 @@ Based on the section analyses and detected configuration style, provide a holist
 3. **Identifies quick wins**: List 3-5 specific, actionable improvements that would have high impact.
 
 4. **Determines overall assessment**:
-   - "good_to_go": The space is well-configured for its style, minor improvements only
+   - "good_to_go": The space is well-configured, minor improvements only
    - "quick_wins": The space works but has clear opportunities for improvement
    - "foundation_needed": The space needs fundamental improvements to be effective
 
 Be encouraging but honest. Focus on improvement opportunities rather than failures.
-Consider the detected style when evaluating - a metric-views-focused space shouldn't be penalized for minimal tables.
 
 {"Note: This is a partial analysis (not all sections were analyzed). Be tentative in the overall assessment." if not is_full_analysis else ""}
 

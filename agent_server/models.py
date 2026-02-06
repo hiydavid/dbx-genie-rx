@@ -1,18 +1,7 @@
 import re
 from enum import Enum
-from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
-
-
-class ConfigStyle(str, Enum):
-    """Detected configuration style for a Genie Space."""
-
-    METRIC_VIEWS_FOCUSED = "metric-views-focused"
-    TABLES_WITH_KNOWLEDGE_BASE = "tables-with-knowledge-base"
-    EXAMPLE_DRIVEN = "example-driven"
-    MINIMAL_VIABLE = "minimal-viable"
-    HYBRID = "hybrid"
 
 
 class AssessmentCategory(str, Enum):
@@ -21,15 +10,6 @@ class AssessmentCategory(str, Enum):
     GOOD_TO_GO = "good_to_go"
     QUICK_WINS = "quick_wins"
     FOUNDATION_NEEDED = "foundation_needed"
-
-
-class StyleDetectionResult(BaseModel):
-    """Result of heuristic-based configuration style detection."""
-
-    detected_style: ConfigStyle
-    confidence: float  # 0.0 to 1.0
-    indicators: dict[str, Any]  # Counts and signals that led to the detection
-    description: str  # Human-readable description of the detected style
 
 
 class CompensatingStrength(BaseModel):
@@ -107,7 +87,6 @@ class AgentOutput(BaseModel):
 
     genie_space_id: str
     analyses: list[SectionAnalysis]
-    style: StyleDetectionResult | None = None  # Detected config style
     synthesis: SynthesisResult | None = None  # Cross-sectional synthesis (full analysis only)
     overall_score: int  # Kept for backward compatibility
     trace_id: str

@@ -186,7 +186,6 @@ function App() {
             onToggleSection={actions.toggleSectionExpanded}
             onExpandAll={actions.expandAllSections}
             onCollapseAll={actions.collapseAllSections}
-            style={state.detectedStyle}
             synthesis={state.synthesis}
             isFullAnalysis={state.isFullAnalysis}
           />

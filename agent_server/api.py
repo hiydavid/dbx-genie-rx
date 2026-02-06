@@ -30,11 +30,9 @@ from agent_server.models import (
     OptimizationResponse,
     OptimizationSuggestion,
     SectionAnalysis,
-    StyleDetectionResult,
     SynthesisResult,
 )
 from agent_server.optimizer import get_optimizer
-from agent_server.style_detector import detect_style
 from agent_server.synthesizer import synthesize_analysis
 
 router = APIRouter(prefix="/api")
@@ -145,9 +143,8 @@ class AnalyzeAllSectionsRequest(BaseModel):
 
 
 class AnalyzeAllSectionsResponse(BaseModel):
-    """Response with all section analyses plus style and synthesis."""
+    """Response with all section analyses and synthesis."""
     analyses: list[SectionAnalysis]
-    style: StyleDetectionResult
     synthesis: SynthesisResult | None  # Only present for full analysis
     is_full_analysis: bool
 
@@ -273,9 +270,6 @@ async def analyze_all_sections(request: AnalyzeAllSectionsRequest):
         analyzer.start_session()
 
         try:
-            # Detect style (no LLM call)
-            style = detect_style(request.full_space)
-
             # Analyze each section
             analyses = []
             for section in request.sections:
@@ -298,11 +292,10 @@ async def analyze_all_sections(request: AnalyzeAllSectionsRequest):
             # Run synthesis for full analysis
             synthesis = None
             if is_full_analysis:
-                synthesis = synthesize_analysis(analyses, style, is_full_analysis)
+                synthesis = synthesize_analysis(analyses, is_full_analysis)
 
             return AnalyzeAllSectionsResponse(
                 analyses=analyses,
-                style=style,
                 synthesis=synthesis,
                 is_full_analysis=is_full_analysis,
             )
