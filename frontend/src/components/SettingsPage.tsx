@@ -3,7 +3,7 @@
  */
 
 import { useState, useEffect } from "react"
-import { ArrowLeft, Loader2, Server, Brain, Database, Globe } from "lucide-react"
+import { ArrowLeft, Loader2, Server, Brain, Database, Globe, FolderOpen } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { getSettings } from "@/lib/api"
@@ -122,6 +122,13 @@ export function SettingsPage({ onBack, currentGenieSpaceId }: SettingsPageProps)
                 label="Databricks Host"
                 value={settings.databricks_host}
                 description="Connected Databricks workspace"
+              />
+
+              <SettingItem
+                icon={<FolderOpen className="w-5 h-5" />}
+                label="Workspace Directory"
+                value={settings.workspace_directory}
+                description="Target directory for creating new Genie Spaces"
               />
             </>
           )}

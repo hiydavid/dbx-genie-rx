@@ -109,6 +109,7 @@ export interface AppSettings {
   llm_model: string
   sql_warehouse_id: string | null
   databricks_host: string | null
+  workspace_directory: string | null
 }
 
 // Optimization types

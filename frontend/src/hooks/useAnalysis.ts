@@ -149,7 +149,7 @@ export function useAnalysis() {
   }, [])
 
   const setPhase = useCallback((phase: Phase) => {
-    setState((prev) => ({ ...prev, phase, showChecklist: false, optimizeView: null }))
+    setState((prev) => ({ ...prev, phase, showChecklist: false, showSettings: false, optimizeView: null }))
   }, [])
 
   const setError = useCallback((error: string | null) => {
@@ -359,6 +359,7 @@ export function useAnalysis() {
         currentSectionIndex: index,
         analysisViewIndex: viewIndex >= 0 ? viewIndex : 0,
         showChecklist: false,
+        showSettings: false,
       }
     })
   }, [])
@@ -392,6 +393,7 @@ export function useAnalysis() {
         currentSectionIndex: firstAnalyzedIndex,
         analysisViewIndex: 0,
         showChecklist: false,
+        showSettings: false,
         optimizeView: null,
       }
     })
@@ -415,11 +417,11 @@ export function useAnalysis() {
   }, [])
 
   const goToSummary = useCallback(() => {
-    setState((prev) => ({ ...prev, phase: "summary", showChecklist: false, optimizeView: null }))
+    setState((prev) => ({ ...prev, phase: "summary", showChecklist: false, showSettings: false, optimizeView: null }))
   }, [])
 
   const goToIngest = useCallback(() => {
-    setState((prev) => ({ ...prev, phase: "ingest", showChecklist: false, optimizeView: null }))
+    setState((prev) => ({ ...prev, phase: "ingest", showChecklist: false, showSettings: false, optimizeView: null }))
   }, [])
 
   const toggleChecklist = useCallback(() => {
@@ -482,7 +484,7 @@ export function useAnalysis() {
   }, [])
 
   const goToBenchmarks = useCallback(() => {
-    setState((prev) => ({ ...prev, optimizeView: "benchmarks", showChecklist: false }))
+    setState((prev) => ({ ...prev, optimizeView: "benchmarks", showChecklist: false, showSettings: false }))
   }, [])
 
   const toggleQuestionSelection = useCallback((questionId: string) => {
@@ -510,6 +512,7 @@ export function useAnalysis() {
       ...prev,
       optimizeView: "labeling",
       showChecklist: false,
+      showSettings: false,
       hasLabelingSession: true,
     }))
   }, [])
@@ -519,6 +522,7 @@ export function useAnalysis() {
       ...prev,
       optimizeView: "feedback",
       showChecklist: false,
+      showSettings: false,
     }))
   }, [])
 
@@ -527,6 +531,7 @@ export function useAnalysis() {
       ...prev,
       optimizeView: "optimization",
       showChecklist: false,
+      showSettings: false,
     }))
   }, [])
 
@@ -535,6 +540,7 @@ export function useAnalysis() {
       ...prev,
       optimizeView: "preview",
       showChecklist: false,
+      showSettings: false,
     }))
   }, [])
 

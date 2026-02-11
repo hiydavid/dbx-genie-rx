@@ -96,12 +96,12 @@ export function SidebarNav({
           onClick={onGoToIngest}
           className={cn(
             "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left",
-            phase === "ingest" && !showChecklist
+            phase === "ingest" && !showChecklist && !showSettings
               ? "gradient-accent text-white shadow-lg shadow-accent/20 dark:glow-accent"
               : "bg-success/10 text-success hover:bg-success/20 dark:bg-success/15"
           )}
         >
-          {phase === "ingest" && !showChecklist ? (
+          {phase === "ingest" && !showChecklist && !showSettings ? (
             <Download className="w-4 h-4" />
           ) : (
             <Check className="w-4 h-4" />
@@ -141,7 +141,7 @@ export function SidebarNav({
                   disabled={!hasAnalyzedSections}
                   className={cn(
                     "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left",
-                    phase === "analysis" && !showChecklist
+                    phase === "analysis" && !showChecklist && !showSettings
                       ? "gradient-accent text-white shadow-lg shadow-accent/20 dark:glow-accent"
                       : hasAnalyzedSections
                       ? "bg-elevated text-secondary hover:bg-sunken cursor-pointer"
@@ -163,7 +163,7 @@ export function SidebarNav({
                   disabled={!allSectionsAnalyzed}
                   className={cn(
                     "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left",
-                    phase === "summary" && !showChecklist
+                    phase === "summary" && !showChecklist && !showSettings
                       ? "gradient-accent text-white shadow-lg shadow-accent/20 dark:glow-accent"
                       : allSectionsAnalyzed
                       ? "bg-elevated text-secondary hover:bg-sunken cursor-pointer"
@@ -209,7 +209,7 @@ export function SidebarNav({
                   onClick={onGoToBenchmarks}
                   className={cn(
                     "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left",
-                    optimizeView === "benchmarks" && !showChecklist
+                    optimizeView === "benchmarks" && !showChecklist && !showSettings
                       ? "gradient-accent text-white shadow-lg shadow-accent/20 dark:glow-accent"
                       : "bg-elevated text-secondary hover:bg-sunken cursor-pointer"
                   )}
@@ -224,7 +224,7 @@ export function SidebarNav({
                   disabled={!hasLabelingSession}
                   className={cn(
                     "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left",
-                    optimizeView === "labeling" && !showChecklist
+                    optimizeView === "labeling" && !showChecklist && !showSettings
                       ? "gradient-accent text-white shadow-lg shadow-accent/20 dark:glow-accent"
                       : hasLabelingSession
                       ? "bg-elevated text-secondary hover:bg-sunken cursor-pointer"
@@ -241,7 +241,7 @@ export function SidebarNav({
                   disabled={!hasLabelingSession}
                   className={cn(
                     "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left",
-                    optimizeView === "feedback" && !showChecklist
+                    optimizeView === "feedback" && !showChecklist && !showSettings
                       ? "gradient-accent text-white shadow-lg shadow-accent/20 dark:glow-accent"
                       : hasLabelingSession
                       ? "bg-elevated text-secondary hover:bg-sunken cursor-pointer"
@@ -258,7 +258,7 @@ export function SidebarNav({
                   disabled={!hasOptimizationResults}
                   className={cn(
                     "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left",
-                    optimizeView === "optimization" && !showChecklist
+                    optimizeView === "optimization" && !showChecklist && !showSettings
                       ? "gradient-accent text-white shadow-lg shadow-accent/20 dark:glow-accent"
                       : hasOptimizationResults
                       ? "bg-elevated text-secondary hover:bg-sunken cursor-pointer"
@@ -275,7 +275,7 @@ export function SidebarNav({
                   disabled={!hasPreviewResults}
                   className={cn(
                     "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left",
-                    optimizeView === "preview" && !showChecklist
+                    optimizeView === "preview" && !showChecklist && !showSettings
                       ? "gradient-accent text-white shadow-lg shadow-accent/20 dark:glow-accent"
                       : hasPreviewResults
                       ? "bg-elevated text-secondary hover:bg-sunken cursor-pointer"
