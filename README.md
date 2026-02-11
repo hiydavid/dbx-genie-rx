@@ -121,21 +121,13 @@ After deploying, you must grant the app's service principal (SP) access to requi
    - Add the SP with **Can Use** permission
    - Update `SQL_WAREHOUSE_ID` in `app.yaml` with your warehouse ID
 
-5. **Grant table access** (for Optimize mode):
+5. **Grant Workspace Directory access** (for Optimize mode):
+   - The SP needs **Can Manage** on the workspace directory where new Genie Spaces will be created (the `GENIE_TARGET_DIRECTORY` path in `app.yaml`)
+
+6. **Grant table access** (for Optimize mode):
    - The SP needs SELECT access to the tables your Genie Space queries
-   - Run the following SQL (replace with your SP name and table paths):
 
-   ```sql
-   -- Grant catalog and schema access
-   GRANT USE CATALOG ON CATALOG your_catalog TO `app-XXXXX [your-app-name]`;
-   GRANT USE SCHEMA ON SCHEMA your_catalog.your_schema TO `app-XXXXX [your-app-name]`;
-
-   -- Grant SELECT on tables (option A: specific tables)
-   GRANT SELECT ON TABLE your_catalog.your_schema.table1 TO `app-XXXXX [your-app-name]`;
-
-   -- Or grant SELECT on entire schema (option B: all tables in schema)
-   GRANT SELECT ON SCHEMA your_catalog.your_schema TO `app-XXXXX [your-app-name]`;
-   ```
+> **Tip:** Steps 5 and 6 can be automated using the `notebooks/grant_app_permissions.py` notebook included in this repo.
 
 ## MLflow Tracing (Optional)
 
